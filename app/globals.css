@@ -185,7 +185,7 @@
   }
 
   .neu-pressed {
-    background-color: var(--input);
+    background-color: var(--ring);
     border: 1px solid var(--border);
   }
 
@@ -196,7 +196,7 @@
 
   .neu-button:hover {
     box-shadow: 0 4px 16px var(--shadow-dark);
-    transform: translateY(-1px);
+    transform: translateY(-0.5px);
   }
 
   .neu-button:active {

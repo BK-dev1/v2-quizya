@@ -28,7 +28,7 @@ export function NeuProgressGrid({ questions, onQuestionClick, className }: NeuPr
         </span>
       </div>
 
-      <div className="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-2">
+      <div className="flex flex-wrap gap-3">
         {questions.map((q) => (
           <button
             key={q.id}

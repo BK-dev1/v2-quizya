@@ -286,7 +286,8 @@ export default function ExamTakingPage() {
     })
   }
 
-  const goToQuestion = (index: number) => {
+  const goToQuestion = (questionId: number) => {
+    const index = examQuestions.findIndex((q) => q.id === questionId)
     setCurrentQuestion(index)
     setShowSidebar(false)
   }
