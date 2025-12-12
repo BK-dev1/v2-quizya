@@ -8,20 +8,8 @@ import { NeuInput } from "@/components/ui/neu-input"
 import { NeuButton } from "@/components/ui/neu-button"
 import { NeuModal } from "@/components/ui/neu-modal"
 import { RoomCodeWidget } from "@/components/ui/room-code-widget"
-import {
-  ArrowLeft,
-  Plus,
-  Trash2,
-  GripVertical,
-  Clock,
-  Shuffle,
-  Globe,
-  Eye,
-  Save,
-  Check,
-  ChevronDown,
-  ChevronUp,
-} from "lucide-react"
+import { SortableQuestion } from "@/components/ui/sortable-question"
+import { ArrowLeft, Plus, Clock, Shuffle, Globe, Eye, Save } from "lucide-react"
 
 type QuestionType = "mcq" | "truefalse" | "shortanswer" | "essay"
 
@@ -34,13 +22,6 @@ interface Question {
   keywords?: string[]
   timeLimit?: number
   hasTimeLimit: boolean
-}
-
-const questionTypeLabels: Record<QuestionType, string> = {
-  mcq: "Multiple Choice",
-  truefalse: "True/False",
-  shortanswer: "Short Answer",
-  essay: "Essay",
 }
 
 export default function NewExamPage() {
@@ -57,6 +38,9 @@ export default function NewExamPage() {
   const [isSaving, setIsSaving] = React.useState(false)
   const [lastSaved, setLastSaved] = React.useState<Date | null>(null)
   const [expandedQuestion, setExpandedQuestion] = React.useState<string | null>(null)
+
+  const [draggedIndex, setDraggedIndex] = React.useState<number | null>(null)
+  const [dragOverIndex, setDragOverIndex] = React.useState<number | null>(null)
 
   const [questions, setQuestions] = React.useState<Question[]>([
     {
@@ -89,6 +73,31 @@ export default function NewExamPage() {
 
   const updateQuestion = (id: string, updates: Partial<Question>) => {
     setQuestions(questions.map((q) => (q.id === id ? { ...q, ...updates } : q)))
+  }
+
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedIndex(index)
+    e.dataTransfer.effectAllowed = "move"
+    e.dataTransfer.setData("text/plain", index.toString())
+  }
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = "move"
+    if (draggedIndex !== null && draggedIndex !== index) {
+      setDragOverIndex(index)
+    }
+  }
+
+  const handleDragEnd = () => {
+    if (draggedIndex !== null && dragOverIndex !== null && draggedIndex !== dragOverIndex) {
+      const newQuestions = [...questions]
+      const [draggedItem] = newQuestions.splice(draggedIndex, 1)
+      newQuestions.splice(dragOverIndex, 0, draggedItem)
+      setQuestions(newQuestions)
+    }
+    setDraggedIndex(null)
+    setDragOverIndex(null)
   }
 
   const handlePublicToggle = () => {
@@ -211,7 +220,7 @@ export default function NewExamPage() {
                   value={examDescription}
                   onChange={(e) => setExamDescription(e.target.value)}
                   rows={3}
-                  className="w-full px-4 py-3 rounded-xl bg-background neu-input placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none text-sm"
+                  className="w-full px-4 py-3 rounded-xl bg-input border border-border placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none text-sm"
                 />
               </div>
 
@@ -225,7 +234,7 @@ export default function NewExamPage() {
                   min={1}
                   value={duration}
                   onChange={(e) => setDuration(Number(e.target.value))}
-                  className="w-full h-12 px-4 rounded-xl bg-background neu-input focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="w-full h-12 px-4 rounded-xl bg-input border border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 />
               </div>
 
@@ -290,12 +299,7 @@ export default function NewExamPage() {
               <NeuCardTitle className="text-lg">Share</NeuCardTitle>
             </NeuCardHeader>
             <NeuCardContent>
-              <RoomCodeWidget
-                roomCode={roomCode}
-                qrCodeUrl="/qr-code.png"
-                showQR={false}
-                onToggleQR={() => {}}
-              />
+              <RoomCodeWidget roomCode={roomCode} qrCodeUrl="/qr-code.png" showQR={false} onToggleQR={() => {}} />
             </NeuCardContent>
           </NeuCard>
         </div>
@@ -307,6 +311,10 @@ export default function NewExamPage() {
             <p className="text-sm text-muted-foreground">Est. {estimatedDuration} min</p>
           </div>
 
+          {questions.length > 1 && (
+            <p className="text-xs text-muted-foreground flex items-center gap-1">Drag questions to reorder them</p>
+          )}
+
           {questions.length === 0 ? (
             <NeuCard className="p-8 text-center">
               <p className="text-muted-foreground">No questions yet. Add your first question from the panel.</p>
@@ -314,158 +322,20 @@ export default function NewExamPage() {
           ) : (
             <div className="space-y-4">
               {questions.map((question, index) => (
-                <NeuCard key={question.id} className="overflow-hidden">
-                  {/* Question Header */}
-                  <button
-                    onClick={() => setExpandedQuestion(expandedQuestion === question.id ? null : question.id)}
-                    className="w-full flex items-center gap-3 p-4 hover:bg-muted/30 transition-colors"
-                  >
-                    <GripVertical className="w-5 h-5 text-muted-foreground cursor-grab" />
-                    <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10 text-primary font-semibold text-sm">
-                      {index + 1}
-                    </span>
-                    <div className="flex-1 text-left">
-                      <p className="font-medium line-clamp-1">{question.text || "Untitled Question"}</p>
-                      <p className="text-xs text-muted-foreground">{questionTypeLabels[question.type]}</p>
-                    </div>
-                    {expandedQuestion === question.id ? (
-                      <ChevronUp className="w-5 h-5 text-muted-foreground" />
-                    ) : (
-                      <ChevronDown className="w-5 h-5 text-muted-foreground" />
-                    )}
-                  </button>
-
-                  {/* Question Editor (Expanded) */}
-                  {expandedQuestion === question.id && (
-                    <div className="px-4 pb-4 space-y-4 border-t border-border pt-4">
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">Question Text</label>
-                        <textarea
-                          placeholder="Enter your question..."
-                          value={question.text}
-                          onChange={(e) => updateQuestion(question.id, { text: e.target.value })}
-                          rows={2}
-                          className="w-full px-4 py-3 rounded-xl bg-background neu-input placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
-                        />
-                      </div>
-
-                      {/* MCQ Options */}
-                      {question.type === "mcq" && question.options && (
-                        <div className="space-y-3">
-                          <label className="text-sm font-medium">Answer Options</label>
-                          {question.options.map((option, optIndex) => (
-                            <div key={optIndex} className="flex items-center gap-3">
-                              <button
-                                onClick={() => updateQuestion(question.id, { correctAnswer: optIndex })}
-                                className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-colors ${
-                                  question.correctAnswer === optIndex
-                                    ? "border-success bg-success text-success-foreground"
-                                    : "border-border hover:border-primary"
-                                }`}
-                                aria-label={`Mark option ${optIndex + 1} as correct`}
-                              >
-                                {question.correctAnswer === optIndex && <Check className="w-4 h-4" />}
-                              </button>
-                              <input
-                                type="text"
-                                placeholder={`Option ${optIndex + 1}`}
-                                value={option}
-                                onChange={(e) => {
-                                  const newOptions = [...question.options!]
-                                  newOptions[optIndex] = e.target.value
-                                  updateQuestion(question.id, { options: newOptions })
-                                }}
-                                className="flex-1 h-10 px-4 rounded-xl bg-background neu-input focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring text-sm"
-                              />
-                            </div>
-                          ))}
-                          <p className="text-xs text-muted-foreground">Click the circle to mark the correct answer</p>
-                        </div>
-                      )}
-
-                      {/* True/False */}
-                      {question.type === "truefalse" && (
-                        <div className="space-y-3">
-                          <label className="text-sm font-medium">Correct Answer</label>
-                          <div className="flex gap-3">
-                            <NeuButton
-                              variant={question.correctAnswer === true ? "primary" : "secondary"}
-                              onClick={() => updateQuestion(question.id, { correctAnswer: true })}
-                              className="flex-1"
-                            >
-                              True
-                            </NeuButton>
-                            <NeuButton
-                              variant={question.correctAnswer === false ? "primary" : "secondary"}
-                              onClick={() => updateQuestion(question.id, { correctAnswer: false })}
-                              className="flex-1"
-                            >
-                              False
-                            </NeuButton>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Short Answer Keywords */}
-                      {question.type === "shortanswer" && (
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium">Keywords for Auto-Grading</label>
-                          <input
-                            type="text"
-                            placeholder="Enter keywords separated by commas"
-                            value={question.keywords?.join(", ") || ""}
-                            onChange={(e) =>
-                              updateQuestion(question.id, {
-                                keywords: e.target.value.split(",").map((k) => k.trim()),
-                              })
-                            }
-                            className="w-full h-10 px-4 rounded-xl bg-background neu-input focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring text-sm"
-                          />
-                          <p className="text-xs text-muted-foreground">
-                            Answers containing these keywords will be marked correct
-                          </p>
-                        </div>
-                      )}
-
-                      {/* Per-question time limit */}
-                      <div className="flex items-center justify-between pt-2">
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={question.hasTimeLimit}
-                            onChange={(e) => updateQuestion(question.id, { hasTimeLimit: e.target.checked })}
-                            className="w-4 h-4 rounded border-border"
-                          />
-                          <span className="text-sm">Per-question time limit</span>
-                        </label>
-                        {question.hasTimeLimit && (
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="number"
-                              min={1}
-                              value={question.timeLimit || 2}
-                              onChange={(e) => updateQuestion(question.id, { timeLimit: Number(e.target.value) })}
-                              className="w-20 h-8 px-3 rounded-lg bg-background neu-input text-sm text-center"
-                            />
-                            <span className="text-sm text-muted-foreground">min</span>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="flex justify-end pt-2">
-                        <NeuButton
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeQuestion(question.id)}
-                          className="text-destructive hover:bg-destructive/10"
-                        >
-                          <Trash2 className="w-4 h-4 mr-2" />
-                          Remove
-                        </NeuButton>
-                      </div>
-                    </div>
-                  )}
-                </NeuCard>
+                <SortableQuestion
+                  key={question.id}
+                  question={question}
+                  index={index}
+                  isExpanded={expandedQuestion === question.id}
+                  onToggleExpand={() => setExpandedQuestion(expandedQuestion === question.id ? null : question.id)}
+                  onUpdate={(updates) => updateQuestion(question.id, updates)}
+                  onRemove={() => removeQuestion(question.id)}
+                  onDragStart={handleDragStart}
+                  onDragOver={handleDragOver}
+                  onDragEnd={handleDragEnd}
+                  isDragging={draggedIndex === index}
+                  dragOverIndex={dragOverIndex}
+                />
               ))}
             </div>
           )}
@@ -473,42 +343,44 @@ export default function NewExamPage() {
       </div>
 
       {/* Public Warning Modal */}
-      <NeuModal
-        open={showPublicWarning}
-        onClose={() => setShowPublicWarning(false)}
-        title="Make Exam Public?"
-        description="Public exams can be viewed and imported by other teachers. Are you sure you want to make this exam public?"
-        variant="warning"
-        footer={
-          <>
-            <NeuButton variant="ghost" onClick={() => setShowPublicWarning(false)}>
+      <NeuModal isOpen={showPublicWarning} onClose={() => setShowPublicWarning(false)} title="Make Exam Public?">
+        <div className="space-y-4">
+          <p className="text-muted-foreground">
+            Public exams can be discovered and taken by anyone with the room code. Are you sure you want to make this
+            exam public?
+          </p>
+          <div className="flex justify-end gap-3">
+            <NeuButton variant="secondary" onClick={() => setShowPublicWarning(false)}>
               Cancel
             </NeuButton>
             <NeuButton onClick={confirmPublic}>Yes, Make Public</NeuButton>
-          </>
-        }
-      />
+          </div>
+        </div>
+      </NeuModal>
 
       {/* Preview Modal */}
-      <NeuModal
-        open={showPreview}
-        onClose={() => setShowPreview(false)}
-        title="Exam Preview"
-        description="This is how students will see your exam"
-        className="max-w-2xl"
-      >
-        <div className="space-y-4 max-h-96 overflow-y-auto">
+      <NeuModal isOpen={showPreview} onClose={() => setShowPreview(false)} title="Exam Preview">
+        <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+          <div className="p-4 rounded-xl bg-muted/50">
+            <h3 className="font-semibold">{examTitle || "Untitled Exam"}</h3>
+            <p className="text-sm text-muted-foreground mt-1">{examDescription || "No description"}</p>
+            <div className="flex gap-4 mt-3 text-sm text-muted-foreground">
+              <span>{duration} min</span>
+              <span>{questions.length} questions</span>
+            </div>
+          </div>
+
           {questions.map((q, i) => (
-            <div key={q.id} className="p-4 rounded-xl bg-muted/30">
+            <div key={q.id} className="p-4 rounded-xl border border-border">
               <p className="font-medium">
-                {i + 1}. {q.text || "No question text"}
+                {i + 1}. {q.text || "Untitled Question"}
               </p>
               {q.type === "mcq" && q.options && (
                 <div className="mt-3 space-y-2">
-                  {q.options.map((opt, j) => (
-                    <div key={j} className="flex items-center gap-2">
-                      <div className="w-4 h-4 rounded-full border-2 border-border" />
-                      <span className="text-sm">{opt || `Option ${j + 1}`}</span>
+                  {q.options.map((opt, oi) => (
+                    <div key={oi} className="flex items-center gap-2">
+                      <div className="w-4 h-4 rounded-full border border-border" />
+                      <span className="text-sm">{opt || `Option ${oi + 1}`}</span>
                     </div>
                   ))}
                 </div>
@@ -516,17 +388,25 @@ export default function NewExamPage() {
               {q.type === "truefalse" && (
                 <div className="mt-3 flex gap-4">
                   <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 rounded-full border-2 border-border" />
+                    <div className="w-4 h-4 rounded-full border border-border" />
                     <span className="text-sm">True</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 rounded-full border-2 border-border" />
+                    <div className="w-4 h-4 rounded-full border border-border" />
                     <span className="text-sm">False</span>
                   </div>
                 </div>
               )}
+              {(q.type === "shortanswer" || q.type === "essay") && (
+                <div className="mt-3 h-20 rounded-lg border border-dashed border-border flex items-center justify-center text-sm text-muted-foreground">
+                  {q.type === "essay" ? "Essay response area" : "Short answer field"}
+                </div>
+              )}
             </div>
           ))}
+        </div>
+        <div className="flex justify-end mt-4">
+          <NeuButton onClick={() => setShowPreview(false)}>Close Preview</NeuButton>
         </div>
       </NeuModal>
     </div>

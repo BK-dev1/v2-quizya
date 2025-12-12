@@ -5,21 +5,8 @@ import Link from "next/link"
 import { NeuCard } from "@/components/ui/neu-card"
 import { NeuButton } from "@/components/ui/neu-button"
 import { NeuInput } from "@/components/ui/neu-input"
-import {
-  User,
-  Bell,
-  Shield,
-  Palette,
-  Globe,
-  Key,
-  Camera,
-  Check,
-  Sun,
-  Moon,
-  Monitor,
-  Mail,
-  ChevronRight,
-} from "lucide-react"
+import { ThemeToggle } from "@/components/ui/theme-toggle"
+import { User, Bell, Shield, Palette, Globe, Key, Camera, Check, Monitor, Mail, ChevronRight } from "lucide-react"
 
 type SettingsTab = "profile" | "notifications" | "security" | "appearance" | "language"
 
@@ -51,7 +38,6 @@ export default function SettingsPage() {
   const [sessionTimeout, setSessionTimeout] = useState("30")
 
   // Appearance state
-  const [theme, setTheme] = useState<"light" | "dark" | "system">("light")
   const [compactMode, setCompactMode] = useState(false)
 
   // Language state
@@ -88,7 +74,7 @@ export default function SettingsPage() {
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl text-left whitespace-nowrap transition-all ${
                   activeTab === tab.id
-                    ? "neu-inset text-primary font-medium"
+                    ? "bg-primary/10 text-primary font-medium"
                     : "hover:bg-muted/50 text-muted-foreground"
                 }`}
               >
@@ -109,10 +95,10 @@ export default function SettingsPage() {
               {/* Avatar Section */}
               <div className="flex items-center gap-6 mb-8">
                 <div className="relative">
-                  <div className="w-24 h-24 rounded-full neu-raised flex items-center justify-center bg-primary/10">
+                  <div className="w-24 h-24 rounded-full border border-border flex items-center justify-center bg-primary/10">
                     <span className="text-3xl font-bold text-primary">SJ</span>
                   </div>
-                  <button className="absolute bottom-0 right-0 w-8 h-8 rounded-full neu-button bg-background flex items-center justify-center hover:scale-105 transition-transform">
+                  <button className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-background border border-border flex items-center justify-center hover:scale-105 transition-transform">
                     <Camera className="w-4 h-4 text-muted-foreground" />
                   </button>
                 </div>
@@ -142,7 +128,6 @@ export default function SettingsPage() {
                     </Link>
                   </div>
                 </div>
-                {/* End change */}
                 <NeuInput
                   label="Institution"
                   value={profile.institution}
@@ -159,7 +144,7 @@ export default function SettingsPage() {
                     value={profile.bio}
                     onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
                     rows={4}
-                    className="w-full px-4 py-3 rounded-xl neu-inset bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+                    className="w-full px-4 py-3 rounded-xl bg-input border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
                   />
                 </div>
               </div>
@@ -195,7 +180,7 @@ export default function SettingsPage() {
                     ].map((item) => (
                       <label
                         key={item.key}
-                        className="flex items-center justify-between p-4 rounded-xl neu-flat cursor-pointer hover:bg-muted/30 transition-colors"
+                        className="flex items-center justify-between p-4 rounded-xl border border-border cursor-pointer hover:bg-muted/30 transition-colors"
                       >
                         <div>
                           <p className="font-medium text-foreground">{item.label}</p>
@@ -208,8 +193,8 @@ export default function SettingsPage() {
                             onChange={(e) => setNotifications({ ...notifications, [item.key]: e.target.checked })}
                             className="sr-only peer"
                           />
-                          <div className="w-12 h-7 rounded-full neu-inset peer-checked:bg-primary/20 transition-colors" />
-                          <div className="absolute top-1 left-1 w-5 h-5 rounded-full bg-muted-foreground peer-checked:bg-primary peer-checked:translate-x-5 transition-all neu-raised" />
+                          <div className="w-12 h-7 rounded-full bg-muted peer-checked:bg-primary/20 transition-colors" />
+                          <div className="absolute top-1 left-1 w-5 h-5 rounded-full bg-muted-foreground peer-checked:bg-primary peer-checked:translate-x-5 transition-all" />
                         </div>
                       </label>
                     ))}
@@ -227,7 +212,7 @@ export default function SettingsPage() {
                     ].map((item) => (
                       <label
                         key={item.key}
-                        className="flex items-center justify-between p-4 rounded-xl neu-flat cursor-pointer hover:bg-muted/30 transition-colors"
+                        className="flex items-center justify-between p-4 rounded-xl border border-border cursor-pointer hover:bg-muted/30 transition-colors"
                       >
                         <div>
                           <p className="font-medium text-foreground">{item.label}</p>
@@ -240,8 +225,8 @@ export default function SettingsPage() {
                             onChange={(e) => setNotifications({ ...notifications, [item.key]: e.target.checked })}
                             className="sr-only peer"
                           />
-                          <div className="w-12 h-7 rounded-full neu-inset peer-checked:bg-primary/20 transition-colors" />
-                          <div className="absolute top-1 left-1 w-5 h-5 rounded-full bg-muted-foreground peer-checked:bg-primary peer-checked:translate-x-5 transition-all neu-raised" />
+                          <div className="w-12 h-7 rounded-full bg-muted peer-checked:bg-primary/20 transition-colors" />
+                          <div className="absolute top-1 left-1 w-5 h-5 rounded-full bg-muted-foreground peer-checked:bg-primary peer-checked:translate-x-5 transition-all" />
                         </div>
                       </label>
                     ))}
@@ -271,7 +256,7 @@ export default function SettingsPage() {
               <div className="space-y-6">
                 {/* Email Change */}
                 <Link href="/dashboard/settings/change-email" className="block">
-                  <div className="p-4 rounded-xl neu-flat hover:bg-muted/30 transition-colors group">
+                  <div className="p-4 rounded-xl border border-border hover:bg-muted/30 transition-colors group">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
                         <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
@@ -289,7 +274,7 @@ export default function SettingsPage() {
 
                 {/* Password Change */}
                 <Link href="/dashboard/settings/change-password" className="block">
-                  <div className="p-4 rounded-xl neu-flat hover:bg-muted/30 transition-colors group">
+                  <div className="p-4 rounded-xl border border-border hover:bg-muted/30 transition-colors group">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
                         <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
@@ -304,10 +289,9 @@ export default function SettingsPage() {
                     </div>
                   </div>
                 </Link>
-                {/* End change */}
 
                 {/* Two-Factor Authentication */}
-                <div className="p-4 rounded-xl neu-flat">
+                <div className="p-4 rounded-xl border border-border">
                   <div className="flex items-center justify-between">
                     <div>
                       <h3 className="font-medium text-foreground">Two-Factor Authentication</h3>
@@ -326,7 +310,7 @@ export default function SettingsPage() {
                 </div>
 
                 {/* Session Timeout */}
-                <div className="p-4 rounded-xl neu-flat">
+                <div className="p-4 rounded-xl border border-border">
                   <h3 className="font-medium text-foreground mb-4">Session Timeout</h3>
                   <div className="flex flex-wrap gap-3">
                     {["15", "30", "60", "120"].map((mins) => (
@@ -334,7 +318,9 @@ export default function SettingsPage() {
                         key={mins}
                         onClick={() => setSessionTimeout(mins)}
                         className={`px-4 py-2 rounded-xl transition-all ${
-                          sessionTimeout === mins ? "neu-inset text-primary font-medium" : "neu-button hover:scale-105"
+                          sessionTimeout === mins
+                            ? "bg-primary/10 text-primary font-medium border-2 border-primary"
+                            : "border border-border hover:border-primary/50"
                         }`}
                       >
                         {mins} min
@@ -344,12 +330,12 @@ export default function SettingsPage() {
                 </div>
 
                 {/* Active Sessions */}
-                <div className="p-4 rounded-xl neu-flat">
+                <div className="p-4 rounded-xl border border-border">
                   <h3 className="font-medium text-foreground mb-4">Active Sessions</h3>
                   <div className="space-y-3">
                     <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg neu-raised flex items-center justify-center">
+                        <div className="w-10 h-10 rounded-lg border border-border flex items-center justify-center">
                           <Monitor className="w-5 h-5 text-primary" />
                         </div>
                         <div>
@@ -357,11 +343,11 @@ export default function SettingsPage() {
                           <p className="text-xs text-muted-foreground">Current session - New York, US</p>
                         </div>
                       </div>
-                      <span className="text-xs text-green-600 font-medium">Active</span>
+                      <span className="text-xs text-success font-medium">Active</span>
                     </div>
                     <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg neu-raised flex items-center justify-center">
+                        <div className="w-10 h-10 rounded-lg border border-border flex items-center justify-center">
                           <Monitor className="w-5 h-5 text-muted-foreground" />
                         </div>
                         <div>
@@ -388,7 +374,6 @@ export default function SettingsPage() {
             </NeuCard>
           )}
 
-          {/* Appearance Tab - unchanged */}
           {activeTab === "appearance" && (
             <NeuCard className="p-6">
               <h2 className="text-xl font-semibold mb-6">Appearance</h2>
@@ -397,28 +382,11 @@ export default function SettingsPage() {
                 {/* Theme Selection */}
                 <div>
                   <h3 className="font-medium text-foreground mb-4">Theme</h3>
-                  <div className="grid grid-cols-3 gap-4">
-                    {[
-                      { id: "light" as const, label: "Light", icon: Sun },
-                      { id: "dark" as const, label: "Dark", icon: Moon },
-                      { id: "system" as const, label: "System", icon: Monitor },
-                    ].map((option) => (
-                      <button
-                        key={option.id}
-                        onClick={() => setTheme(option.id)}
-                        className={`p-4 rounded-xl flex flex-col items-center gap-2 transition-all ${
-                          theme === option.id ? "neu-inset text-primary" : "neu-button hover:scale-105"
-                        }`}
-                      >
-                        <option.icon className="w-6 h-6" />
-                        <span className="text-sm font-medium">{option.label}</span>
-                      </button>
-                    ))}
-                  </div>
+                  <ThemeToggle variant="buttons" />
                 </div>
 
                 {/* Compact Mode */}
-                <div className="p-4 rounded-xl neu-flat">
+                <div className="p-4 rounded-xl border border-border">
                   <label className="flex items-center justify-between cursor-pointer">
                     <div>
                       <h3 className="font-medium text-foreground">Compact Mode</h3>
@@ -433,29 +401,10 @@ export default function SettingsPage() {
                         onChange={(e) => setCompactMode(e.target.checked)}
                         className="sr-only peer"
                       />
-                      <div className="w-12 h-7 rounded-full neu-inset peer-checked:bg-primary/20 transition-colors" />
-                      <div className="absolute top-1 left-1 w-5 h-5 rounded-full bg-muted-foreground peer-checked:bg-primary peer-checked:translate-x-5 transition-all neu-raised" />
+                      <div className="w-12 h-7 rounded-full bg-muted peer-checked:bg-primary/20 transition-colors" />
+                      <div className="absolute top-1 left-1 w-5 h-5 rounded-full bg-muted-foreground peer-checked:bg-primary peer-checked:translate-x-5 transition-all" />
                     </div>
                   </label>
-                </div>
-
-                {/* Preview */}
-                <div>
-                  <h3 className="font-medium text-foreground mb-4">Preview</h3>
-                  <div className="p-6 rounded-xl neu-inset">
-                    <div className="flex items-center gap-4 mb-4">
-                      <div className="w-12 h-12 rounded-full neu-raised bg-primary/10" />
-                      <div className="flex-1">
-                        <div className="h-4 w-32 rounded neu-flat mb-2" />
-                        <div className="h-3 w-24 rounded neu-flat" />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="h-3 rounded neu-flat w-full" />
-                      <div className="h-3 rounded neu-flat w-4/5" />
-                      <div className="h-3 rounded neu-flat w-3/5" />
-                    </div>
-                  </div>
                 </div>
               </div>
 
@@ -485,15 +434,15 @@ export default function SettingsPage() {
                   <select
                     value={language}
                     onChange={(e) => setLanguage(e.target.value)}
-                    className="w-full h-12 px-4 rounded-xl neu-inset bg-transparent text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    className="w-full h-12 px-4 rounded-xl bg-input border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                   >
-                    <option value="en">English (US)</option>
-                    <option value="en-gb">English (UK)</option>
-                    <option value="es">Espanol</option>
-                    <option value="fr">Francais</option>
-                    <option value="de">Deutsch</option>
+                    <option value="en">English</option>
+                    <option value="es">Spanish</option>
+                    <option value="fr">French</option>
+                    <option value="de">German</option>
+                    <option value="zh">Chinese</option>
                     <option value="ja">Japanese</option>
-                    <option value="zh">Chinese (Simplified)</option>
+                    <option value="ar">Arabic</option>
                   </select>
                 </div>
 
@@ -503,15 +452,16 @@ export default function SettingsPage() {
                   <select
                     value={timezone}
                     onChange={(e) => setTimezone(e.target.value)}
-                    className="w-full h-12 px-4 rounded-xl neu-inset bg-transparent text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    className="w-full h-12 px-4 rounded-xl bg-input border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                   >
                     <option value="America/New_York">Eastern Time (ET)</option>
                     <option value="America/Chicago">Central Time (CT)</option>
                     <option value="America/Denver">Mountain Time (MT)</option>
                     <option value="America/Los_Angeles">Pacific Time (PT)</option>
-                    <option value="Europe/London">London (GMT)</option>
-                    <option value="Europe/Paris">Paris (CET)</option>
-                    <option value="Asia/Tokyo">Tokyo (JST)</option>
+                    <option value="Europe/London">Greenwich Mean Time (GMT)</option>
+                    <option value="Europe/Paris">Central European Time (CET)</option>
+                    <option value="Asia/Tokyo">Japan Standard Time (JST)</option>
+                    <option value="Asia/Shanghai">China Standard Time (CST)</option>
                   </select>
                 </div>
 
@@ -522,7 +472,7 @@ export default function SettingsPage() {
                     {["MM/DD/YYYY", "DD/MM/YYYY", "YYYY-MM-DD"].map((format) => (
                       <button
                         key={format}
-                        className="px-4 py-2 rounded-xl neu-button hover:scale-105 transition-all text-sm"
+                        className="px-4 py-2 rounded-xl border border-border hover:border-primary/50 text-sm transition-colors"
                       >
                         {format}
                       </button>
