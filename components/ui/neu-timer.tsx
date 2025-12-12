@@ -39,7 +39,7 @@ export function NeuTimer({
             {formatTime(remainingSeconds)}
           </span>
         </div>
-        <div className="h-3 rounded-full neu-inset overflow-hidden">
+        <div className="h-3 rounded-full bg-secondary border border-border overflow-hidden">
           <div
             className={cn(
               "h-full rounded-full transition-all duration-1000",
@@ -65,7 +65,7 @@ export function NeuTimer({
     <div className={cn("relative inline-flex items-center justify-center", className)}>
       <svg className="w-28 h-28 transform -rotate-90" viewBox="0 0 100 100">
         {/* Background circle */}
-        <circle className="text-muted stroke-current" strokeWidth="8" fill="none" r="45" cx="50" cy="50" />
+        <circle className="text-secondary stroke-current" strokeWidth="8" fill="none" r="45" cx="50" cy="50" />
         {/* Progress circle */}
         <circle
           className={cn("stroke-current transition-all duration-1000", isLowTime ? "text-destructive" : "text-primary")}

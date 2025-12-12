@@ -8,13 +8,13 @@ export interface NeuCardProps extends React.HTMLAttributes<HTMLDivElement> {
 const NeuCard = React.forwardRef<HTMLDivElement, NeuCardProps>(
   ({ className, variant = "raised", children, ...props }, ref) => {
     const variants = {
-      raised: "neu-card",
-      flat: "neu-flat",
-      inset: "neu-inset",
+      raised: "shadow-lg border border-border",
+      flat: "shadow-sm border border-border",
+      inset: "bg-secondary border border-border",
     }
 
     return (
-      <div ref={ref} className={cn("rounded-2xl bg-background p-6", variants[variant], className)} {...props}>
+      <div ref={ref} className={cn("rounded-xl bg-card p-6", variants[variant], className)} {...props}>
         {children}
       </div>
     )

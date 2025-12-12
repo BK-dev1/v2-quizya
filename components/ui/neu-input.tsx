@@ -10,7 +10,7 @@ export interface NeuInputProps extends React.InputHTMLAttributes<HTMLInputElemen
 
 const NeuInput = React.forwardRef<HTMLInputElement, NeuInputProps>(
   ({ className, type, label, error, id, ...props }, ref) => {
-    const inputId = React.useId() // Moved useId hook to the top level
+    const inputId = React.useId()
     const effectiveId = id || inputId
 
     return (
@@ -24,11 +24,13 @@ const NeuInput = React.forwardRef<HTMLInputElement, NeuInputProps>(
           type={type}
           id={effectiveId}
           className={cn(
-            "flex h-12 w-full rounded-xl bg-background px-4 py-3 text-base",
-            "neu-input placeholder:text-muted-foreground",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+            "flex h-12 w-full rounded-lg bg-input px-4 py-3 text-base",
+            "border border-border placeholder:text-muted-foreground",
+            "transition-all duration-150 ease-out",
+            "hover:border-muted-foreground/50",
+            "focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20",
             "disabled:cursor-not-allowed disabled:opacity-50",
-            error && "ring-2 ring-destructive",
+            error && "border-destructive focus-visible:border-destructive focus-visible:ring-destructive/20",
             className,
           )}
           ref={ref}

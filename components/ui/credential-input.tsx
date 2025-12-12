@@ -33,18 +33,17 @@ const CredentialInput = React.forwardRef<HTMLInputElement, CredentialInputProps>
             type={inputType}
             id={effectiveId}
             className={cn(
-              "flex h-14 w-full rounded-xl bg-white px-4 py-4 text-base text-foreground",
-              "shadow-[inset_2px_2px_5px_rgba(0,0,0,0.05),inset_-2px_-2px_5px_rgba(255,255,255,0.8)]",
+              "flex h-14 w-full rounded-lg bg-input px-4 py-4 text-base text-foreground",
+              "border border-border",
               "placeholder:text-muted-foreground/60",
-              "transition-all duration-200 ease-out",
-              "focus:outline-none focus:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.05),inset_-2px_-2px_5px_rgba(255,255,255,0.8),0_0_0_3px_rgba(20,184,166,0.15)]",
+              "transition-all duration-150 ease-out",
+              "hover:border-muted-foreground/50",
+              "focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20",
               "disabled:cursor-not-allowed disabled:opacity-50",
               icon && "pl-12",
               (showPasswordToggle || success || error) && "pr-12",
-              error &&
-                "shadow-[inset_2px_2px_5px_rgba(0,0,0,0.05),inset_-2px_-2px_5px_rgba(255,255,255,0.8),0_0_0_2px_rgba(239,68,68,0.3)]",
-              success &&
-                "shadow-[inset_2px_2px_5px_rgba(0,0,0,0.05),inset_-2px_-2px_5px_rgba(255,255,255,0.8),0_0_0_2px_rgba(34,197,94,0.3)]",
+              error && "border-destructive focus:border-destructive focus:ring-destructive/20",
+              success && "border-success focus:border-success focus:ring-success/20",
               className,
             )}
             ref={ref}
@@ -53,8 +52,8 @@ const CredentialInput = React.forwardRef<HTMLInputElement, CredentialInputProps>
             {...props}
           />
           <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
-            {success && !error && <Check className="w-5 h-5 text-green-500" aria-hidden="true" />}
-            {error && <AlertCircle className="w-5 h-5 text-red-500" aria-hidden="true" />}
+            {success && !error && <Check className="w-5 h-5 text-success" aria-hidden="true" />}
+            {error && <AlertCircle className="w-5 h-5 text-destructive" aria-hidden="true" />}
             {showPasswordToggle && (
               <button
                 type="button"
@@ -68,7 +67,7 @@ const CredentialInput = React.forwardRef<HTMLInputElement, CredentialInputProps>
           </div>
         </div>
         {error && (
-          <p id={`${effectiveId}-error`} className="text-sm text-red-500 flex items-center gap-1" role="alert">
+          <p id={`${effectiveId}-error`} className="text-sm text-destructive flex items-center gap-1" role="alert">
             {error}
           </p>
         )}

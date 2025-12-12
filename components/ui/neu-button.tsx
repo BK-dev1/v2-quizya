@@ -11,13 +11,16 @@ export interface NeuButtonProps extends React.ButtonHTMLAttributes<HTMLButtonEle
 const NeuButton = React.forwardRef<HTMLButtonElement, NeuButtonProps>(
   ({ className, variant = "primary", size = "md", children, ...props }, ref) => {
     const baseStyles =
-      "inline-flex items-center justify-center font-medium transition-all duration-100 ease-out rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+      "inline-flex items-center justify-center font-medium transition-all duration-150 ease-out rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
 
     const variants = {
-      primary: "bg-primary text-primary-foreground neu-button hover:brightness-105 active:neu-pressed",
-      secondary: "bg-background text-foreground neu-button hover:brightness-102 active:neu-pressed",
-      ghost: "bg-transparent text-foreground hover:bg-muted/50 active:bg-muted",
-      destructive: "bg-destructive text-destructive-foreground neu-button hover:brightness-105 active:neu-pressed",
+      primary:
+        "bg-primary text-primary-foreground shadow-md hover:shadow-lg hover:-translate-y-0.5 active:shadow-sm active:translate-y-0",
+      secondary:
+        "bg-secondary text-secondary-foreground border border-border shadow-sm hover:shadow-md hover:-translate-y-0.5 active:shadow-none active:translate-y-0",
+      ghost: "bg-transparent text-foreground hover:bg-secondary active:bg-secondary/80",
+      destructive:
+        "bg-destructive text-destructive-foreground shadow-md hover:shadow-lg hover:-translate-y-0.5 active:shadow-sm active:translate-y-0",
     }
 
     const sizes = {

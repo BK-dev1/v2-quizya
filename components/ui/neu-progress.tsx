@@ -34,10 +34,12 @@ export function NeuProgressGrid({ questions, onQuestionClick, className }: NeuPr
             key={q.id}
             onClick={() => onQuestionClick?.(q.id)}
             className={cn(
-              "relative w-9 h-9 rounded-lg text-sm font-medium transition-all duration-100",
+              "relative w-9 h-9 rounded-lg text-sm font-medium transition-all duration-150",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               q.current && "ring-2 ring-primary",
-              q.answered ? "bg-primary text-primary-foreground neu-button" : "bg-background text-foreground neu-flat",
+              q.answered
+                ? "bg-primary text-primary-foreground shadow-sm hover:shadow-md"
+                : "bg-card text-foreground border border-border shadow-sm hover:shadow-md",
               q.markedForReview && "ring-2 ring-warning",
             )}
             aria-label={`Question ${q.id}${q.answered ? ", answered" : ", not answered"}${q.markedForReview ? ", marked for review" : ""}`}
@@ -57,11 +59,11 @@ export function NeuProgressGrid({ questions, onQuestionClick, className }: NeuPr
           <span>Answered</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded bg-background neu-flat" />
+          <div className="w-4 h-4 rounded bg-card border border-border" />
           <span>Unanswered</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded bg-background ring-2 ring-warning" />
+          <div className="w-4 h-4 rounded bg-card border border-border ring-2 ring-warning" />
           <span>Marked for Review</span>
         </div>
       </div>
