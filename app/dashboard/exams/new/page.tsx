@@ -114,10 +114,49 @@ export default function NewExamPage() {
   }
 
   const handleSave = async () => {
+    if (!examTitle.trim()) {
+      alert('Please enter an exam title')
+      return
+    }
+
     setIsSaving(true)
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-    setIsSaving(false)
-    setLastSaved(new Date())
+    try {
+      const response = await fetch('/api/exams', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: examTitle,
+          description: examDescription,
+          duration_minutes: duration,
+          is_public: isPublic,
+          shuffle_questions: shuffleQuestions,
+          total_questions: questions.length,
+          questions: questions.map((q, idx) => ({
+            order_index: idx,
+            question_text: q.text,
+            question_type: q.type,
+            options: q.options,
+            correct_answer: q.correctAnswer,
+            time_limit: q.timeLimit,
+            points: 1
+          }))
+        })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setLastSaved(new Date())
+        // Optionally redirect to the exam details page
+        router.push(`/dashboard/exams/${data.id}`)
+      } else {
+        alert('Failed to save exam')
+      }
+    } catch (error) {
+      console.error('Error saving exam:', error)
+      alert('Error saving exam')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const estimatedDuration = questions.reduce((acc, q) => {
@@ -343,7 +382,7 @@ export default function NewExamPage() {
       </div>
 
       {/* Public Warning Modal */}
-      <NeuModal isOpen={showPublicWarning} onClose={() => setShowPublicWarning(false)} title="Make Exam Public?">
+      <NeuModal open={showPublicWarning} onClose={() => setShowPublicWarning(false)} title="Make Exam Public?">
         <div className="space-y-4">
           <p className="text-muted-foreground">
             Public exams can be discovered and taken by anyone with the room code. Are you sure you want to make this
@@ -359,7 +398,7 @@ export default function NewExamPage() {
       </NeuModal>
 
       {/* Preview Modal */}
-      <NeuModal isOpen={showPreview} onClose={() => setShowPreview(false)} title="Exam Preview">
+      <NeuModal open={showPreview} onClose={() => setShowPreview(false)} title="Exam Preview">
         <div className="space-y-4 max-h-[60vh] overflow-y-auto">
           <div className="p-4 rounded-xl bg-muted/50">
             <h3 className="font-semibold">{examTitle || "Untitled Exam"}</h3>

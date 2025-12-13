@@ -2,7 +2,8 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
+import { useAuth } from "@/lib/hooks/use-auth"
 import { cn } from "@/lib/utils"
 import { NeuButton } from "@/components/ui/neu-button"
 import {
@@ -16,7 +17,9 @@ import {
   X,
   Bell,
   ChevronDown,
+  Loader2,
 } from "lucide-react"
+import { toast } from "sonner"
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -32,8 +35,56 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   const pathname = usePathname()
+  const router = useRouter()
+  const { user, profile, signOut, loading } = useAuth()
   const [sidebarOpen, setSidebarOpen] = React.useState(false)
   const [userMenuOpen, setUserMenuOpen] = React.useState(false)
+  const [signingOut, setSigningOut] = React.useState(false)
+
+  const handleSignOut = async () => {
+    setSigningOut(true)
+    try {
+      await signOut()
+      toast.success('Signed out successfully')
+      router.replace('/auth/login')
+    } catch (error) {
+      console.error('Error signing out:', error)
+      toast.error('Failed to sign out')
+    } finally {
+      setSigningOut(false)
+      setUserMenuOpen(false)
+    }
+  }
+
+  const getInitials = (name: string | null) => {
+    if (!name) return 'U'
+    return name
+      .split(' ')
+      .map(word => word.charAt(0))
+      .join('')
+      .toUpperCase()
+      .slice(0, 2)
+  }
+
+  const getUserDisplayName = () => {
+    return profile?.full_name || profile?.username || user?.email?.split('@')[0] || 'User'
+  }
+
+  const getUserEmail = () => {
+    return user?.email || 'No email'
+  }
+
+  // Show loading screen while auth is loading
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -95,12 +146,24 @@ export default function DashboardLayout({
             </nav>
 
             <div className="absolute bottom-4 left-4 right-4">
-              <Link href="/auth/login">
-                <NeuButton variant="ghost" className="w-full justify-start gap-3">
-                  <LogOut className="w-5 h-5" />
-                  Log Out
-                </NeuButton>
-              </Link>
+              <NeuButton 
+                variant="ghost" 
+                className="w-full justify-start gap-3"
+                onClick={handleSignOut}
+                disabled={signingOut}
+              >
+                {signingOut ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Signing Out...
+                  </>
+                ) : (
+                  <>
+                    <LogOut className="w-5 h-5" />
+                    Log Out
+                  </>
+                )}
+              </NeuButton>
             </div>
           </aside>
         </div>
@@ -141,11 +204,13 @@ export default function DashboardLayout({
               className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-sidebar-accent transition-colors"
             >
               <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                <span className="text-primary font-semibold">JD</span>
+                <span className="text-primary font-semibold">
+                  {getInitials(getUserDisplayName())}
+                </span>
               </div>
               <div className="flex-1 text-left">
-                <p className="text-sm font-medium">John Doe</p>
-                <p className="text-xs text-muted-foreground">john@school.edu</p>
+                <p className="text-sm font-medium truncate">{getUserDisplayName()}</p>
+                <p className="text-xs text-muted-foreground truncate">{getUserEmail()}</p>
               </div>
               <ChevronDown className={cn("w-4 h-4 transition-transform", userMenuOpen && "rotate-180")} />
             </button>
@@ -160,14 +225,23 @@ export default function DashboardLayout({
                   <Settings className="w-4 h-4" />
                   Settings
                 </Link>
-                <Link
-                  href="/auth/login"
-                  className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-destructive hover:bg-destructive/10"
-                  onClick={() => setUserMenuOpen(false)}
+                <button
+                  onClick={handleSignOut}
+                  disabled={signingOut}
+                  className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-destructive hover:bg-destructive/10 disabled:opacity-50"
                 >
-                  <LogOut className="w-4 h-4" />
-                  Log Out
-                </Link>
+                  {signingOut ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Signing Out...
+                    </>
+                  ) : (
+                    <>
+                      <LogOut className="w-4 h-4" />
+                      Log Out
+                    </>
+                  )}
+                </button>
               </div>
             )}
           </div>

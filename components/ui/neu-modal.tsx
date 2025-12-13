@@ -74,7 +74,7 @@ export function NeuModal({
         ref={modalRef}
         tabIndex={-1}
         className={cn(
-          "relative w-full max-w-md mx-4 bg-background rounded-2xl p-6 neu-card animate-in fade-in-0 zoom-in-95",
+          "relative w-full max-w-lg mx-4 bg-background rounded-2xl p-6 neu-card animate-in fade-in-0 zoom-in-95",
           variantStyles[variant],
           className,
         )}
