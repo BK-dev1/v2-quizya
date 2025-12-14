@@ -3,16 +3,17 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient()
+    const { id } = await params
 
     // Get exam stats
     const { data: sessions, error } = await supabase
       .from('exam_sessions')
       .select('score')
-      .eq('exam_id', params.id)
+      .eq('exam_id', id)
       .eq('status', 'completed')
 
     if (error) {

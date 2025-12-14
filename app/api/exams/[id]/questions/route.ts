@@ -3,16 +3,17 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient()
+    const { id } = await params
 
     // Get questions for exam
     const { data: questions, error } = await supabase
       .from('questions')
       .select('*')
-      .eq('exam_id', params.id)
+      .eq('exam_id', id)
       .order('order_index')
 
     if (error) {

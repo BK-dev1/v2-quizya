@@ -34,15 +34,23 @@ export default function LoginPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const error = params.get('error')
+    const verified = params.get('verified')
+    const message = params.get('message')
+    
     if (error) {
       if (error.includes('Unable to exchange external code')) {
         toast.error('Google Sign-In not configured. Please set up Google OAuth in Supabase Dashboard.')
       } else {
         toast.error(decodeURIComponent(error))
       }
-      // Clean up URL
-      window.history.replaceState({}, '', '/auth/login')
     }
+    
+    if (verified === 'true' && message) {
+      toast.success(decodeURIComponent(message))
+    }
+    
+    // Clean up URL
+    window.history.replaceState({}, '', '/auth/login')
   }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {

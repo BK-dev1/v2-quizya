@@ -3,10 +3,11 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient()
+    const { id } = await params
 
     // Get exam session
     const { data: session, error: sessionError } = await supabase
@@ -15,7 +16,7 @@ export async function GET(
         *,
         exam:exams (*)
       `)
-      .eq('id', params.id)
+      .eq('id', id)
       .single()
 
     if (sessionError || !session) {
@@ -31,16 +32,17 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient()
     const body = await request.json()
+    const { id } = await params
 
     const { data, error } = await supabase
       .from('exam_sessions')
       .update(body)
-      .eq('id', params.id)
+      .eq('id', id)
       .select()
       .single()
 

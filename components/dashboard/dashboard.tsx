@@ -23,7 +23,7 @@ import { toast } from 'sonner'
 
 export default function DashboardPage() {
   const { user, profile, loading: authLoading } = useAuth()
-  const { exams, loading: examsLoading, deleteExam } = useExams()
+  const { exams, loading: examsLoading, deleteExam, fetchExams, pagination } = useExams()
   const [stats, setStats] = useState({
     totalExams: 0,
     activeExams: 0,
@@ -31,6 +31,7 @@ export default function DashboardPage() {
     avgScore: 0
   })
   const [loadingStats, setLoadingStats] = useState(true)
+  const [currentPage, setCurrentPage] = useState(1)
 
   useEffect(() => {
     if (user) {
@@ -260,6 +261,41 @@ export default function DashboardPage() {
                 </div>
               </NeuCard>
             ))}
+          </div>
+        )}
+
+        {/* Pagination */}
+        {pagination.pages > 1 && (
+          <div className="mt-6 flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              Showing {(currentPage - 1) * pagination.limit + 1} to{' '}
+              {Math.min(currentPage * pagination.limit, pagination.total)} of{' '}
+              {pagination.total} exams
+            </p>
+            <div className="flex gap-2">
+              <NeuButton
+                variant="secondary"
+                size="sm"
+                disabled={currentPage === 1}
+                onClick={() => {
+                  setCurrentPage(currentPage - 1)
+                  fetchExams(currentPage - 1)
+                }}
+              >
+                Previous
+              </NeuButton>
+              <NeuButton
+                variant="secondary"
+                size="sm"
+                disabled={currentPage === pagination.pages}
+                onClick={() => {
+                  setCurrentPage(currentPage + 1)
+                  fetchExams(currentPage + 1)
+                }}
+              >
+                Next
+              </NeuButton>
+            </div>
           </div>
         )}
 

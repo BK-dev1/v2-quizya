@@ -122,6 +122,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { error: data.error || 'Sign up failed' }
       }
 
+      const data = await res.json()
+      
+      // Set user after successful signup (user will need to verify email)
+      if (data.user) {
+        setUser(data.user)
+      }
+
       return {}
     } catch (error) {
       return { error: String(error) }

@@ -4,20 +4,34 @@ import { useState, useEffect } from 'react'
 import { Exam } from '@/lib/types'
 import { useAuth } from './use-auth'
 
+interface PaginationInfo {
+  page: number
+  limit: number
+  total: number
+  pages: number
+}
+
 export function useExams() {
   const [exams, setExams] = useState<Exam[]>([])
   const [loading, setLoading] = useState(true)
+  const [pagination, setPagination] = useState<PaginationInfo>({
+    page: 1,
+    limit: 10,
+    total: 0,
+    pages: 0
+  })
   const { user } = useAuth()
 
-  const fetchExams = async () => {
+  const fetchExams = async (page = 1) => {
     if (!user) return
 
     setLoading(true)
     try {
-      const res = await fetch(`/api/exams?userId=${user.id}`)
+      const res = await fetch(`/api/exams?page=${page}&limit=10`)
       if (res.ok) {
-        const data = await res.json()
-        setExams(data)
+        const response = await res.json()
+        setExams(response.data)
+        setPagination(response.pagination)
       }
     } catch (error) {
       console.error('Error fetching exams:', error)
@@ -42,7 +56,8 @@ export function useExams() {
 
       if (res.ok) {
         const data = await res.json()
-        setExams(prev => [data, ...prev])
+        // Refetch exams to update list
+        await fetchExams(1)
         return data
       }
     } catch (error) {
@@ -92,9 +107,10 @@ export function useExams() {
   return {
     exams,
     loading,
+    pagination,
     createExam,
     updateExam,
     deleteExam,
-    refetch: fetchExams
+    fetchExams
   }
 }

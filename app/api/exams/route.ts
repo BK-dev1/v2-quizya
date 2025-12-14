@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient()
+    const { searchParams } = new URL(request.url)
 
     const { data: { user }, error: userError } = await supabase.auth.getUser()
 
@@ -11,18 +12,32 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get exams
-    const { data: exams, error } = await supabase
+    // Get pagination params
+    const page = parseInt(searchParams.get('page') || '1')
+    const limit = parseInt(searchParams.get('limit') || '10')
+    const offset = (page - 1) * limit
+
+    // Get exams with only essential fields for list view
+    const { data: exams, error, count } = await supabase
       .from('exams')
-      .select('*')
+      .select('id, title, description, duration_minutes, total_questions, passing_score, is_public, is_active, room_code, created_at, updated_at', { count: 'exact' })
       .eq('created_by', user.id)
       .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1)
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 })
     }
 
-    return NextResponse.json(exams || [])
+    return NextResponse.json({
+      data: exams || [],
+      pagination: {
+        page,
+        limit,
+        total: count || 0,
+        pages: Math.ceil((count || 0) / limit)
+      }
+    })
   } catch (error) {
     console.error('Error fetching exams:', error)
     return NextResponse.json({ error: 'Failed to fetch exams' }, { status: 500 })

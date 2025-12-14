@@ -29,15 +29,17 @@ export default function NewExamPage() {
   const [examTitle, setExamTitle] = React.useState("")
   const [examDescription, setExamDescription] = React.useState("")
   const [duration, setDuration] = React.useState(60)
+  const [passingScore, setPassingScore] = React.useState(70)
   const [shuffleQuestions, setShuffleQuestions] = React.useState(false)
   const [shuffleChoices, setShuffleChoices] = React.useState(false)
   const [isPublic, setIsPublic] = React.useState(false)
   const [showPublicWarning, setShowPublicWarning] = React.useState(false)
   const [showPreview, setShowPreview] = React.useState(false)
-  const [roomCode] = React.useState("XYZ789")
+  const [roomCode, setRoomCode] = React.useState("")
   const [isSaving, setIsSaving] = React.useState(false)
   const [lastSaved, setLastSaved] = React.useState<Date | null>(null)
   const [expandedQuestion, setExpandedQuestion] = React.useState<string | null>(null)
+  const [validationErrors, setValidationErrors] = React.useState<string[]>([])
 
   const [draggedIndex, setDraggedIndex] = React.useState<number | null>(null)
   const [dragOverIndex, setDragOverIndex] = React.useState<number | null>(null)
@@ -52,6 +54,19 @@ export default function NewExamPage() {
       hasTimeLimit: false,
     },
   ])
+
+  // Generate room code on mount
+  React.useEffect(() => {
+    const generateRoomCode = () => {
+      const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+      let code = ''
+      for (let i = 0; i < 6; i++) {
+        code += characters.charAt(Math.floor(Math.random() * characters.length))
+      }
+      setRoomCode(code)
+    }
+    generateRoomCode()
+  }, [])
 
   const addQuestion = (type: QuestionType) => {
     const newQuestion: Question = {
@@ -114,12 +129,38 @@ export default function NewExamPage() {
   }
 
   const handleSave = async () => {
+    // Validation
+    const errors: string[] = []
+    
     if (!examTitle.trim()) {
-      alert('Please enter an exam title')
+      errors.push('Exam title is required')
+    }
+    
+    if (questions.length === 0) {
+      errors.push('At least one question is required')
+    }
+    
+    // Check all questions have required fields
+    questions.forEach((q, idx) => {
+      if (!q.text.trim()) {
+        errors.push(`Question ${idx + 1}: Question text is required`)
+      }
+      if (q.type === 'mcq' && (!q.options || q.options.some(o => !o.trim()))) {
+        errors.push(`Question ${idx + 1}: All options are required for multiple choice`)
+      }
+      if (q.type === 'mcq' && q.correctAnswer === undefined) {
+        errors.push(`Question ${idx + 1}: Correct answer must be selected`)
+      }
+    })
+    
+    if (errors.length > 0) {
+      setValidationErrors(errors)
       return
     }
-
+    
+    setValidationErrors([])
     setIsSaving(true)
+    
     try {
       const response = await fetch('/api/exams', {
         method: 'POST',
@@ -128,9 +169,12 @@ export default function NewExamPage() {
           title: examTitle,
           description: examDescription,
           duration_minutes: duration,
+          passing_score: passingScore,
           is_public: isPublic,
           shuffle_questions: shuffleQuestions,
+          room_code: roomCode,
           total_questions: questions.length,
+          show_results_immediately: true,
           questions: questions.map((q, idx) => ({
             order_index: idx,
             question_text: q.text,
@@ -146,14 +190,14 @@ export default function NewExamPage() {
       if (response.ok) {
         const data = await response.json()
         setLastSaved(new Date())
-        // Optionally redirect to the exam details page
         router.push(`/dashboard/exams/${data.id}`)
       } else {
-        alert('Failed to save exam')
+        const error = await response.json()
+        setValidationErrors([error.error || 'Failed to save exam'])
       }
     } catch (error) {
       console.error('Error saving exam:', error)
-      alert('Error saving exam')
+      setValidationErrors(['Error saving exam'])
     } finally {
       setIsSaving(false)
     }
@@ -199,6 +243,21 @@ export default function NewExamPage() {
           </NeuButton>
         </div>
       </div>
+
+      {/* Validation Errors */}
+      {validationErrors.length > 0 && (
+        <div className="p-4 rounded-lg border border-red-300 bg-red-50">
+          <p className="font-medium text-red-900 mb-2">Please fix the following issues:</p>
+          <ul className="space-y-1 text-sm text-red-800">
+            {validationErrors.map((error, idx) => (
+              <li key={idx} className="flex gap-2">
+                <span>•</span>
+                <span>{error}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left: Question Bank & Add */}
@@ -273,6 +332,18 @@ export default function NewExamPage() {
                   min={1}
                   value={duration}
                   onChange={(e) => setDuration(Number(e.target.value))}
+                  className="w-full h-12 px-4 rounded-xl bg-input border border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Passing Score (%)</label>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={passingScore}
+                  onChange={(e) => setPassingScore(Number(e.target.value))}
                   className="w-full h-12 px-4 rounded-xl bg-input border border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 />
               </div>
