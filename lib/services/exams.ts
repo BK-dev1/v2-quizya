@@ -36,8 +36,8 @@ export async function getExam(examId: string): Promise<Exam | null> {
 }
 
 export async function getExamWithQuestions(examId: string): Promise<ExamWithQuestions | null> {
-  const supabase = await createClient()
-  
+  const supabase = await createClient();
+
   const { data, error } = await supabase
     .from('exams')
     .select(`
@@ -45,16 +45,17 @@ export async function getExamWithQuestions(examId: string): Promise<ExamWithQues
       questions (*)
     `)
     .eq('id', examId)
-    .order('order_index', { foreignTable: 'questions' })
-    .single()
+    .order('order_index', { foreignTable: 'questions' }) // order questions by order_index
+    .single();
 
   if (error) {
-    console.error('Error fetching exam with questions:', error)
-    return null
+    console.error('Error fetching exam with questions:', error);
+    return null;
   }
 
-  return data as ExamWithQuestions
+  return data as ExamWithQuestions;
 }
+
 
 export async function getUserExams(userId: string): Promise<Exam[]> {
   const supabase = await createClient()

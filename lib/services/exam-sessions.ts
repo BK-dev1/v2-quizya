@@ -82,13 +82,12 @@ export async function startExamSession(
   }
 
   // Get exam details for total_points
-  const { data: exam } = await supabase
-    .from('exams')
-    .select('questions(points)')
-    .eq('id', examId)
-    .single()
+  const { data: questions } = await supabase
+    .from('questions')
+    .select('points')
+    .eq('exam_id', examId)
 
-  const totalPoints = exam?.questions?.reduce((sum: number, q: any) => sum + q.points, 0) || 0
+  const totalPoints = questions?.reduce((sum: number, q: any) => sum + q.points, 0) || 0
 
   // Create new session
   const sessionData: ExamSessionInsert = {

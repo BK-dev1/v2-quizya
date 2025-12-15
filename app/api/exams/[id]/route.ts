@@ -153,4 +153,3 @@ export async function DELETE(
     return NextResponse.json({ error: 'Failed to delete exam' }, { status: 500 })
   }
 }
-
