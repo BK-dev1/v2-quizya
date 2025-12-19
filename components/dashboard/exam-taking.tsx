@@ -188,7 +188,7 @@ export default function TakeExamPage() {
     )
   }
 
-  if (!exam || !session || questions.length === 0) {
+  if (!exam || !session) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -197,6 +197,15 @@ export default function TakeExamPage() {
       </div>
     )
   }
+
+  if (questions.length === 0) {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <p>No questions available for this exam.</p>
+    </div>
+  )
+}
+
 
   const currentQuestion = questions[currentQuestionIndex]
   const progress = ((currentQuestionIndex + 1) / questions.length) * 100
@@ -253,7 +262,7 @@ export default function TakeExamPage() {
 
           {/* Answer Options */}
           <div className="space-y-3">
-            {currentQuestion.question_type === 'multiple_choice' && currentQuestion.options && (
+            {currentQuestion.question_type === 'mcq' && currentQuestion.options && (
               <div className="space-y-2">
                 {(currentQuestion.options as any).map((option: any, index: number) => (
                   <label key={index} className="flex items-center space-x-3 cursor-pointer">

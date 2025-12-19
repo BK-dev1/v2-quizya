@@ -69,3 +69,50 @@ export async function POST(
     return NextResponse.json({ error: 'Failed to add questions' }, { status: 500 })
   }
 }
+
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const supabase = await createClient()
+    const { id: examId } = await params
+
+    if (!examId) {
+      return NextResponse.json(
+        { error: 'Exam ID missing' },
+        { status: 400 }
+      )
+    }
+
+    const { data: questions, error } = await supabase
+      .from('questions')
+      .select(`
+        id,
+        question_text,
+        question_type,
+        options,
+        points,
+        order_index
+      `)
+      .eq('exam_id', examId)
+      .order('order_index', { ascending: true })
+
+    if (error) {
+      console.error(error)
+      return NextResponse.json(
+        { error: error.message },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json(questions)
+  } catch (err) {
+    console.error('GET questions failed:', err)
+    return NextResponse.json(
+      { error: 'Failed to fetch questions' },
+      { status: 500 }
+    )
+  }
+}
