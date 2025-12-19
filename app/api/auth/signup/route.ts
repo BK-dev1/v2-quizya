@@ -37,13 +37,16 @@ export async function POST(request: NextRequest) {
     }
   )
 
+  // Sanitize role - allow 'teacher' or 'student', default to 'student'
+  const safeRole = role === 'teacher' ? 'teacher' : 'student'
+
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
       data: {
         full_name,
-        role: role || 'student'
+        role: safeRole
       }
     }
   })
@@ -85,7 +88,7 @@ export async function POST(request: NextRequest) {
         id: data.user.id,
         email: data.user.email,
         full_name,
-        role: role || 'student'
+        role: safeRole
       })
 
     if (profileError) {

@@ -16,7 +16,7 @@ export function NeuTimer({
   showWarning = false,
   className,
 }: NeuTimerProps) {
-  const percentage = (remainingSeconds / totalSeconds) * 100
+  const percentage = totalSeconds > 0 ? (remainingSeconds / totalSeconds) * 100 : 0
   const isLowTime = remainingSeconds <= 300 // 5 minutes
 
   const formatTime = (seconds: number) => {
@@ -54,6 +54,21 @@ export function NeuTimer({
           />
         </div>
       </div>
+    )
+  }
+
+  // For text-only display (no circular variant requested)
+  if (!variant || variant === 'linear' || className?.includes('text-')) {
+    return (
+      <span
+        className={cn(
+          "font-mono font-bold tabular-nums",
+          isLowTime && "text-red-600 animate-pulse",
+          className
+        )}
+      >
+        {formatTime(remainingSeconds)}
+      </span>
     )
   }
 

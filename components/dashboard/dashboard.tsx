@@ -5,21 +5,22 @@ import { useAuth } from '@/lib/hooks/use-auth'
 import { useExams } from '@/lib/hooks/use-exams'
 import { NeuCard } from '@/components/ui/neu-card'
 import { NeuButton } from '@/components/ui/neu-button'
-import { 
-  Plus, 
-  FileEdit, 
-  Users, 
-  BarChart3, 
-  Eye, 
-  Copy, 
-  Trash2, 
-  Globe, 
+import {
+  Plus,
+  FileEdit,
+  Users,
+  BarChart3,
+  Eye,
+  Copy,
+  Trash2,
+  Globe,
   Lock,
-  Loader2,
-  ExternalLink
+  Loader2
 } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
+import StudentDashboard from '@/components/dashboard/student-dashboard'
+import { DashboardSkeleton } from '@/components/dashboard/dashboard-skeleton'
 
 export default function DashboardPage() {
   const { user, profile, loading: authLoading } = useAuth()
@@ -34,10 +35,10 @@ export default function DashboardPage() {
   const [currentPage, setCurrentPage] = useState(1)
 
   useEffect(() => {
-    if (user) {
+    if (user && profile?.role === 'teacher') {
       loadStats()
     }
-  }, [user, exams])
+  }, [user, profile, exams])
 
   const loadStats = async () => {
     try {
@@ -75,14 +76,7 @@ export default function DashboardPage() {
   }
 
   if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p>Loading dashboard...</p>
-        </div>
-      </div>
-    )
+    return <DashboardSkeleton />
   }
 
   if (!user) {
@@ -98,6 +92,11 @@ export default function DashboardPage() {
     )
   }
 
+  // Check for student role
+  if (profile?.role === 'student') {
+    return <StudentDashboard />
+  }
+
   if (profile?.role !== 'teacher') {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -109,29 +108,29 @@ export default function DashboardPage() {
   }
 
   const statsData = [
-    { 
-      label: "Total Exams", 
-      value: loadingStats ? "..." : stats.totalExams, 
-      icon: FileEdit, 
-      color: "text-blue-600" 
+    {
+      label: "Total Exams",
+      value: loadingStats ? "..." : stats.totalExams,
+      icon: FileEdit,
+      color: "text-blue-600"
     },
-    { 
-      label: "Active Exams", 
-      value: loadingStats ? "..." : stats.activeExams, 
-      icon: Globe, 
-      color: "text-green-600" 
+    {
+      label: "Active Exams",
+      value: loadingStats ? "..." : stats.activeExams,
+      icon: Globe,
+      color: "text-green-600"
     },
-    { 
-      label: "Total Attempts", 
-      value: loadingStats ? "..." : stats.totalSessions, 
-      icon: Users, 
-      color: "text-purple-600" 
+    {
+      label: "Total Attempts",
+      value: loadingStats ? "..." : stats.totalSessions,
+      icon: Users,
+      color: "text-purple-600"
     },
-    { 
-      label: "Avg. Score", 
-      value: loadingStats ? "..." : `${stats.avgScore}%`, 
-      icon: BarChart3, 
-      color: "text-orange-600" 
+    {
+      label: "Avg. Score",
+      value: loadingStats ? "..." : `${stats.avgScore}%`,
+      icon: BarChart3,
+      color: "text-orange-600"
     },
   ]
 
@@ -176,9 +175,17 @@ export default function DashboardPage() {
 
         {/* Exams List */}
         {examsLoading ? (
-          <div className="text-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-            <p>Loading exams...</p>
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <NeuCard key={i} className="p-6">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-3 w-full max-w-2xl">
+                    <div className="h-6 w-1/3 bg-slate-200 animate-pulse rounded" />
+                    <div className="h-4 w-2/3 bg-slate-200 animate-pulse rounded" />
+                  </div>
+                </div>
+              </NeuCard>
+            ))}
           </div>
         ) : exams.length === 0 ? (
           <NeuCard className="text-center p-12">
@@ -205,19 +212,18 @@ export default function DashboardPage() {
                       ) : (
                         <Lock className="h-4 w-4 text-slate-400" />
                       )}
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${
-                        exam.is_active 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-gray-100 text-gray-800'
-                      }`}>
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${exam.is_active
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-gray-100 text-gray-800'
+                        }`}>
                         {exam.is_active ? 'Active' : 'Inactive'}
                       </span>
                     </div>
-                    
+
                     {exam.description && (
                       <p className=" mb-3">{exam.description}</p>
                     )}
-                    
+
                     <div className="flex items-center gap-4 text-sm text-slate-500">
                       <span>{exam.total_questions} questions</span>
                       <span>{exam.duration_minutes} minutes</span>
@@ -241,14 +247,14 @@ export default function DashboardPage() {
                         View
                       </NeuButton>
                     </Link>
-                    
+
                     <Link href={`/dashboard/exams/${exam.id}/monitor`}>
                       <NeuButton variant="secondary" size="sm">
                         <BarChart3 className="h-4 w-4 mr-1" />
                         Monitor
                       </NeuButton>
                     </Link>
-                    
+
                     <NeuButton
                       variant="secondary"
                       size="sm"
