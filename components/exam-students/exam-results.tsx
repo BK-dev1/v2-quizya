@@ -2,231 +2,178 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useAuth } from '@/lib/hooks/use-auth'
-import { getGuestSessionData, isGuestSession, clearGuestSessionData } from '@/lib/utils/guest-session'
-import { ExamSession, Exam } from '@/lib/types'
 import { NeuCard } from '@/components/ui/neu-card'
 import { NeuButton } from '@/components/ui/neu-button'
-import { CheckCircle, XCircle, Clock, User, Mail, Trophy, Loader2 } from 'lucide-react'
-import { toast } from 'sonner'
+import { Loader2, CheckCircle, XCircle, Home, Award } from 'lucide-react'
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
+import { useWindowSize } from 'react-use'
+import Confetti from 'react-confetti'
 
-export default function ResultsPage() {
+interface ResultData {
+  score: number
+  totalPoints: number
+  percentage: number
+  passed: boolean
+  totalQuestions: number
+  correctAnswers: number
+  answers: any[]
+}
+
+export default function ExamResults() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { user } = useAuth()
-  
-  const [session, setSession] = useState<ExamSession | null>(null)
-  const [exam, setExam] = useState<Exam | null>(null)
-  const [loading, setLoading] = useState(true)
-
   const sessionId = searchParams.get('session')
-  const guestData = getGuestSessionData()
-  const isGuest = isGuestSession()
+  const [loading, setLoading] = useState(true)
+  const [result, setResult] = useState<ResultData | null>(null)
+  const { width, height } = useWindowSize()
 
   useEffect(() => {
     if (!sessionId) {
-      toast.error('No exam session found')
       router.push('/')
       return
     }
-
-    loadResults()
+    fetchResults()
   }, [sessionId])
 
-  const loadResults = async () => {
+  const fetchResults = async () => {
     try {
-      // Get exam session with exam details
       const res = await fetch(`/api/sessions/${sessionId}`)
-      if (!res.ok) {
-        toast.error('Results not found')
-        router.push('/')
-        return
-      }
+      if (!res.ok) throw new Error('Failed to fetch results')
 
-      const sessionData = await res.json()
+      const session = await res.json()
 
-      // Verify access
-      if (!isGuest && (!user || sessionData.student_id !== user.id)) {
-        toast.error('Access denied')
-        router.push('/')
-        return
-      }
+      // Calculate derived stats
+      const totalQuestions = session.exam.total_questions || 0
+      const score = Number(session.score) || 0
+      const totalPoints = session.total_points || 0 // Assuming backend provides this or we calculate
+      // Fallback if totalPoints is 0 to avoid division by zero
+      const percentage = totalPoints > 0 ? (score / totalPoints) * 100 : 0
+      const passed = percentage >= (session.exam.passing_score || 0)
 
-      if (isGuest && (!guestData || sessionData.guest_email !== guestData.guestEmail)) {
-        toast.error('Access denied')
-        router.push('/')
-        return
-      }
+      // Count correct answers from session.answers array
+      const correctCount = Array.isArray(session.answers)
+        ? session.answers.filter((a: any) => a.is_correct).length
+        : 0
 
-      setSession(sessionData)
-      setExam(sessionData.exam)
-
+      setResult({
+        score,
+        totalPoints,
+        percentage,
+        passed,
+        totalQuestions,
+        correctAnswers: correctCount,
+        answers: session.answers
+      })
     } catch (error) {
-      console.error('Error loading results:', error)
-      toast.error('Failed to load results')
-      router.push('/')
+      console.error(error)
     } finally {
       setLoading(false)
     }
   }
 
-  const handleFinish = () => {
-    if (isGuest) {
-      clearGuestSessionData()
-      router.push('/')
-    } else {
-      router.push('/dashboard')
-    }
-  }
-
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p>Loading results...</p>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-secondary/30">
+        <Loader2 className="w-10 h-10 animate-spin text-primary" />
       </div>
     )
   }
 
-  if (!session || !exam) {
+  if (!result) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-secondary/30">
         <div className="text-center">
-          <p className="text-red-600">Failed to load results</p>
+          <p className="text-destructive mb-4">Could not load results.</p>
+          <NeuButton onClick={() => router.push('/')}>Go Home</NeuButton>
         </div>
       </div>
     )
   }
 
-  const percentage = session.total_points > 0 ? Math.round((session.score || 0) / session.total_points * 100) : 0
-  const passed = percentage >= exam.passing_score
-  const answers = session.answers as any[] || []
+  const data = [
+    { name: 'Correct', value: result.correctAnswers, color: '#22c55e' },
+    { name: 'Incorrect', value: result.totalQuestions - result.correctAnswers, color: '#ef4444' },
+  ]
 
   return (
-    <div className="min-h-screen ">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className={`w-20 h-20 mx-auto mb-4 rounded-full flex items-center justify-center ${
-            passed ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
-          }`}>
-            {passed ? <Trophy className="h-10 w-10" /> : <XCircle className="h-10 w-10" />}
+    <div className="min-h-screen bg-secondary/30 py-12 px-4">
+      {result.passed && <Confetti width={width} height={height} recycle={false} numberOfPieces={200} />}
+
+      <div className="max-w-4xl mx-auto space-y-8">
+        <NeuCard className="p-8 md:p-12 text-center relative overflow-hidden">
+          {/* Header Status */}
+          <div className="mb-8 relative z-10">
+            <div className={`w-24 h-24 mx-auto mb-6 rounded-full flex items-center justify-center shadow-lg ${result.passed ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+              {result.passed ? <Award className="w-12 h-12" /> : <XCircle className="w-12 h-12" />}
+            </div>
+            <h1 className="text-4xl font-bold mb-2">
+              {result.passed ? 'Congratulations!' : 'Keep Practicing!'}
+            </h1>
+            <p className="text-lg text-muted-foreground">
+              You have {result.passed ? 'passed' : 'failed'} the exam.
+            </p>
           </div>
-          
-          <h1 className="text-3xl font-bold  mb-2">
-            {passed ? 'Congratulations!' : 'Exam Completed'}
-          </h1>
-          
-          <p className="text-xl ">
-            {passed ? 'You have passed the exam!' : 'Better luck next time!'}
-          </p>
-        </div>
 
-        {/* Results Summary */}
-        <NeuCard className="mb-8 p-6">
-          <h2 className="text-xl font-semibold  mb-4">Exam Results</h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Exam Info */}
-            <div>
-              <h3 className="font-medium  mb-3">Exam Information</h3>
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center gap-2">
-                  <span className="">Exam:</span>
-                  <span className="font-medium">{exam.title}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <User className="h-4 w-4 text-slate-400" />
-                  <span className="">Name:</span>
-                  <span>{isGuest ? guestData?.guestName : user?.email}</span>
-                </div>
-                {isGuest && (
-                  <div className="flex items-center gap-2">
-                    <Mail className="h-4 w-4 text-slate-400" />
-                    <span className="">Email:</span>
-                    <span>{guestData?.guestEmail}</span>
-                  </div>
-                )}
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-slate-400" />
-                  <span className="">Completed:</span>
-                  <span>{new Date(session.submitted_at!).toLocaleString()}</span>
-                </div>
+          {/* Score Display */}
+          <div className="grid md:grid-cols-2 gap-8 items-center mb-8">
+            <div className="h-64 relative">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={data}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={80}
+                    paddingAngle={5}
+                    dataKey="value"
+                  >
+                    {data.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                <span className="text-4xl font-bold">{Math.round(result.percentage)}%</span>
+                <span className="text-sm text-muted-foreground">Score</span>
               </div>
             </div>
 
-            {/* Score Info */}
-            <div>
-              <h3 className="font-medium  mb-3">Score Breakdown</h3>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="">Your Score:</span>
-                  <span className="font-bold text-2xl">{session.score || 0} / {session.total_points}</span>
+            <div className="flex flex-col gap-4 text-left">
+              <div className="p-4 rounded-xl bg-green-50/50 border border-green-100 flex items-center gap-4">
+                <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600">
+                  <CheckCircle className="w-5 h-5" />
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="">Percentage:</span>
-                  <span className={`font-bold text-xl ${passed ? 'text-green-600' : 'text-red-600'}`}>
-                    {percentage}%
-                  </span>
+                <div>
+                  <p className="text-sm text-muted-foreground">Correct Answers</p>
+                  <p className="text-xl font-bold">{result.correctAnswers} / {result.totalQuestions}</p>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="">Passing Score:</span>
-                  <span className="font-medium">{exam.passing_score}%</span>
+              </div>
+              <div className="p-4 rounded-xl bg-blue-50/50 border border-blue-100 flex items-center gap-4">
+                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+                  <Award className="w-5 h-5" />
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="">Result:</span>
-                  <span className={`font-bold ${passed ? 'text-green-600' : 'text-red-600'}`}>
-                    {passed ? 'PASSED' : 'FAILED'}
-                  </span>
+                <div>
+                  <p className="text-sm text-muted-foreground">Points Earned</p>
+                  <p className="text-xl font-bold">{result.score} / {result.totalPoints}</p>
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex flex-wrap items-center justify-center gap-4">
+            <NeuButton
+              onClick={() => router.push('/')}
+              className="gap-2"
+            >
+              <Home className="w-4 h-4" />
+              Back to Home
+            </NeuButton>
           </div>
         </NeuCard>
-
-        {/* Answer Review (if enabled) */}
-        {exam.show_results_immediately && answers.length > 0 && (
-          <NeuCard className="mb-8 p-6">
-            <h2 className="text-xl font-semibold  mb-4">Answer Review</h2>
-            
-            <div className="space-y-4">
-              {answers.map((answer, index) => (
-                <div key={index} className="border-l-4 border-slate-200 pl-4">
-                  <div className="flex items-start justify-between mb-2">
-                    <span className="font-medium ">Question {index + 1}</span>
-                    <div className="flex items-center gap-1">
-                      {answer.is_correct ? (
-                        <CheckCircle className="h-5 w-5 text-green-600" />
-                      ) : (
-                        <XCircle className="h-5 w-5 text-red-600" />
-                      )}
-                      <span className="text-sm ">
-                        {answer.points_earned} / {answer.points_earned + (answer.is_correct ? 0 : 1)} pts
-                      </span>
-                    </div>
-                  </div>
-                  <div className="text-sm ">
-                    <span className="font-medium">Your answer:</span> {answer.answer}
-                  </div>
-                  {!answer.is_correct && (
-                    <div className="text-sm text-green-600 mt-1">
-                      <span className="font-medium">Correct answer:</span> [Hidden for security]
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </NeuCard>
-        )}
-
-        {/* Actions */}
-        <div className="text-center">
-          <NeuButton onClick={handleFinish} size="lg">
-            {isGuest ? 'Back to Home' : 'Back to Dashboard'}
-          </NeuButton>
-        </div>
       </div>
     </div>
   )

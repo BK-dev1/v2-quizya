@@ -61,9 +61,9 @@ export async function POST(request: NextRequest) {
     // Create exam
     const { data: exam, error: examError } = await supabase
       .from('exams')
-      .insert({ 
-        ...examData, 
-        created_by: user.id 
+      .insert({
+        ...examData,
+        created_by: user.id
       })
       .select()
       .single()
@@ -74,16 +74,23 @@ export async function POST(request: NextRequest) {
 
     // Create questions if provided
     if (questions && questions.length > 0) {
-      const questionsData = questions.map((q: any) => ({
-        exam_id: exam.id,
-        question_text: q.question_text,
-        question_type: q.question_type,
-        options: q.options,
-        correct_answer: q.correct_answer,
-        order_index: q.order_index,
-        points: q.points || 1,
-        time_limit: q.time_limit || null
-      }))
+      const questionsData = questions.map((q: any) => {
+        let dbType = q.question_type
+        if (q.question_type === 'mcq') dbType = 'multiple_choice'
+        else if (q.question_type === 'truefalse') dbType = 'true_false'
+        else if (q.question_type === 'shortanswer') dbType = 'short_answer'
+
+        return {
+          exam_id: exam.id,
+          question_text: q.question_text,
+          question_type: dbType,
+          options: q.options,
+          correct_answer: String(q.correct_answer),
+          order_index: q.order_index,
+          points: q.points || 1,
+          time_limit: q.time_limit || null
+        }
+      })
 
       const { error: questionsError } = await supabase
         .from('questions')

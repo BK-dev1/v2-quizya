@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
-const VALID_TYPES = ['mcq', 'true_false', 'short_answer']
+const VALID_TYPES = ['mcq', 'truefalse', 'shortanswer', 'essay']
 
 export async function POST(
   request: NextRequest,
@@ -46,16 +46,23 @@ export async function POST(
     }
 
     // Insert questions
-    const questionsData = questions.map((q: any) => ({
-      exam_id: id,
-      question_text: q.question_text,
-      question_type: q.question_type,
-      options: q.options || null,
-      correct_answer: q.correct_answer,
-      order_index: q.order_index || null,
-      points: q.points || 1,
-      time_limit: q.time_limit || null
-    }))
+    const questionsData = questions.map((q: any) => {
+      let dbType = q.question_type
+      if (q.question_type === 'mcq') dbType = 'multiple_choice'
+      else if (q.question_type === 'truefalse') dbType = 'true_false'
+      else if (q.question_type === 'shortanswer') dbType = 'short_answer'
+
+      return {
+        exam_id: id,
+        question_text: q.question_text,
+        question_type: dbType,
+        options: q.options || null,
+        correct_answer: String(q.correct_answer),
+        order_index: q.order_index || null,
+        points: q.points || 1,
+        time_limit: q.time_limit || null
+      }
+    })
 
     const { error: questionsError } = await supabase
       .from('questions')
@@ -94,7 +101,8 @@ export async function GET(
         question_type,
         options,
         points,
-        order_index
+        order_index,
+        time_limit
       `)
       .eq('exam_id', examId)
       .order('order_index', { ascending: true })

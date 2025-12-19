@@ -53,6 +53,7 @@ export type Database = {
           proctoring_enabled: boolean
           shuffle_questions: boolean
           show_results_immediately: boolean
+          status: 'upcoming' | 'active' | 'ended'
           created_by: string
           created_at: string
           updated_at: string
@@ -70,6 +71,7 @@ export type Database = {
           proctoring_enabled?: boolean
           shuffle_questions?: boolean
           show_results_immediately?: boolean
+          status?: 'upcoming' | 'active' | 'ended'
           created_by: string
           created_at?: string
           updated_at?: string
@@ -87,6 +89,7 @@ export type Database = {
           proctoring_enabled?: boolean
           shuffle_questions?: boolean
           show_results_immediately?: boolean
+          status?: 'upcoming' | 'active' | 'ended'
           created_by?: string
           created_at?: string
           updated_at?: string
@@ -111,6 +114,7 @@ export type Database = {
           correct_answer: string
           points: number
           order_index: number
+          time_limit: number | null
           created_at: string
           updated_at: string
         }
@@ -123,6 +127,7 @@ export type Database = {
           correct_answer: string
           points: number
           order_index: number
+          time_limit?: number | null
           created_at?: string
           updated_at?: string
         }
@@ -135,6 +140,7 @@ export type Database = {
           correct_answer?: string
           points?: number
           order_index?: number
+          time_limit?: number | null
           created_at?: string
           updated_at?: string
         }
