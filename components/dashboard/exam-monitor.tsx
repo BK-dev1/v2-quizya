@@ -170,7 +170,7 @@ export default function ExamMonitor({ examId }: ExamMonitorProps) {
                             exam.status === 'ended' ? 'bg-red-100 text-red-700 border-red-200' :
                                 'bg-amber-100 text-amber-700 border-amber-200'
                             }`}>
-                            {exam.status.toUpperCase()}
+                            {exam.status?.toUpperCase()}
                         </span>
                     </h1>
                     <p className="text-muted-foreground text-sm flex items-center gap-2">

@@ -413,7 +413,7 @@ export default function ExamDetailPage() {
           </NeuCard>
 
           {/* Actions */}
-          <div className="space-y-2">
+          <div className="flex flex-col gap-2">
             <Link href={`/dashboard/exams/${examId}/results`}>
               <NeuButton className="w-full gap-2">
                 <BarChart3 className="w-4 h-4" />

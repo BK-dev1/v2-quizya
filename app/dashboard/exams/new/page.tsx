@@ -448,9 +448,9 @@ export default function NewExamPage() {
               <hr className="border-border" />
 
               {/* Proctoring Toggle */}
-              <div className="flex items-center justify-between p-4 rounded-lg border border-border bg-amber-50/50">
+              <div className="flex items-center justify-between p-4 rounded-lg border border-border bg-amber-50/10">
                 <div>
-                  <span className="text-sm font-bold flex items-center gap-2 text-amber-900">
+                  <span className="text-sm font-bold flex items-center gap-2 text-amber-200">
                     <ShieldAlert className="w-4 h-4" /> Enable Proctoring
                   </span>
                   <p className="text-xs text-muted-foreground mt-1 max-w-[300px]">
@@ -575,7 +575,7 @@ export default function NewExamPage() {
       </div>
 
       {/* Footer Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t border-border p-4 z-10">
+      <div className="fixed bottom-0 left-0 right-0  backdrop-blur-md border-t border-border p-4 z-10">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div>
             {currentStep !== 'details' && (
