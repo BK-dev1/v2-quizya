@@ -60,7 +60,13 @@ export type StudentAnswer = {
 }
 
 export type ProctoringEvent = {
-  type: 'tab_switch' | 'window_blur' | 'fullscreen_exit' | 'suspicious_activity'
+  type: 'tab_switch' | 'focus_lost' | 'fullscreen_exit' | 'suspicious_activity'
   timestamp: string
   details?: any
+}
+
+export type ProctoringData = {
+  infractions: ProctoringEvent[]
+  fullscreen_exits?: number
+  tab_switches?: number
 }

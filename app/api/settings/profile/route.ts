@@ -19,6 +19,26 @@ export async function GET(request: NextRequest) {
       .single()
 
     if (error) {
+      // If profile doesn't exist, create it (fallback for trigger failure)
+      if (error.code === 'PGRST116') { // single row not found
+        console.log('Profile missing for user, creating fallback record:', user.id)
+        const { data: newProfile, error: createError } = await supabase
+          .from('profiles')
+          .insert({
+            id: user.id,
+            email: user.email!,
+            full_name: user.user_metadata?.full_name || 'User',
+            role: user.user_metadata?.role || 'student'
+          })
+          .select()
+          .single()
+
+        if (createError) {
+          console.error('Failed to create fallback profile:', createError)
+          return NextResponse.json({ error: createError.message }, { status: 400 })
+        }
+        return NextResponse.json(newProfile)
+      }
       return NextResponse.json({ error: error.message }, { status: 400 })
     }
 

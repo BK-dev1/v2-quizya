@@ -59,44 +59,8 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  // Create profile record using service role (bypasses RLS)
-  if (data.user) {
-    const supabaseAdmin = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SERVICE_ROLE_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll()
-          },
-          setAll(cookiesToSet) {
-            try {
-              cookiesToSet.forEach(({ name, value, options }) =>
-                cookieStore.set(name, value, options)
-              )
-            } catch {
-              // Ignore errors in Server Components
-            }
-          },
-        },
-      }
-    )
-
-    const { error: profileError } = await supabaseAdmin
-      .from('profiles')
-      .insert({
-        id: data.user.id,
-        email: data.user.email,
-        full_name,
-        role: safeRole
-      })
-
-    if (profileError) {
-      console.error('Profile creation error:', profileError.message)
-      // Don't fail the signup if profile creation fails - user can still sign in
-      // The profile will be created via trigger or manually later
-    }
-  }
+  // Profile record is created automatically via database trigger (handle_new_user)
+  // which extracts full_name and role from raw_user_meta_data
 
   return NextResponse.json({ user: data.user })
 }

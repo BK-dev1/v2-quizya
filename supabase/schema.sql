@@ -118,7 +118,7 @@ CREATE POLICY "Users can update own profile" ON profiles
 
 -- RLS Policies for exams
 CREATE POLICY "Public exams are viewable by everyone" ON exams
-    FOR SELECT USING (is_public = true OR created_by = auth.uid());
+    FOR SELECT USING (is_public = true OR created_by = auth.uid() OR room_code IS NOT NULL);
 
 CREATE POLICY "Teachers can create exams" ON exams
     FOR INSERT WITH CHECK (
@@ -157,6 +157,7 @@ CREATE POLICY "Teachers can manage questions for their exams" ON questions
 CREATE POLICY "Users can view their own exam sessions" ON exam_sessions
     FOR SELECT USING (
         student_id = auth.uid() OR 
+        is_guest = true OR
         EXISTS (
             SELECT 1 FROM exams 
             WHERE exams.id = exam_sessions.exam_id 
@@ -223,8 +224,13 @@ CREATE TRIGGER update_question_bank_updated_at BEFORE UPDATE ON question_bank
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-    INSERT INTO public.profiles (id, email, full_name)
-    VALUES (NEW.id, NEW.email, NEW.raw_user_meta_data->>'full_name');
+    INSERT INTO public.profiles (id, email, full_name, role)
+    VALUES (
+        NEW.id, 
+        NEW.email, 
+        NEW.raw_user_meta_data->>'full_name',
+        COALESCE((NEW.raw_user_meta_data->>'role')::user_role, 'student'::user_role)
+    );
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

@@ -29,8 +29,34 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Use Service Role for session operations to bypass RLS during join
+    const supabaseAdmin = await createClient() // wait, I should probably create a specific admin client helper or just use the env here
+    // But createClient from @/lib/supabase/server uses cookies/anon key.
+
+    // I will use createServerClient directly with the service role key
+    const { createServerClient } = await import('@supabase/ssr')
+    const { cookies } = await import('next/headers')
+    const cookieStore = await cookies()
+
+    const adminClient = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SERVICE_ROLE_KEY!,
+      {
+        cookies: {
+          getAll() { return cookieStore.getAll() },
+          setAll(cookiesToSet) {
+            try {
+              cookiesToSet.forEach(({ name, value, options }) =>
+                cookieStore.set(name, value, options)
+              )
+            } catch { }
+          },
+        },
+      }
+    )
+
     // Check if guest already has a session for this exam
-    const { data: existingSession } = await supabase
+    const { data: existingSession } = await adminClient
       .from('exam_sessions')
       .select('*')
       .eq('exam_id', exam.id)
@@ -47,15 +73,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Get total points for the exam
-    const { data: questions } = await supabase
+    const { data: questions } = await adminClient
       .from('questions')
       .select('points')
       .eq('exam_id', exam.id)
 
     const totalPoints = questions?.reduce((sum, q) => sum + q.points, 0) || 0
 
-    // Create new guest session
-    const { data: newSession, error: sessionError } = await supabase
+    // Create new guest session using admin client to bypass RLS constraints during join
+    const { data: newSession, error: sessionError } = await adminClient
       .from('exam_sessions')
       .insert({
         exam_id: exam.id,
