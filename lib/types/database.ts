@@ -14,6 +14,10 @@ export type Database = {
           id: string
           email: string
           full_name: string | null
+          username: string | null
+          institution: string | null
+          department: string | null
+          bio: string | null
           avatar_url: string | null
           role: 'teacher' | 'student'
           created_at: string
@@ -23,6 +27,10 @@ export type Database = {
           id: string
           email: string
           full_name?: string | null
+          username?: string | null
+          institution?: string | null
+          department?: string | null
+          bio?: string | null
           avatar_url?: string | null
           role?: 'teacher' | 'student'
           created_at?: string
@@ -32,6 +40,10 @@ export type Database = {
           id?: string
           email?: string
           full_name?: string | null
+          username?: string | null
+          institution?: string | null
+          department?: string | null
+          bio?: string | null
           avatar_url?: string | null
           role?: 'teacher' | 'student'
           created_at?: string
@@ -278,6 +290,74 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      user_settings: {
+        Row: {
+          id: string
+          user_id: string
+          email_exam_start: boolean | null
+          email_submissions: boolean | null
+          email_weekly_report: boolean | null
+          push_exam_start: boolean | null
+          push_infractions: boolean | null
+          push_submissions: boolean | null
+          compact_mode: boolean | null
+          theme: string | null
+          language: string | null
+          timezone: string | null
+          date_format: string | null
+          session_timeout_minutes: number | null
+          two_factor_enabled: boolean | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          email_exam_start?: boolean | null
+          email_submissions?: boolean | null
+          email_weekly_report?: boolean | null
+          push_exam_start?: boolean | null
+          push_infractions?: boolean | null
+          push_submissions?: boolean | null
+          compact_mode?: boolean | null
+          theme?: string | null
+          language?: string | null
+          timezone?: string | null
+          date_format?: string | null
+          session_timeout_minutes?: number | null
+          two_factor_enabled?: boolean | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          email_exam_start?: boolean | null
+          email_submissions?: boolean | null
+          email_weekly_report?: boolean | null
+          push_exam_start?: boolean | null
+          push_infractions?: boolean | null
+          push_submissions?: boolean | null
+          compact_mode?: boolean | null
+          theme?: string | null
+          language?: string | null
+          timezone?: string | null
+          date_format?: string | null
+          session_timeout_minutes?: number | null
+          two_factor_enabled?: boolean | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_settings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
             referencedColumns: ["id"]
           }
         ]
