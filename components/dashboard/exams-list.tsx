@@ -102,12 +102,12 @@ export default function ExamsPage() {
   // Filter exams based on search and filter
   const filteredExams = exams.filter(exam => {
     const matchesSearch = exam.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         exam.description?.toLowerCase().includes(searchTerm.toLowerCase())
-    
-    const matchesFilter = filter === 'all' || 
-                         (filter === 'active' && exam.is_active) ||
-                         (filter === 'inactive' && !exam.is_active)
-    
+      exam.description?.toLowerCase().includes(searchTerm.toLowerCase())
+
+    const matchesFilter = filter === 'all' ||
+      (filter === 'active' && exam.is_active) ||
+      (filter === 'inactive' && !exam.is_active)
+
     return matchesSearch && matchesFilter
   })
 
@@ -161,7 +161,7 @@ export default function ExamsPage() {
                 className="pl-10"
               />
             </div>
-            
+
             <div className="flex gap-2">
               {(['all', 'active', 'inactive'] as const).map((filterType) => (
                 <NeuButton
@@ -204,45 +204,43 @@ export default function ExamsPage() {
           <div className="grid gap-6">
             {filteredExams.map((exam) => {
               const stats = examStats[exam.id] || { sessions: 0, avgScore: 0 }
-              
+
               return (
                 <NeuCard key={exam.id} className="p-6">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
                         <h3 className="text-lg font-semibold ">{exam.title}</h3>
-                        
+
                         {exam.is_public ? (
                           <Globe className="h-4 w-4 text-green-600" title="Public exam" />
                         ) : (
                           <Lock className="h-4 w-4 text-slate-400" title="Private exam" />
                         )}
-                        
+
                         <button
                           onClick={() => toggleExamStatus(exam)}
-                          className={`p-1 rounded ${
-                            exam.is_active 
-                              ? 'text-green-600 hover:bg-green-50' 
+                          className={`p-1 rounded ${exam.is_active
+                              ? 'text-green-600 hover:bg-green-50'
                               : 'text-red-600 hover:bg-red-50'
-                          }`}
+                            }`}
                           title={exam.is_active ? 'Deactivate exam' : 'Activate exam'}
                         >
                           {exam.is_active ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
                         </button>
-                        
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${
-                          exam.is_active 
-                            ? 'bg-green-100 text-green-800' 
+
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${exam.is_active
+                            ? 'bg-green-100 text-green-800'
                             : 'bg-gray-100 text-gray-800'
-                        }`}>
+                          }`}>
                           {exam.is_active ? 'Active' : 'Inactive'}
                         </span>
                       </div>
-                      
+
                       {exam.description && (
                         <p className=" mb-3 line-clamp-2">{exam.description}</p>
                       )}
-                      
+
                       <div className="flex items-center gap-6 text-sm text-slate-500 mb-3">
                         <div className="flex items-center gap-1">
                           <FileQuestion className="h-4 w-4" />
@@ -262,7 +260,7 @@ export default function ExamsPage() {
                           </div>
                         )}
                       </div>
-                      
+
                       {exam.room_code && (
                         <div className="flex items-center gap-2">
                           <span className="text-sm ">Room Code:</span>
@@ -277,21 +275,21 @@ export default function ExamsPage() {
                       )}
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-col sm:flex-row gap-2 ml-4">
                       <Link href={`/dashboard/exams/${exam.id}`}>
                         <NeuButton variant="outline" size="sm">
                           <Eye className="h-4 w-4 mr-1" />
                           View
                         </NeuButton>
                       </Link>
-                      
+
                       <Link href={`/dashboard/exams/${exam.id}/monitor`}>
                         <NeuButton variant="outline" size="sm">
                           <Users className="h-4 w-4 mr-1" />
                           Monitor
                         </NeuButton>
                       </Link>
-                      
+
                       <NeuButton
                         variant="outline"
                         size="sm"
@@ -305,9 +303,9 @@ export default function ExamsPage() {
                 </NeuCard>
               )
             })}
-          </div>
+          </div >
         )}
-      </div>
-    </div>
+      </div >
+    </div >
   )
 }

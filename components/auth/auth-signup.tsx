@@ -24,6 +24,8 @@ export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [verificationSent, setVerificationSent] = useState(false)
+  const [verificationEmail, setVerificationEmail] = useState('')
 
   const validateForm = () => {
     if (!formData.fullName.trim()) {
@@ -70,13 +72,23 @@ export default function SignupPage() {
       )
       
       if (error) {
-        toast.error(error)
+        // Provide specific error messages
+        if (error.includes('already registered') || error.includes('duplicate')) {
+          toast.error('This email is already registered. Please log in instead.')
+        } else if (error.includes('weak') || error.includes('password')) {
+          toast.error('Password is too weak. Please use a stronger password.')
+        } else {
+          toast.error(error)
+        }
       } else {
         toast.success('Account created successfully! Please check your email to verify your account.')
-        router.push('/auth/login')
+        setVerificationSent(true)
+        setVerificationEmail(formData.email)
+        // Don't redirect - show verification pending message
       }
     } catch (err) {
       toast.error('An error occurred during signup')
+      console.error('Signup error:', err)
     } finally {
       setIsLoading(false)
     }
@@ -96,6 +108,46 @@ export default function SignupPage() {
           <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
           <p>Loading...</p>
         </div>
+      </div>
+    )
+  }
+
+  // Show verification pending message
+  if (verificationSent) {
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center">
+        <NeuCard className="w-full max-w-lg p-8">
+          <div className="text-center">
+            <div className="mb-4 flex justify-center">
+              <div className="rounded-full bg-green-100 p-3">
+                <Check className="h-6 w-6 text-green-600" />
+              </div>
+            </div>
+            <h2 className="text-2xl font-bold mb-2">Verify Your Email</h2>
+            <p className="text-slate-600 mb-4">
+              We've sent a verification link to <strong>{verificationEmail}</strong>
+            </p>
+            <div className="bg-slate-50 rounded-lg p-4 mb-6 text-left">
+              <p className="text-sm text-slate-700 mb-2">
+                <strong>Next steps:</strong>
+              </p>
+              <ol className="text-sm text-slate-600 space-y-2 list-decimal list-inside">
+                <li>Check your email inbox (and spam folder)</li>
+                <li>Click the verification link in the email</li>
+                <li>Return here to sign in</li>
+              </ol>
+            </div>
+            <NeuButton
+              onClick={() => router.push('/auth/login')}
+              className="w-full mb-4"
+            >
+              Go to Login
+            </NeuButton>
+            <p className="text-xs text-slate-500">
+              Didn't receive an email? Check your spam folder or try signing up again.
+            </p>
+          </div>
+        </NeuCard>
       </div>
     )
   }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { getGuestSessionData, isGuestSession } from '@/lib/utils/guest-session'
@@ -8,41 +8,73 @@ import { Exam, Question, ExamSession } from '@/lib/types'
 import { NeuCard } from '@/components/ui/neu-card'
 import { NeuButton } from '@/components/ui/neu-button'
 import { NeuTimer } from '@/components/ui/neu-timer'
-import { NeuProgressGrid } from '@/components/ui/neu-progress'
-import { Loader2 } from 'lucide-react'
+import { NeuModal } from '@/components/ui/neu-modal'
+import {
+  Loader2,
+  ArrowRight,
+  ArrowLeft,
+  Check,
+  Clock,
+  AlertTriangle,
+  EyeOff,
+  LayoutGrid,
+  Flag,
+  WifiOff
+} from 'lucide-react'
 import { toast } from 'sonner'
+import { motion, AnimatePresence } from 'framer-motion'
+import { cn } from '@/lib/utils'
+import { createClient } from '@/lib/supabase/client'
+import { useNetworkStatus } from '@/lib/hooks/use-network-status'
 
 export default function TakeExamPage() {
+  const isOnline = useNetworkStatus()
   const router = useRouter()
   const searchParams = useSearchParams()
   const { user } = useAuth()
-  
+  const supabase = createClient()
+
   const [exam, setExam] = useState<Exam | null>(null)
   const [questions, setQuestions] = useState<Question[]>([])
   const [session, setSession] = useState<ExamSession | null>(null)
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
   const [answers, setAnswers] = useState<Record<string, string>>({})
+  const [markedQuestions, setMarkedQuestions] = useState<Set<string>>(new Set())
+  const [showQuestionMap, setShowQuestionMap] = useState(false)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [timeLeft, setTimeLeft] = useState(0)
+  const [totalTime, setTotalTime] = useState(0)
+
+  const [questionTimeLeft, setQuestionTimeLeft] = useState<number | null>(null)
+  const questionTimerRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Proctoring States
+  const [infractions, setInfractions] = useState<number>(0)
+  const [warningCount, setWarningCount] = useState(0)
+
+  // Refs for stable access in event listeners
+  const sessionRef = useRef<ExamSession | null>(null)
+  const examRef = useRef<Exam | null>(null)
+  const lastInfractionTimeRef = useRef<number>(0) // Track last infraction to prevent duplicates
+
+  useEffect(() => {
+    sessionRef.current = session
+  }, [session])
+
+  useEffect(() => {
+    examRef.current = exam
+  }, [exam])
 
   const sessionId = searchParams.get('session')
   const guestData = getGuestSessionData()
   const isGuest = isGuestSession()
 
-  useEffect(() => {
-    if (!sessionId) {
-      toast.error('No exam session found')
-      router.push('/join')
-      return
-    }
-
-    loadExamData()
-  }, [sessionId])
-
-  const loadExamData = async () => {
+  // STABLE HELPERS AT TOP
+  const loadExamData = useCallback(async () => {
+    if (!sessionId) return
     try {
-      // Get exam session
+      setLoading(true)
       const res = await fetch(`/api/sessions/${sessionId}`)
       if (!res.ok) {
         toast.error('Exam session not found')
@@ -52,7 +84,6 @@ export default function TakeExamPage() {
 
       const sessionData = await res.json()
 
-      // Verify access (either user owns the session or it's a guest session)
       if (!isGuest && (!user || sessionData.student_id !== user.id)) {
         toast.error('Access denied')
         router.push('/join')
@@ -65,10 +96,35 @@ export default function TakeExamPage() {
         return
       }
 
+      // Strict Flow: If completed, redirect immediately to results
+      if (sessionData.status === 'completed') {
+        router.replace(`/results?session=${sessionId}`)
+        return
+      }
+
       setSession(sessionData)
       setExam(sessionData.exam)
 
-      // Get questions for the exam
+      // Update refs for stable access in other effects
+      sessionRef.current = sessionData
+      examRef.current = sessionData.exam
+
+      console.log('Loaded exam data:', {
+        examId: sessionData.exam.id,
+        examTitle: sessionData.exam.title,
+        examStatus: sessionData.exam.status,
+        sessionId: sessionData.id,
+        sessionStatus: sessionData.status,
+        proctoringEnabled: sessionData.exam.proctoring_enabled
+      })
+
+      // Load previous infractions if any - but don't overwrite local count if we already have infractions
+      if (sessionData.proctoring_data && sessionData.proctoring_data.infractions) {
+        const dbInfractionCount = sessionData.proctoring_data.infractions.length
+        // Only set if we don't have a local count yet, or if DB has more (shouldn't happen but be safe)
+        setInfractions(prev => prev > 0 ? Math.max(prev, dbInfractionCount) : dbInfractionCount)
+      }
+
       const questionsRes = await fetch(`/api/exams/${sessionData.exam.id}/questions`)
       if (!questionsRes.ok) {
         toast.error('Failed to load questions')
@@ -78,18 +134,68 @@ export default function TakeExamPage() {
       const questionsData = await questionsRes.json()
       setQuestions(questionsData)
 
-      // Load existing answers if any
       if (sessionData.answers) {
-        setAnswers(sessionData.answers as Record<string, string>)
+        if (Array.isArray(sessionData.answers)) {
+          const answerMap: Record<string, string> = {}
+          sessionData.answers.forEach((ans: any) => {
+            answerMap[ans.question_id] = ans.answer
+          })
+          setAnswers(answerMap)
+        } else {
+          setAnswers(sessionData.answers as Record<string, string>)
+        }
       }
 
-      // Calculate time left
+
       if (sessionData.started_at && sessionData.exam.duration_minutes) {
         const startTime = new Date(sessionData.started_at).getTime()
-        const duration = sessionData.exam.duration_minutes * 60 * 1000 // in ms
+        const durationSeconds = sessionData.exam.duration_minutes * 60
+        setTotalTime(durationSeconds)
+
         const elapsed = Date.now() - startTime
-        const remaining = Math.max(0, duration - elapsed)
-        setTimeLeft(Math.floor(remaining / 1000)) // in seconds
+        const remaining = Math.max(0, (durationSeconds * 1000) - elapsed)
+        setTimeLeft(Math.floor(remaining / 1000))
+      }
+
+      // Auto-start session if exam is active but session hasn't started
+      if (sessionData.exam.status === 'active' && sessionData.status === 'not_started') {
+        console.log('Exam is active but session not started - auto-starting session')
+        // Update session status to in_progress
+        try {
+          const startedAt = new Date().toISOString()
+          const response = await fetch(`/api/sessions/${sessionId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              status: 'in_progress',
+              started_at: startedAt
+            })
+          })
+
+          if (response.ok) {
+            // Update local state immediately
+            const updatedSession = {
+              ...sessionData,
+              status: 'in_progress' as const,
+              started_at: startedAt
+            }
+            setSession(updatedSession)
+            sessionRef.current = updatedSession
+            console.log('Session auto-started successfully, proctoring is now active')
+
+            // Initialize the timer
+            if (sessionData.exam.duration_minutes) {
+              const durationSeconds = sessionData.exam.duration_minutes * 60
+              setTotalTime(durationSeconds)
+              setTimeLeft(durationSeconds)
+              console.log(`Timer initialized: ${durationSeconds} seconds`)
+            }
+          } else {
+            console.error('Failed to auto-start session')
+          }
+        } catch (e) {
+          console.error('Error auto-starting session:', e)
+        }
       }
 
     } catch (error) {
@@ -99,13 +205,158 @@ export default function TakeExamPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [sessionId, isGuest, user, guestData, router])
+
+  const submitExam = useCallback(async () => {
+    if (!session || !exam) return
+    if (!isOnline) {
+      toast.error('You are offline. Please check your connection before submitting.')
+      return
+    }
+    setSubmitting(true)
+    try {
+      const studentAnswers = questions.map(question => ({
+        question_id: question.id,
+        answer: answers[question.id] || '',
+        is_correct: false,
+        points_earned: 0
+      }))
+
+      const res = await fetch(`/api/sessions/${sessionId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          submitted_at: new Date().toISOString(),
+          status: 'completed',
+          answers: studentAnswers
+        })
+      })
+
+      if (!res.ok) {
+        toast.error('Failed to submit exam')
+        return
+      }
+
+      toast.success('Exam submitted successfully!')
+      if (isGuest) sessionStorage.removeItem('guestExamSession')
+      router.replace(`/results?session=${sessionId}`)
+    } catch (error) {
+      console.error('Error submitting exam:', error)
+      toast.error('Failed to submit exam')
+    } finally {
+      setSubmitting(false)
+    }
+  }, [session, exam, isOnline, questions, answers, sessionId, isGuest, router])
+
+  const handleTimeUp = useCallback(() => {
+    toast.info('Time is up! Submitting your exam...')
+    submitExam()
+  }, [submitExam])
+
+  const recordInfraction = useCallback(async (type: string) => {
+    // Debounce: Prevent duplicate infractions within 1 second
+    const now = Date.now()
+    if (now - lastInfractionTimeRef.current < 1000) {
+      console.log('Infraction debounced - too soon after last one')
+      return
+    }
+    lastInfractionTimeRef.current = now
+
+    const timestamp = new Date().toISOString()
+
+    // Use functional updates to get current values
+    let currentInfractionCount = 0
+    setInfractions(prev => {
+      currentInfractionCount = prev + 1
+      return currentInfractionCount
+    })
+
+    setWarningCount(prev => prev + 1)
+
+    // Show toast with current count
+    toast.error("Proctoring Alert: Don't leave the exam tab!", {
+      description: `Warning: Your activity is being monitored.`,
+      duration: 4000
+    })
+
+    const currentSession = sessionRef.current
+    if (!currentSession) {
+      console.log('No session found for infraction recording')
+      return
+    }
+
+    const newInfraction = { type, timestamp, warningCount: currentInfractionCount }
+    console.log('Recording infraction:', newInfraction)
+
+    try {
+      const currentData = (currentSession.proctoring_data as { infractions?: any[] }) || { infractions: [] }
+      const updatedData = {
+        ...currentData,
+        infractions: [...(currentData.infractions || []), newInfraction]
+      }
+
+      const updatedSession = { ...currentSession, proctoring_data: updatedData }
+      setSession(updatedSession)
+      sessionRef.current = updatedSession
+
+      const response = await fetch(`/api/sessions/${sessionId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ proctoring_data: updatedData })
+      })
+
+      if (!response.ok) {
+        console.error('Failed to save infraction to server:', response.statusText)
+      } else {
+        console.log('Infraction saved successfully')
+      }
+    } catch (e) {
+      console.error("Failed to record infraction", e)
+    }
+  }, [sessionId])
+
+  const startExamSession = useCallback(async () => {
+    console.log('Starting exam session...')
+    try {
+      const response = await fetch(`/api/sessions/${sessionId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'in_progress' })
+      })
+
+      if (!response.ok) {
+        console.error('Failed to start session:', response.statusText)
+        return
+      }
+
+      console.log('Session status updated to in_progress on server')
+
+      // Immediately update local state
+      setSession(prev => {
+        if (!prev) return prev
+        const updated = { ...prev, status: 'in_progress' as const }
+        sessionRef.current = updated
+        console.log('Local session status updated to in_progress')
+        return updated
+      })
+
+      // Reload exam data to ensure everything is in sync
+      await loadExamData()
+      console.log('Exam data reloaded after starting session')
+    } catch (e) {
+      console.error("Failed to start session", e)
+    }
+  }, [sessionId, loadExamData])
 
   const saveAnswer = async (questionId: string, answer: string) => {
     const newAnswers = { ...answers, [questionId]: answer }
     setAnswers(newAnswers)
 
-    // Auto-save answers
+    if (!isOnline) {
+      toast.warning('Offline: Answer saved locally only', { id: 'offline-save' })
+      return
+    }
+
     try {
       await fetch(`/api/sessions/${sessionId}`, {
         method: 'PUT',
@@ -117,233 +368,597 @@ export default function TakeExamPage() {
     }
   }
 
-  const submitExam = async () => {
-    if (!session || !exam) return
+  const toggleMarkQuestion = (questionId: string) => {
+    setMarkedQuestions(prev => {
+      const next = new Set(prev)
+      if (next.has(questionId)) {
+        next.delete(questionId)
+        toast.success("Question unmarked")
+      } else {
+        next.add(questionId)
+        toast.info("Question marked for review")
+      }
+      return next
+    })
+  }
 
-    setSubmitting(true)
-    try {
-      // Calculate score
-      let score = 0
-      const studentAnswers = questions.map(question => {
-        const studentAnswer = answers[question.id] || ''
-        const isCorrect = studentAnswer === question.correct_answer
-        const pointsEarned = isCorrect ? question.points : 0
-        score += pointsEarned
+  // EFFECTS
+  useEffect(() => {
+    if (!sessionId) {
+      toast.error('No exam session found')
+      router.push('/join')
+      return
+    }
+    loadExamData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId])
 
-        return {
-          question_id: question.id,
-          answer: studentAnswer,
-          is_correct: isCorrect,
-          points_earned: pointsEarned
-        }
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      console.log('Visibility change detected, hidden:', document.hidden)
+      const currentExam = examRef.current
+      const currentSession = sessionRef.current
+
+      console.log('Proctoring check:', {
+        proctoringEnabled: currentExam?.proctoring_enabled,
+        sessionStatus: currentSession?.status,
+        hasSession: !!currentSession
       })
 
-      // Submit the exam
-      const res = await fetch(`/api/sessions/${sessionId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          submitted_at: new Date().toISOString(),
-          status: 'completed',
-          answers: studentAnswers,
-          score
-        })
-      })
-
-      if (!res.ok) {
-        toast.error('Failed to submit exam')
+      if (!currentExam?.proctoring_enabled || !currentSession || currentSession.status !== 'in_progress') {
+        console.log('Proctoring not active, skipping infraction')
         return
       }
 
-      toast.success('Exam submitted successfully!')
-      
-      // Clear guest session data if applicable
-      if (isGuest) {
-        sessionStorage.removeItem('guestExamSession')
+      if (document.hidden) {
+        console.log('Tab switched - recording infraction')
+        recordInfraction('tab_switch')
+      }
+    }
+
+    const handleBlur = () => {
+      console.log('Window blur detected')
+      const currentExam = examRef.current
+      const currentSession = sessionRef.current
+
+      if (!currentExam?.proctoring_enabled || !currentSession || currentSession.status !== 'in_progress') {
+        console.log('Proctoring not active, skipping blur infraction')
+        return
       }
 
-      router.push(`/results?session=${sessionId}`)
-
-    } catch (error) {
-      console.error('Error submitting exam:', error)
-      toast.error('Failed to submit exam')
-    } finally {
-      setSubmitting(false)
+      console.log('Focus lost - recording infraction')
+      recordInfraction('focus_lost')
     }
-  }
 
-  const handleTimeUp = () => {
-    toast.info('Time is up! Submitting your exam...')
-    submitExam()
-  }
+    console.log('Setting up proctoring event listeners')
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('blur', handleBlur)
+
+    return () => {
+      console.log('Cleaning up proctoring event listeners')
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('blur', handleBlur)
+    }
+  }, [recordInfraction])
+
+  useEffect(() => {
+    if (!exam?.id || !session?.id) return;
+    const channel = supabase
+      .channel(`exam_${exam.id}`)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'exams',
+        filter: `id=eq.${exam.id}`,
+      }, (payload) => {
+        const newStatus = payload.new.status
+        const currentExamStatus = examRef.current?.status
+        if (newStatus === 'active' && currentExamStatus === 'upcoming') {
+          toast.success('The exam has started!')
+          setExam(prev => prev ? ({ ...prev, status: 'active' }) : null)
+          startExamSession()
+        } else if (newStatus === 'ended' && currentExamStatus !== 'ended') {
+          toast.info('The teacher has ended the exam.')
+          submitExam()
+        }
+      })
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [exam?.id, session?.id, startExamSession, submitExam])
+
+  useEffect(() => {
+    if (!exam || exam.status !== 'active' || timeLeft === 0) return
+
+    const timer = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          handleTimeUp()
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+
+    return () => clearInterval(timer)
+  }, [exam?.status, handleTimeUp])
+
+  useEffect(() => {
+    const currentQuestion = questions[currentQuestionIndex]
+
+    if (questionTimerRef.current) {
+      clearInterval(questionTimerRef.current)
+      questionTimerRef.current = null
+    }
+    setQuestionTimeLeft(null)
+
+    if (currentQuestion?.time_limit) {
+      setQuestionTimeLeft(currentQuestion.time_limit * 60)
+
+      questionTimerRef.current = setInterval(() => {
+        setQuestionTimeLeft(prev => {
+          if (prev === null) return null
+          if (prev <= 1) {
+            if (questionTimerRef.current) clearInterval(questionTimerRef.current)
+            toast.warning("Time's up for this question!")
+            if (currentQuestionIndex < questions.length - 1) {
+              setCurrentQuestionIndex(idx => idx + 1)
+            }
+            return 0
+          }
+          return prev - 1
+        })
+      }, 1000)
+    }
+
+    return () => {
+      if (questionTimerRef.current) clearInterval(questionTimerRef.current)
+    }
+  }, [currentQuestionIndex, questions])
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p>Loading exam...</p>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center space-y-4">
+          <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto" />
+          <p className="text-muted-foreground animate-pulse">Loading your exam...</p>
         </div>
       </div>
     )
   }
 
-  if (!exam || !session || questions.length === 0) {
+  if (!exam || !session) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-600">Failed to load exam</p>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <NeuCard className="max-w-md w-full p-8 text-center space-y-6">
+          <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto">
+            <AlertTriangle className="w-10 h-10 text-red-600" />
+          </div>
+          <div className="space-y-2">
+            <h1 className="text-2xl font-bold">Exam link is incorrect</h1>
+            <p className="text-muted-foreground">
+              Wait for the teacher to start the exam.
+            </p>
+          </div>
+          <NeuButton onClick={() => router.push('/join')}>Return to Join</NeuButton>
+        </NeuCard>
+      </div>
+    )
+  }
+
+  // EXAM NOT STARTED (WAITING ROOM)
+  if (exam.status === 'upcoming') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-secondary/30 p-4">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="max-w-lg w-full"
+        >
+          <NeuCard className="p-8 md:p-12 text-center space-y-8 relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-2 bg-primary animate-pulse" />
+
+            <div className="space-y-4">
+              <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center mx-auto transform rotate-12">
+                <Clock className="w-10 h-10 text-primary" />
+              </div>
+              <h1 className="text-3xl font-black tracking-tight">{exam.title}</h1>
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-secondary rounded-full text-sm font-medium text-secondary-foreground">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                Waiting Room
+              </div>
+            </div>
+
+            <div className="bg-card border-2 border-border rounded-2xl p-6 space-y-4">
+              <p className="text-muted-foreground text-lg">
+                The exam has not started yet. Please stay on this page.
+              </p>
+              <div className="flex flex-col gap-2 text-sm text-left">
+                <div className="flex justify-between items-center p-2 bg-secondary/50 rounded-lg">
+                  <span className="text-muted-foreground">Student:</span>
+                  <span className="font-bold">{isGuest ? guestData?.guestName : user?.email}</span>
+                </div>
+                <div className="flex justify-between items-center p-2 bg-secondary/50 rounded-lg">
+                  <span className="text-muted-foreground">Status:</span>
+                  <span className="font-bold text-primary">Ready to start</span>
+                </div>
+              </div>
+            </div>
+
+            <p className="text-xs text-muted-foreground">
+              Don't refresh! The exam will start automatically when the teacher begins.
+            </p>
+          </NeuCard>
+        </motion.div>
+      </div>
+    )
+  }
+
+  // EXAM ENDED
+  if (exam.status === 'ended' && session.status !== 'completed') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <NeuCard className="max-w-md w-full p-8 text-center space-y-6">
+          <div className="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mx-auto">
+            <EyeOff className="w-10 h-10 text-amber-600" />
+          </div>
+          <div className="space-y-2">
+            <h1 className="text-2xl font-bold">Exam Ended</h1>
+            <p className="text-muted-foreground">
+              This exam has already ended. If you believe this is an error, please contact your instructor.
+            </p>
+          </div>
+          <NeuButton onClick={() => router.push('/')}>Return Home</NeuButton>
+        </NeuCard>
+      </div>
+    )
+  }
+
+  // EXAM ALREADY SUBMITTED
+  if (session.status === 'completed') {
+    router.replace(`/results?session=${sessionId}`)
+    return null
+  }
+
+  if (questions.length === 0) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <p className="text-muted-foreground">No questions available for this exam.</p>
       </div>
     )
   }
 
   const currentQuestion = questions[currentQuestionIndex]
-  const progress = ((currentQuestionIndex + 1) / questions.length) * 100
+  const progressPercent = ((currentQuestionIndex + 1) / questions.length) * 100
+  const isMarked = markedQuestions.has(currentQuestion.id)
 
   return (
-    <div className="min-h-screen ">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h1 className="text-2xl font-bold ">{exam.title}</h1>
-              <p className="">
-                {isGuest ? `Taking as: ${guestData?.guestName}` : `Taking as: ${user?.email}`}
-              </p>
-            </div>
-            {timeLeft > 0 && (
-              <NeuTimer 
-                initialSeconds={timeLeft}
-                onTimeUp={handleTimeUp}
-              />
-            )}
+    <div className="min-h-screen bg-secondary/30 flex flex-col user-select-none">
+      {/* Question Map Modal */}
+      <NeuModal
+        open={showQuestionMap}
+        onClose={() => setShowQuestionMap(false)}
+        title="Question Map"
+        description="Jump to a specific question or review your progress."
+      >
+        <div className="grid grid-cols-5 gap-2 max-h-[60vh] overflow-y-auto p-1">
+          {questions.map((q, idx) => {
+            const isAnswered = !!answers[q.id]
+            const isCurrent = idx === currentQuestionIndex
+            const isMarked = markedQuestions.has(q.id)
+
+            return (
+              <button
+                key={q.id}
+                onClick={() => {
+                  setCurrentQuestionIndex(idx)
+                  setShowQuestionMap(false)
+                }}
+                className={cn(
+                  "h-12 rounded-lg flex flex-col items-center justify-center text-sm font-medium border-2 transition-all relative overflow-hidden",
+                  isCurrent
+                    ? "border-primary bg-primary/10 text-primary"
+                    : isAnswered
+                      ? "border-green-500/50 bg-green-50 text-green-700"
+                      : "border-border bg-card text-muted-foreground hover:bg-secondary",
+                  isMarked && !isCurrent && "border-amber-400 border-dashed bg-amber-50"
+                )}
+              >
+                <span>{idx + 1}</span>
+                {isMarked && (
+                  <div className="absolute top-1 right-1">
+                    <Flag className="w-3 h-3 text-amber-500 fill-amber-500" />
+                  </div>
+                )}
+              </button>
+            )
+          })}
+        </div>
+        <div className="mt-4 flex gap-4 text-xs text-muted-foreground justify-center">
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 rounded bg-green-50 border border-green-500/50" /> Answered
           </div>
-          
-          <NeuProgressGrid
-            totalQuestions={questions.length}
-            currentQuestion={currentQuestionIndex + 1}
-            answered={Object.keys(answers).length}
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 rounded bg-amber-50 border-2 border-dashed border-amber-400" /> Marked
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 rounded bg-card border-2 border-border" /> Unanswered
+          </div>
+        </div>
+      </NeuModal>
+
+      {/* Sticky Header */}
+      <header className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-border shadow-sm">
+        <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <h1 className="font-bold text-lg hidden md:block">{exam.title}</h1>
+            <div className="h-6 w-[1px] bg-border hidden md:block" />
+
+            <NeuButton
+              size="sm"
+              variant="ghost"
+              onClick={() => setShowQuestionMap(true)}
+              className="gap-2"
+            >
+              <LayoutGrid className="w-4 h-4" />
+              <span className="hidden sm:inline">Question Map</span>
+              <span className="inline sm:hidden">{currentQuestionIndex + 1} / {questions.length}</span>
+            </NeuButton>
+          </div>
+
+          <div className="flex items-center gap-4">
+            {!isOnline && (
+              <div className="flex items-center gap-2 text-xs font-bold text-red-600 bg-red-50 px-3 py-1.5 rounded-full border border-red-100 animate-pulse">
+                <WifiOff className="w-4 h-4" />
+                OFFLINE
+              </div>
+            )}
+
+            {/* Infraction Counter - only show if proctoring is enabled and student has infractions */}
+            {exam?.proctoring_enabled && infractions > 0 && (
+              <div className="flex items-center gap-2 text-xs font-bold text-orange-700 bg-orange-100 px-3 py-1.5 rounded-full border-2 border-orange-300 animate-pulse">
+                <AlertTriangle className="w-4 h-4" />
+                <span>{infractions} {infractions === 1 ? 'Warning' : 'Warnings'}</span>
+              </div>
+            )}
+
+            <div className="flex flex-col items-end">
+              <span className="text-[10px] uppercase font-bold text-muted-foreground">Time Remaining</span>
+              <NeuTimer
+                totalSeconds={totalTime}
+                remainingSeconds={timeLeft}
+                className="text-lg font-mono font-bold"
+              />
+            </div>
+          </div>
+        </div>
+        <div className="w-full h-1 bg-secondary overflow-hidden">
+          <motion.div
+            className="h-full bg-primary"
+            initial={{ width: 0 }}
+            animate={{ width: `${progressPercent}%` }}
+            transition={{ type: 'spring', bounce: 0, duration: 0.5 }}
           />
         </div>
+      </header>
 
-        {/* Question Card */}
-        <NeuCard className="mb-6 p-6">
-          <div className="mb-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm ">
-                Question {currentQuestionIndex + 1} of {questions.length}
-              </span>
-              <span className="text-sm ">
-                {currentQuestion.points} point(s)
-              </span>
-            </div>
-            <div className="w-full bg-slate-200 rounded-full h-2">
-              <div 
-                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-          </div>
-
-          <h2 className="text-lg font-medium  mb-4">
-            {currentQuestion.question_text}
-          </h2>
-
-          {/* Answer Options */}
-          <div className="space-y-3">
-            {currentQuestion.question_type === 'multiple_choice' && currentQuestion.options && (
-              <div className="space-y-2">
-                {(currentQuestion.options as any).map((option: any, index: number) => (
-                  <label key={index} className="flex items-center space-x-3 cursor-pointer">
-                    <input
-                      type="radio"
-                      name={`question-${currentQuestion.id}`}
-                      value={option.text || option}
-                      checked={answers[currentQuestion.id] === (option.text || option)}
-                      onChange={(e) => saveAnswer(currentQuestion.id, e.target.value)}
-                      className="text-blue-600"
-                    />
-                    <span className="">{option.text || option}</span>
-                  </label>
-                ))}
-              </div>
-            )}
-
-            {currentQuestion.question_type === 'true_false' && (
-              <div className="space-y-2">
-                <label className="flex items-center space-x-3 cursor-pointer">
-                  <input
-                    type="radio"
-                    name={`question-${currentQuestion.id}`}
-                    value="true"
-                    checked={answers[currentQuestion.id] === 'true'}
-                    onChange={(e) => saveAnswer(currentQuestion.id, e.target.value)}
-                    className="text-blue-600"
-                  />
-                  <span className="">True</span>
-                </label>
-                <label className="flex items-center space-x-3 cursor-pointer">
-                  <input
-                    type="radio"
-                    name={`question-${currentQuestion.id}`}
-                    value="false"
-                    checked={answers[currentQuestion.id] === 'false'}
-                    onChange={(e) => saveAnswer(currentQuestion.id, e.target.value)}
-                    className="text-blue-600"
-                  />
-                  <span className="">False</span>
-                </label>
-              </div>
-            )}
-
-            {(currentQuestion.question_type === 'short_answer' || currentQuestion.question_type === 'essay') && (
-              <textarea
-                className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                rows={currentQuestion.question_type === 'essay' ? 6 : 3}
-                placeholder="Type your answer here..."
-                value={answers[currentQuestion.id] || ''}
-                onChange={(e) => saveAnswer(currentQuestion.id, e.target.value)}
-              />
-            )}
-          </div>
-        </NeuCard>
-
-        {/* Navigation */}
-        <div className="flex items-center justify-between">
-          <NeuButton
-            variant="outline"
-            onClick={() => setCurrentQuestionIndex(Math.max(0, currentQuestionIndex - 1))}
-            disabled={currentQuestionIndex === 0}
-          >
-            Previous
-          </NeuButton>
-
-          {currentQuestionIndex < questions.length - 1 ? (
-            <NeuButton
-              onClick={() => setCurrentQuestionIndex(currentQuestionIndex + 1)}
-            >
-              Next
-            </NeuButton>
-          ) : (
-            <NeuButton
-              onClick={submitExam}
-              disabled={submitting}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              {submitting ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Submitting...
-                </>
-              ) : (
-                'Submit Exam'
-              )}
-            </NeuButton>
-          )}
+      {!isOnline && (
+        <div className="bg-red-600 text-white text-center py-2 text-sm font-medium animate-in slide-in-from-top duration-300">
+          You are currently offline. Answers will be saved locally.
         </div>
-      </div>
+      )}
+
+      {/* Main Content */}
+      <main className="flex-1 max-w-5xl w-full mx-auto px-4 py-8 md:py-12">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentQuestion.id}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.2 }}
+          >
+            <NeuCard className="p-6 md:p-10 min-h-[400px] flex flex-col justify-between relative overflow-hidden">
+              <div>
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <span className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary text-primary-foreground font-black text-lg shadow-lg">
+                      {currentQuestionIndex + 1}
+                    </span>
+                    <div className="flex flex-col">
+                      <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground opacity-70">
+                        Question
+                      </span>
+                      <span className="text-sm font-bold capitalize">
+                        {currentQuestion.question_type.replace('_', ' ')}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="flex flex-col items-end">
+                      <span className="text-[10px] uppercase font-bold text-muted-foreground">Points</span>
+                      <span className="text-lg font-black text-primary">{currentQuestion.points}</span>
+                    </div>
+                    {questionTimeLeft !== null && (
+                      <div className="flex flex-col items-end">
+                        <span className="text-[10px] uppercase font-bold text-muted-foreground">Limit</span>
+                        <div className={cn(
+                          "flex items-center gap-1.5 font-mono font-bold px-3 py-1 rounded-lg border-2",
+                          questionTimeLeft < 30
+                            ? "text-red-600 bg-red-50 border-red-200 animate-pulse"
+                            : "text-orange-600 bg-orange-50 border-orange-100"
+                        )}>
+                          <Clock className="w-3.5 h-3.5" />
+                          {Math.floor(questionTimeLeft / 60)}:{String(questionTimeLeft % 60).padStart(2, '0')}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="prose prose-lg dark:prose-invert max-w-none">
+                  <h2 className="text-2xl md:text-3xl font-black leading-tight text-foreground mb-8">
+                    {currentQuestion.question_text}
+                  </h2>
+                </div>
+
+                <div className="space-y-4 my-8">
+                  {/* Multiple Choice & MCQ */}
+                  {((currentQuestion.question_type as string) === 'multiple_choice' || (currentQuestion.question_type as string) === 'mcq') && currentQuestion.options && (
+                    <div className="grid gap-4">
+                      {(currentQuestion.options as any).map((option: any, index: number) => {
+                        const val = option.text || option
+                        const isSelected = answers[currentQuestion.id] === val
+                        return (
+                          <motion.div
+                            key={index}
+                            whileHover={{ scale: 1.01 }}
+                            whileTap={{ scale: 0.99 }}
+                          >
+                            <label
+                              className={cn(
+                                "flex items-center p-6 rounded-2xl border-4 cursor-pointer transition-all duration-200",
+                                isSelected
+                                  ? "border-primary bg-primary/5 shadow-[8px_8px_0px_0px_rgba(var(--primary-rgb),0.1)]"
+                                  : "border-border bg-card hover:border-primary/50 hover:bg-secondary/50"
+                              )}
+                            >
+                              <input
+                                type="radio"
+                                name={`question-${currentQuestion.id}`}
+                                value={val}
+                                checked={isSelected}
+                                onChange={(e) => saveAnswer(currentQuestion.id, e.target.value)}
+                                className="sr-only"
+                              />
+                              <div className={cn(
+                                "w-8 h-8 rounded-xl border-4 flex items-center justify-center mr-6 transition-all duration-300",
+                                isSelected
+                                  ? "border-primary bg-primary text-primary-foreground transform rotate-12 scale-110"
+                                  : "border-muted-foreground/30"
+                              )}>
+                                {isSelected && <Check className="w-5 h-5 stroke-[4px]" />}
+                              </div>
+                              <span className="text-xl font-bold tracking-tight">{val}</span>
+                            </label>
+                          </motion.div>
+                        )
+                      })}
+                    </div>
+                  )}
+
+                  {/* True / False */}
+                  {((currentQuestion.question_type as string) === 'true_false' || (currentQuestion.question_type as string) === 'truefalse') && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                      {['true', 'false'].map((val) => {
+                        const isSelected = answers[currentQuestion.id] === val
+                        return (
+                          <motion.div key={val} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                            <label
+                              className={cn(
+                                "flex flex-col items-center justify-center p-10 rounded-3xl border-4 cursor-pointer transition-all duration-300 h-48",
+                                isSelected
+                                  ? "border-primary bg-primary/5 shadow-[8px_8px_0px_0px_rgba(var(--primary-rgb),0.1)]"
+                                  : "border-border bg-card hover:border-primary/50 hover:bg-secondary/50"
+                              )}
+                            >
+                              <input
+                                type="radio"
+                                name={`question-${currentQuestion.id}`}
+                                value={val}
+                                checked={isSelected}
+                                onChange={(e) => saveAnswer(currentQuestion.id, e.target.value)}
+                                className="sr-only"
+                              />
+                              <span className={cn(
+                                "text-3xl font-black capitalize transition-all duration-300",
+                                isSelected ? "text-primary scale-110" : "text-foreground"
+                              )}>
+                                {val}
+                              </span>
+                            </label>
+                          </motion.div>
+                        )
+                      })}
+                    </div>
+                  )}
+
+                  {/* Text Inputs */}
+                  {((currentQuestion.question_type as string) === 'short_answer' || (currentQuestion.question_type as string) === 'shortanswer' || (currentQuestion.question_type as string) === 'essay') && (
+                    <div className="relative group">
+                      <textarea
+                        className="w-full p-6 text-xl font-medium border-4 border-border rounded-3xl focus:ring-8 focus:ring-primary/10 focus:border-primary transition-all outline-none bg-card resize-y min-h-[200px] shadow-sm group-hover:shadow-md"
+                        rows={currentQuestion.question_type === 'essay' ? 10 : 5}
+                        placeholder="Start typing your answer here..."
+                        value={answers[currentQuestion.id] || ''}
+                        onChange={(e) => saveAnswer(currentQuestion.id, e.target.value)}
+                      />
+                      <div className="absolute bottom-6 right-6 flex items-center gap-2 px-3 py-1 bg-secondary rounded-full text-[10px] font-black uppercase text-muted-foreground border-2 border-border shadow-sm">
+                        <span>Words: {((answers[currentQuestion.id] || '').trim().split(/\s+/).filter(Boolean).length)}</span>
+                        <span className="opacity-30">|</span>
+                        <span>Chars: {(answers[currentQuestion.id] || '').length}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Action Bar */}
+              <div className="mt-12 flex items-center justify-between pt-8 border-t-4 border-dashed border-border">
+                <div className="flex gap-4">
+                  <NeuButton
+                    variant="ghost"
+                    onClick={() => setCurrentQuestionIndex(Math.max(0, currentQuestionIndex - 1))}
+                    disabled={currentQuestionIndex === 0}
+                    className="gap-3 px-6 h-14 rounded-2xl font-bold"
+                  >
+                    <ArrowLeft className="w-5 h-5 stroke-[3px]" />
+                    <span className="hidden sm:inline">Previous</span>
+                  </NeuButton>
+
+                  <NeuButton
+                    variant="ghost"
+                    onClick={() => toggleMarkQuestion(currentQuestion.id)}
+                    className={cn(
+                      "gap-3 px-6 h-14 rounded-2xl font-bold border-4",
+                      isMarked
+                        ? "text-amber-600 bg-amber-50 border-amber-200 hover:bg-amber-100"
+                        : "text-muted-foreground border-transparent hover:border-border"
+                    )}
+                  >
+                    <Flag className={cn("w-5 h-5", isMarked ? "fill-amber-600 stroke-[3px]" : "stroke-[2px]")} />
+                    <span className="hidden sm:inline">{isMarked ? 'Question Marked' : 'Mark for Review'}</span>
+                  </NeuButton>
+                </div>
+
+                {currentQuestionIndex < questions.length - 1 ? (
+                  <NeuButton
+                    onClick={() => setCurrentQuestionIndex(currentQuestionIndex + 1)}
+                    className="gap-3 px-8 h-14 rounded-2xl font-black text-lg shadow-[8px_8px_0px_0px_rgba(var(--primary-rgb),0.2)] hover:shadow-none translate-y-[-4px] hover:translate-y-0"
+                  >
+                    Next Question
+                    <ArrowRight className="w-5 h-5 stroke-[3px]" />
+                  </NeuButton>
+                ) : (
+                  <NeuButton
+                    onClick={submitExam}
+                    disabled={submitting}
+                    className="bg-green-600 hover:bg-green-700 text-white gap-3 px-8 h-14 rounded-2xl font-black text-lg shadow-[8px_8px_0px_0px_rgba(22,163,74,0.2)] hover:shadow-none translate-y-[-4px] hover:translate-y-0"
+                  >
+                    {submitting ? (
+                      <Loader2 className="w-6 h-6 animate-spin" />
+                    ) : (
+                      <>
+                        Complete & Submit
+                        <Check className="w-6 h-6 stroke-[4px]" />
+                      </>
+                    )}
+                  </NeuButton>
+                )}
+              </div>
+            </NeuCard>
+          </motion.div>
+        </AnimatePresence>
+      </main>
     </div>
   )
 }

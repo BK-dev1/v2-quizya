@@ -1,0 +1,393 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useRouter, useParams } from 'next/navigation'
+import { NeuCard, NeuCardHeader, NeuCardTitle, NeuCardContent } from '@/components/ui/neu-card'
+import { NeuButton } from '@/components/ui/neu-button'
+import { 
+  BarChart3, 
+  Users, 
+  TrendingUp, 
+  CheckCircle, 
+  XCircle,
+  Download,
+  Loader2,
+  ArrowLeft,
+  ChevronDown
+} from 'lucide-react'
+import { toast } from 'sonner'
+import Link from 'next/link'
+
+interface ExamSession {
+  id: string
+  student_id: string | null
+  guest_name: string | null
+  guest_email: string | null
+  is_guest: boolean
+  score: number
+  total_points: number
+  status: string
+  submitted_at: string | null
+  answers: any[]
+  student: {
+    id: string
+    email: string
+    full_name: string
+  } | null
+}
+
+interface QuestionStat {
+  id: string
+  question_text: string
+  correct_count: number
+  total_attempted: number
+  correct_percentage: number
+  points: number
+}
+
+interface ExamResultsData {
+  exam: any
+  sessions: ExamSession[]
+  questions: any[]
+  statistics: {
+    totalAttempts: number
+    completedAttempts: number
+    avgScore: number
+    passedCount: number
+    failedCount: number
+    passPercentage: number
+  }
+  questionStats: QuestionStat[]
+}
+
+export default function ExamResultsPage() {
+  const router = useRouter()
+  const params = useParams()
+  const examId = params.id as string
+
+  const [data, setData] = useState<ExamResultsData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [expandedStudents, setExpandedStudents] = useState<Set<string>>(new Set())
+
+  useEffect(() => {
+    loadResults()
+  }, [examId])
+
+  const loadResults = async () => {
+    try {
+      const res = await fetch(`/api/exams/${examId}/results`)
+      if (!res.ok) {
+        toast.error('Failed to load exam results')
+        router.push('/dashboard/exams')
+        return
+      }
+
+      const resultsData = await res.json()
+      setData(resultsData)
+    } catch (error) {
+      console.error('Error loading results:', error)
+      toast.error('Failed to load exam results')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const toggleStudentExpand = (studentId: string) => {
+    const newExpanded = new Set(expandedStudents)
+    if (newExpanded.has(studentId)) {
+      newExpanded.delete(studentId)
+    } else {
+      newExpanded.add(studentId)
+    }
+    setExpandedStudents(newExpanded)
+  }
+
+  const downloadCSV = () => {
+    if (!data) return
+
+    let csv = 'Student Name,Email,Score,Total Points,Percentage,Status\n'
+
+    const completedSessions = data.sessions.filter(s => s.status === 'completed')
+    for (const session of completedSessions) {
+      const studentName = session.is_guest 
+        ? session.guest_name 
+        : session.student?.full_name || session.student?.email || 'Unknown'
+      const email = session.is_guest ? session.guest_email : session.student?.email || ''
+      const percentage = session.total_points > 0
+        ? Math.round((session.score / session.total_points) * 100)
+        : 0
+      const passed = percentage >= data.exam.passing_score ? 'Passed' : 'Failed'
+
+      csv += `"${studentName}","${email}",${session.score},${session.total_points},${percentage}%,"${passed}"\n`
+    }
+
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${data.exam.title}-results.csv`
+    a.click()
+    window.URL.revokeObjectURL(url)
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    )
+  }
+
+  if (!data) {
+    return (
+      <div className="text-center py-12">
+        <h2 className="text-2xl font-bold mb-4">Results not found</h2>
+        <Link href="/dashboard/exams">
+          <NeuButton>Back to Exams</NeuButton>
+        </Link>
+      </div>
+    )
+  }
+
+  const completedSessions = data.sessions.filter(s => s.status === 'completed')
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center gap-4">
+        <Link href={`/dashboard/exams/${examId}`}>
+          <NeuButton variant="ghost" size="sm">
+            <ArrowLeft className="w-4 h-4" />
+          </NeuButton>
+        </Link>
+        <div className="flex-1">
+          <h1 className="text-3xl font-bold">Exam Results</h1>
+          <p className="text-muted-foreground">{data.exam.title}</p>
+        </div>
+        <NeuButton 
+          onClick={downloadCSV}
+          className="gap-2"
+        >
+          <Download className="w-4 h-4" />
+          Export CSV
+        </NeuButton>
+      </div>
+
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <NeuCard>
+          <NeuCardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Total Submissions</p>
+                <p className="text-3xl font-bold">{data.statistics.completedAttempts}</p>
+              </div>
+              <Users className="h-8 w-8 text-blue-500 opacity-50" />
+            </div>
+          </NeuCardContent>
+        </NeuCard>
+
+        <NeuCard>
+          <NeuCardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Average Score</p>
+                <p className="text-3xl font-bold">{data.statistics.avgScore}%</p>
+              </div>
+              <TrendingUp className="h-8 w-8 text-green-500 opacity-50" />
+            </div>
+          </NeuCardContent>
+        </NeuCard>
+
+        <NeuCard>
+          <NeuCardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Passed</p>
+                <p className="text-3xl font-bold text-green-600">
+                  {data.statistics.passedCount}
+                  <span className="text-lg text-muted-foreground ml-1">
+                    ({data.statistics.passPercentage}%)
+                  </span>
+                </p>
+              </div>
+              <CheckCircle className="h-8 w-8 text-green-500 opacity-50" />
+            </div>
+          </NeuCardContent>
+        </NeuCard>
+
+        <NeuCard>
+          <NeuCardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Failed</p>
+                <p className="text-3xl font-bold text-red-600">
+                  {data.statistics.failedCount}
+                </p>
+              </div>
+              <XCircle className="h-8 w-8 text-red-500 opacity-50" />
+            </div>
+          </NeuCardContent>
+        </NeuCard>
+      </div>
+
+      {/* Question Performance */}
+      <NeuCard>
+        <NeuCardHeader>
+          <NeuCardTitle className="flex items-center gap-2">
+            <BarChart3 className="h-5 w-5" />
+            Question Performance
+          </NeuCardTitle>
+        </NeuCardHeader>
+        <NeuCardContent>
+          <div className="space-y-4">
+            {data.questionStats.map((question, index) => {
+              const correctPercentage = question.correct_percentage
+              return (
+                <div key={question.id} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <p className="font-medium">
+                        Q{index + 1}: {question.question_text.substring(0, 50)}...
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {question.correct_count}/{question.total_attempted} correct
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-2xl font-bold text-blue-600">
+                        {correctPercentage}%
+                      </p>
+                    </div>
+                  </div>
+                  <div className="w-full bg-slate-200 rounded-full h-2">
+                    <div
+                      className="bg-blue-600 h-2 rounded-full transition-all"
+                      style={{ width: `${correctPercentage}%` }}
+                    />
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </NeuCardContent>
+      </NeuCard>
+
+      {/* Student Submissions */}
+      <NeuCard>
+        <NeuCardHeader>
+          <NeuCardTitle>Student Submissions</NeuCardTitle>
+        </NeuCardHeader>
+        <NeuCardContent>
+          {completedSessions.length === 0 ? (
+            <p className="text-muted-foreground">No submissions yet</p>
+          ) : (
+            <div className="space-y-2">
+              {completedSessions.map((session) => {
+                const studentName = session.is_guest
+                  ? session.guest_name
+                  : session.student?.full_name || session.student?.email || 'Unknown'
+                const studentEmail = session.is_guest
+                  ? session.guest_email
+                  : session.student?.email || ''
+                const percentage = session.total_points > 0
+                  ? Math.round((session.score / session.total_points) * 100)
+                  : 0
+                const passed = percentage >= data.exam.passing_score
+                const isExpanded = expandedStudents.has(session.id)
+
+                return (
+                  <div key={session.id} className="border border-slate-200 rounded-lg">
+                    <button
+                      onClick={() => toggleStudentExpand(session.id)}
+                      className="w-full p-4 flex items-center justify-between hover:bg-slate-50"
+                    >
+                      <div className="flex items-center gap-4 flex-1 text-left">
+                        <div className="flex-1">
+                          <p className="font-medium">{studentName}</p>
+                          <p className="text-sm text-muted-foreground">{studentEmail}</p>
+                        </div>
+                        <div className="text-right">
+                          <div className="flex items-center gap-2">
+                            <span className="text-2xl font-bold">{percentage}%</span>
+                            {passed ? (
+                              <CheckCircle className="h-5 w-5 text-green-600" />
+                            ) : (
+                              <XCircle className="h-5 w-5 text-red-600" />
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            {session.score} / {session.total_points} points
+                          </p>
+                        </div>
+                      </div>
+                      <ChevronDown
+                        className={`h-5 w-5 text-muted-foreground transition-transform ${
+                          isExpanded ? 'rotate-180' : ''
+                        }`}
+                      />
+                    </button>
+
+                    {isExpanded && (
+                      <div className="border-t border-slate-200 p-4 bg-slate-50 space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <p className="text-sm text-muted-foreground">Submitted At</p>
+                            <p className="font-medium">
+                              {session.submitted_at
+                                ? new Date(session.submitted_at).toLocaleString()
+                                : 'N/A'}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Status</p>
+                            <p className="font-medium capitalize">{session.status}</p>
+                          </div>
+                        </div>
+
+                        <Link href={`/dashboard/exams/${examId}/sessions/${session.id}`}>
+                          <NeuButton variant="secondary" className="w-full">
+                            View Detailed Performance
+                          </NeuButton>
+                        </Link>
+
+                        {/* Answer Details */}
+                        {session.answers && (
+                          <div className="mt-4 pt-4 border-t border-slate-200">
+                            <p className="font-medium mb-3">Answer Details</p>
+                            <div className="space-y-2">
+                              {(session.answers as any[]).map((answer, idx) => (
+                                <div
+                                  key={idx}
+                                  className="p-3 bg-white rounded border border-slate-200 flex items-start gap-3"
+                                >
+                                  <div className="flex-1">
+                                    <p className="text-sm font-medium">Question {answer.question_id}</p>
+                                    <p className="text-sm text-muted-foreground">
+                                      Answer: {answer.answer || 'Not answered'}
+                                    </p>
+                                  </div>
+                                  <div className="shrink-0">
+                                    {answer.is_correct ? (
+                                      <CheckCircle className="h-5 w-5 text-green-600" />
+                                    ) : (
+                                      <XCircle className="h-5 w-5 text-red-600" />
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </NeuCardContent>
+      </NeuCard>
+    </div>
+  )
+}

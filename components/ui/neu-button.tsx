@@ -4,7 +4,7 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 
 export interface NeuButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: "primary" | "secondary" | "ghost" | "destructive"
+  variant?: 'primary' | 'secondary' | 'ghost' | 'destructive' | 'outline'
   size?: "sm" | "md" | "lg"
 }
 
@@ -21,6 +21,8 @@ const NeuButton = React.forwardRef<HTMLButtonElement, NeuButtonProps>(
       ghost: "bg-transparent text-foreground hover:bg-secondary active:bg-secondary/80",
       destructive:
         "bg-destructive text-destructive-foreground shadow-md hover:shadow-lg hover:-translate-y-0.5 active:shadow-sm active:translate-y-0",
+      outline:
+        "border-2 border-border bg-background hover:bg-secondary hover:text-secondary-foreground shadow-sm hover:shadow-md hover:-translate-y-0.5 active:translate-y-0",
     }
 
     const sizes = {

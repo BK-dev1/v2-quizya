@@ -61,19 +61,6 @@ export default function QuestionBankPage() {
     } finally {
       setLoading(false)
     }
-  } 
-              ? Math.round(sessions.reduce((sum, s) => sum + (s.score || 0), 0) / sessions.length / 10) // Convert to 5-star scale
-              : 0
-          }
-        })
-      )
-
-      setPublicExams(examsWithStats)
-    } catch (error) {
-      console.error('Error loading public exams:', error)
-    } finally {
-      setLoading(false)
-    }
   }
 
   // Filter exams based on search and category

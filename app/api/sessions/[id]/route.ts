@@ -3,10 +3,11 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient()
+    const { id } = await params
 
     // Get exam session
     const { data: session, error: sessionError } = await supabase
@@ -15,7 +16,7 @@ export async function GET(
         *,
         exam:exams (*)
       `)
-      .eq('id', params.id)
+      .eq('id', id)
       .single()
 
     if (sessionError || !session) {
@@ -29,18 +30,53 @@ export async function GET(
   }
 }
 
+// Import submitExamSession
+import { submitExamSession } from '@/lib/services/exam-sessions'
+
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient()
     const body = await request.json()
+    const { id } = await params
+
+    // If submitting the exam, use the secure service
+    if (body.status === 'completed') {
+      // Pass answers to the service for server-side grading
+      // We expect body.answers to be in the format required by submitExamSession
+      // Note: submitExamSession expects StudentAnswer[], but body.answers might be Record<string, string>
+      // The frontend currently sends an array of StudentAnswer objects, which matches.
+
+      try {
+        const result = await submitExamSession(id, body.answers)
+
+        if (!result) {
+          return NextResponse.json({ error: 'Failed to submit exam' }, { status: 500 })
+        }
+
+        return NextResponse.json(result)
+      } catch (error: any) {
+        if (error.message === 'Time limit exceeded') {
+          return NextResponse.json({ error: 'Time limit exceeded. Your submission was too late.' }, { status: 403 })
+        }
+        throw error // Rethrow to be caught by outer catch
+      }
+    }
+
+    // For other updates (e.g. auto-save), prevent updating sensitive fields
+    const { score, total_points, ...safeBody } = body
+
+    // Also prevent setting status to completed directly without validation
+    if (safeBody.status === 'completed') {
+      delete safeBody.status
+    }
 
     const { data, error } = await supabase
       .from('exam_sessions')
-      .update(body)
-      .eq('id', params.id)
+      .update(safeBody)
+      .eq('id', id)
       .select()
       .single()
 

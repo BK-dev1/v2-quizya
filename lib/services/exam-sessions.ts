@@ -3,7 +3,7 @@ import { ExamSession, ExamSessionInsert, ExamSessionUpdate, StudentAnswer } from
 
 export async function createExamSession(session: ExamSessionInsert): Promise<ExamSession | null> {
   const supabase = await createClient()
-  
+
   const { data, error } = await supabase
     .from('exam_sessions')
     .insert(session)
@@ -20,7 +20,7 @@ export async function createExamSession(session: ExamSessionInsert): Promise<Exa
 
 export async function getExamSession(examId: string, studentId?: string, guestEmail?: string): Promise<ExamSession | null> {
   const supabase = await createClient()
-  
+
   let query = supabase
     .from('exam_sessions')
     .select('*')
@@ -46,7 +46,7 @@ export async function getExamSession(examId: string, studentId?: string, guestEm
 
 export async function updateExamSession(sessionId: string, updates: ExamSessionUpdate): Promise<ExamSession | null> {
   const supabase = await createClient()
-  
+
   const { data, error } = await supabase
     .from('exam_sessions')
     .update(updates)
@@ -63,16 +63,16 @@ export async function updateExamSession(sessionId: string, updates: ExamSessionU
 }
 
 export async function startExamSession(
-  examId: string, 
-  studentId?: string, 
-  guestName?: string, 
+  examId: string,
+  studentId?: string,
+  guestName?: string,
   guestEmail?: string
 ): Promise<ExamSession | null> {
   const supabase = await createClient()
-  
+
   // First check if session already exists
   const existingSession = await getExamSession(examId, studentId, guestEmail)
-  
+
   if (existingSession) {
     // Update existing session to mark as started
     return updateExamSession(existingSession.id, {
@@ -82,13 +82,12 @@ export async function startExamSession(
   }
 
   // Get exam details for total_points
-  const { data: exam } = await supabase
-    .from('exams')
-    .select('questions(points)')
-    .eq('id', examId)
-    .single()
+  const { data: questions } = await supabase
+    .from('questions')
+    .select('points')
+    .eq('exam_id', examId)
 
-  const totalPoints = exam?.questions?.reduce((sum: number, q: any) => sum + q.points, 0) || 0
+  const totalPoints = questions?.reduce((sum: number, q: any) => sum + q.points, 0) || 0
 
   // Create new session
   const sessionData: ExamSessionInsert = {
@@ -114,25 +113,102 @@ export async function startExamSession(
 }
 
 export async function submitExamSession(
-  sessionId: string, 
+  sessionId: string,
   answers: StudentAnswer[]
 ): Promise<ExamSession | null> {
   const supabase = await createClient()
-  
-  // Calculate score
-  const totalPointsEarned = answers.reduce((sum, answer) => sum + answer.points_earned, 0)
-  
+
+  // 1. Get the session to find the exam_id
+  const { data: session, error: sessionError } = await supabase
+    .from('exam_sessions')
+    .select('exam_id, started_at')
+    .eq('id', sessionId)
+    .single()
+
+  if (sessionError || !session) {
+    console.error('Error fetching session:', sessionError)
+    return null
+  }
+
+  // 2. Fetch all questions for this exam AND exam duration
+  const { data: questions, error: questionsError } = await supabase
+    .from('questions')
+    .select('id, question_type, correct_answer, points')
+    .eq('exam_id', session.exam_id)
+
+  const { data: exam, error: examError } = await supabase
+    .from('exams')
+    .select('duration_minutes, status')
+    .eq('id', session.exam_id)
+    .single()
+
+  if (questionsError || !questions || examError || !exam) {
+    console.error('Error fetching exam data:', questionsError || examError)
+    return null
+  }
+
+  // 2.5 Validation Logic (Time Check)
+  if (session.started_at && exam.duration_minutes) {
+    const startTime = new Date(session.started_at).getTime()
+    const now = new Date().getTime()
+    const allowedDurationMs = exam.duration_minutes * 60 * 1000
+    const gracePeriodMs = 2 * 60 * 1000 // 2 minutes grace
+    const deadline = startTime + allowedDurationMs + gracePeriodMs
+
+    if (now > deadline) {
+      console.error(`Submission rejected: Time limit exceeded. Now: ${now}, Deadline: ${deadline}`)
+      throw new Error('Time limit exceeded')
+    }
+  }
+
+  // 3. Calculate score and validate answers
+  let totalScore = 0
+
+  // Create a map for faster lookup
+  const questionMap = new Map(questions.map(q => [q.id, q]))
+
+  const validatedAnswers: StudentAnswer[] = answers.map(ans => {
+    const question = questionMap.get(ans.question_id)
+    if (!question) {
+      // Question not found or invalid
+      return { ...ans, is_correct: false, points_earned: 0 }
+    }
+
+    let isCorrect = false
+
+    if (question.question_type === 'essay') {
+      // Essays require manual grading, set to 0 for now
+      isCorrect = false
+    } else if (question.question_type === 'short_answer') {
+      // Case-insensitive comparison
+      isCorrect = (ans.answer || '').trim().toLowerCase() === (question.correct_answer || '').trim().toLowerCase()
+    } else {
+      // Exact match for multiple choice / true_false
+      isCorrect = ans.answer === question.correct_answer
+    }
+
+    const pointsEarned = isCorrect ? question.points : 0
+    totalScore += pointsEarned
+
+    return {
+      question_id: ans.question_id,
+      answer: ans.answer,
+      is_correct: isCorrect,
+      points_earned: pointsEarned
+    }
+  })
+
   return updateExamSession(sessionId, {
     submitted_at: new Date().toISOString(),
     status: 'completed',
-    answers: answers as any,
-    score: totalPointsEarned
+    answers: validatedAnswers as any,
+    score: totalScore
   })
 }
 
 export async function getStudentExamSessions(studentId: string): Promise<ExamSession[]> {
   const supabase = await createClient()
-  
+
   const { data, error } = await supabase
     .from('exam_sessions')
     .select(`
@@ -152,7 +228,7 @@ export async function getStudentExamSessions(studentId: string): Promise<ExamSes
 
 export async function getExamSessions(examId: string): Promise<ExamSession[]> {
   const supabase = await createClient()
-  
+
   const { data, error } = await supabase
     .from('exam_sessions')
     .select(`
@@ -171,12 +247,12 @@ export async function getExamSessions(examId: string): Promise<ExamSession[]> {
 }
 
 export async function addProctoringEvent(
-  sessionId: string, 
-  eventType: string, 
+  sessionId: string,
+  eventType: string,
   details?: any
 ): Promise<boolean> {
   const supabase = await createClient()
-  
+
   // Get current proctoring data
   const { data: session } = await supabase
     .from('exam_sessions')
