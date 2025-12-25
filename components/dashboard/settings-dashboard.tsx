@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useAuth } from "@/lib/hooks/use-auth"
+import { useTheme } from "next-themes"
 import { NeuCard } from "@/components/ui/neu-card"
 import { NeuButton } from "@/components/ui/neu-button"
 import { NeuInput } from "@/components/ui/neu-input"
@@ -36,6 +37,7 @@ interface NotificationSettings {
 
 export default function SettingsPage() {
   const { user, profile } = useAuth()
+  const { theme, setTheme } = useTheme()
   const [activeTab, setActiveTab] = useState<SettingsTab>("profile")
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -69,6 +71,7 @@ export default function SettingsPage() {
   // Language state
   const [language, setLanguage] = useState("en")
   const [timezone, setTimezone] = useState("America/New_York")
+  const [dateFormat, setDateFormat] = useState("MM/DD/YYYY")
 
   useEffect(() => {
     if (user && profile) {
@@ -93,22 +96,22 @@ export default function SettingsPage() {
       if (res.ok) {
         const notificationData = await res.json()
         if (notificationData) {
-          setNotifications(notificationData)
+          setNotifications({
+            email_exam_start: notificationData.email_exam_start ?? true,
+            email_submissions: notificationData.email_submissions ?? true,
+            email_weekly_report: notificationData.email_weekly_report ?? false,
+            push_exam_start: notificationData.push_exam_start ?? true,
+            push_infractions: notificationData.push_infractions ?? true,
+            push_submissions: notificationData.push_submissions ?? false,
+          })
+          setLanguage(notificationData.language || 'en')
+          setTimezone(notificationData.timezone || 'America/New_York')
+          setCompactMode(notificationData.compact_mode || false)
+          setDateFormat(notificationData.date_format || 'MM/DD/YYYY')
+          if (notificationData.theme) {
+            setTheme(notificationData.theme)
+          }
         }
-      }
-
-      if (notificationData) {
-        setNotifications({
-          email_exam_start: notificationData.email_exam_start ?? true,
-          email_submissions: notificationData.email_submissions ?? true,
-          email_weekly_report: notificationData.email_weekly_report ?? false,
-          push_exam_start: notificationData.push_exam_start ?? true,
-          push_infractions: notificationData.push_infractions ?? true,
-          push_submissions: notificationData.push_submissions ?? false,
-        })
-        setLanguage(notificationData.language || 'en')
-        setTimezone(notificationData.timezone || 'America/New_York')
-        setCompactMode(notificationData.compact_mode || false)
       }
     } catch (error) {
       console.error('Error loading user settings:', error)
@@ -191,8 +194,10 @@ export default function SettingsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           compact_mode: compactMode,
+          theme: theme || 'system',
           language,
           timezone,
+          date_format: dateFormat,
           updated_at: new Date().toISOString(),
         })
       })
@@ -264,11 +269,10 @@ export default function SettingsPage() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl text-left whitespace-nowrap transition-all ${
-                  activeTab === tab.id
-                    ? "bg-primary/10 text-primary font-medium"
-                    : "hover:bg-muted/50 text-muted-foreground"
-                }`}
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl text-left whitespace-nowrap transition-all ${activeTab === tab.id
+                  ? "bg-primary/10 text-primary font-medium"
+                  : "hover:bg-muted/50 text-muted-foreground"
+                  }`}
               >
                 <tab.icon className="w-5 h-5 shrink-0" />
                 <span>{tab.label}</span>
@@ -289,7 +293,7 @@ export default function SettingsPage() {
                 <div className="relative">
                   <div className="w-24 h-24 rounded-full border border-border flex items-center justify-center bg-primary/10">
                     <span className="text-3xl font-bold text-primary">
-                      {getInitials(userProfile.full_name)}
+                      {getInitials(userProfile.full_name ?? null)}
                     </span>
                   </div>
                   <button className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-background border border-border flex items-center justify-center hover:scale-105 transition-transform">
@@ -519,11 +523,10 @@ export default function SettingsPage() {
                       <button
                         key={mins}
                         onClick={() => setSessionTimeout(mins)}
-                        className={`px-4 py-2 rounded-xl transition-all ${
-                          sessionTimeout === mins
-                            ? "bg-primary/10 text-primary font-medium border-2 border-primary"
-                            : "border border-border hover:border-primary/50"
-                        }`}
+                        className={`px-4 py-2 rounded-xl transition-all ${sessionTimeout === mins
+                          ? "bg-primary/10 text-primary font-medium border-2 border-primary"
+                          : "border border-border hover:border-primary/50"
+                          }`}
                       >
                         {mins} min
                       </button>
@@ -663,7 +666,11 @@ export default function SettingsPage() {
                     {["MM/DD/YYYY", "DD/MM/YYYY", "YYYY-MM-DD"].map((format) => (
                       <button
                         key={format}
-                        className="px-4 py-2 rounded-xl border border-border hover:border-primary/50 text-sm transition-colors"
+                        onClick={() => setDateFormat(format)}
+                        className={`px-4 py-2 rounded-xl text-sm transition-all ${dateFormat === format
+                            ? "bg-primary/10 text-primary font-medium border-2 border-primary"
+                            : "border border-border hover:border-primary/50"
+                          }`}
                       >
                         {format}
                       </button>

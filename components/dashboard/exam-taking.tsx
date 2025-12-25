@@ -57,6 +57,7 @@ export default function TakeExamPage() {
   const sessionRef = useRef<ExamSession | null>(null)
   const examRef = useRef<Exam | null>(null)
   const lastInfractionTimeRef = useRef<number>(0) // Track last infraction to prevent duplicates
+  const lastToastTimeRef = useRef<number>(0) // Track last toast to prevent duplicate visuals
 
   useEffect(() => {
     sessionRef.current = session
@@ -109,20 +110,9 @@ export default function TakeExamPage() {
       sessionRef.current = sessionData
       examRef.current = sessionData.exam
 
-      console.log('Loaded exam data:', {
-        examId: sessionData.exam.id,
-        examTitle: sessionData.exam.title,
-        examStatus: sessionData.exam.status,
-        sessionId: sessionData.id,
-        sessionStatus: sessionData.status,
-        proctoringEnabled: sessionData.exam.proctoring_enabled
-      })
-
-      // Load previous infractions if any - but don't overwrite local count if we already have infractions
+      // Load previous infractions if any
       if (sessionData.proctoring_data && sessionData.proctoring_data.infractions) {
-        const dbInfractionCount = sessionData.proctoring_data.infractions.length
-        // Only set if we don't have a local count yet, or if DB has more (shouldn't happen but be safe)
-        setInfractions(prev => prev > 0 ? Math.max(prev, dbInfractionCount) : dbInfractionCount)
+        setInfractions(sessionData.proctoring_data.infractions.length)
       }
 
       const questionsRes = await fetch(`/api/exams/${sessionData.exam.id}/questions`)
@@ -159,7 +149,6 @@ export default function TakeExamPage() {
 
       // Auto-start session if exam is active but session hasn't started
       if (sessionData.exam.status === 'active' && sessionData.status === 'not_started') {
-        console.log('Exam is active but session not started - auto-starting session')
         // Update session status to in_progress
         try {
           const startedAt = new Date().toISOString()
@@ -181,14 +170,12 @@ export default function TakeExamPage() {
             }
             setSession(updatedSession)
             sessionRef.current = updatedSession
-            console.log('Session auto-started successfully, proctoring is now active')
 
             // Initialize the timer
             if (sessionData.exam.duration_minutes) {
               const durationSeconds = sessionData.exam.duration_minutes * 60
               setTotalTime(durationSeconds)
               setTimeLeft(durationSeconds)
-              console.log(`Timer initialized: ${durationSeconds} seconds`)
             }
           } else {
             console.error('Failed to auto-start session')
@@ -254,61 +241,30 @@ export default function TakeExamPage() {
   }, [submitExam])
 
   const recordInfraction = useCallback(async (type: string) => {
-    // Debounce: Prevent duplicate infractions within 1 second
     const now = Date.now()
     if (now - lastInfractionTimeRef.current < 1000) {
-      console.log('Infraction debounced - too soon after last one')
       return
     }
     lastInfractionTimeRef.current = now
 
-    const timestamp = new Date().toISOString()
-
-    // Use functional updates to get current values
-    let currentInfractionCount = 0
-    setInfractions(prev => {
-      currentInfractionCount = prev + 1
-      return currentInfractionCount
-    })
-
+    setInfractions(prev => prev + 1)
     setWarningCount(prev => prev + 1)
 
-    // Show toast with current count
     toast.error("Proctoring Alert: Don't leave the exam tab!", {
-      description: `Warning: Your activity is being monitored.`,
-      duration: 4000
+      description: `Your activity is being monitored.`,
+      duration: 4000,
+      id: 'proctoring-alert' // Use a stable ID to prevent duplicate toasts
     })
 
-    const currentSession = sessionRef.current
-    if (!currentSession) {
-      console.log('No session found for infraction recording')
-      return
-    }
-
-    const newInfraction = { type, timestamp, warningCount: currentInfractionCount }
-    console.log('Recording infraction:', newInfraction)
-
     try {
-      const currentData = (currentSession.proctoring_data as { infractions?: any[] }) || { infractions: [] }
-      const updatedData = {
-        ...currentData,
-        infractions: [...(currentData.infractions || []), newInfraction]
-      }
-
-      const updatedSession = { ...currentSession, proctoring_data: updatedData }
-      setSession(updatedSession)
-      sessionRef.current = updatedSession
-
-      const response = await fetch(`/api/sessions/${sessionId}`, {
-        method: 'PUT',
+      const response = await fetch(`/api/sessions/${sessionId}/infractions`, {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ proctoring_data: updatedData })
+        body: JSON.stringify({ type })
       })
 
       if (!response.ok) {
-        console.error('Failed to save infraction to server:', response.statusText)
-      } else {
-        console.log('Infraction saved successfully')
+        console.error('Failed to save infraction')
       }
     } catch (e) {
       console.error("Failed to record infraction", e)
@@ -316,7 +272,6 @@ export default function TakeExamPage() {
   }, [sessionId])
 
   const startExamSession = useCallback(async () => {
-    console.log('Starting exam session...')
     try {
       const response = await fetch(`/api/sessions/${sessionId}`, {
         method: 'PUT',
@@ -329,20 +284,16 @@ export default function TakeExamPage() {
         return
       }
 
-      console.log('Session status updated to in_progress on server')
-
       // Immediately update local state
       setSession(prev => {
         if (!prev) return prev
         const updated = { ...prev, status: 'in_progress' as const }
         sessionRef.current = updated
-        console.log('Local session status updated to in_progress')
         return updated
       })
 
       // Reload exam data to ensure everything is in sync
       await loadExamData()
-      console.log('Exam data reloaded after starting session')
     } catch (e) {
       console.error("Failed to start session", e)
     }
@@ -395,38 +346,26 @@ export default function TakeExamPage() {
 
   useEffect(() => {
     const handleVisibilityChange = () => {
-      console.log('Visibility change detected, hidden:', document.hidden)
       const currentExam = examRef.current
       const currentSession = sessionRef.current
 
-      console.log('Proctoring check:', {
-        proctoringEnabled: currentExam?.proctoring_enabled,
-        sessionStatus: currentSession?.status,
-        hasSession: !!currentSession
-      })
-
       if (!currentExam?.proctoring_enabled || !currentSession || currentSession.status !== 'in_progress') {
-        console.log('Proctoring not active, skipping infraction')
         return
       }
 
       if (document.hidden) {
-        console.log('Tab switched - recording infraction')
         recordInfraction('tab_switch')
       }
     }
 
     const handleBlur = () => {
-      console.log('Window blur detected')
       const currentExam = examRef.current
       const currentSession = sessionRef.current
 
       if (!currentExam?.proctoring_enabled || !currentSession || currentSession.status !== 'in_progress') {
-        console.log('Proctoring not active, skipping blur infraction')
         return
       }
 
-      console.log('Focus lost - recording infraction')
       recordInfraction('focus_lost')
     }
 

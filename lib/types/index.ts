@@ -16,6 +16,7 @@ export type Exam = Tables<'exams'>
 export type Question = Tables<'questions'>
 export type ExamSession = Tables<'exam_sessions'>
 export type QuestionBank = Tables<'question_bank'>
+export type UserSettings = Tables<'user_settings'>
 
 // Insert types
 export type ProfileInsert = TablesInsert<'profiles'>
@@ -23,6 +24,7 @@ export type ExamInsert = TablesInsert<'exams'>
 export type QuestionInsert = TablesInsert<'questions'>
 export type ExamSessionInsert = TablesInsert<'exam_sessions'>
 export type QuestionBankInsert = TablesInsert<'question_bank'>
+export type UserSettingsInsert = TablesInsert<'user_settings'>
 
 // Update types
 export type ProfileUpdate = TablesUpdate<'profiles'>
@@ -30,6 +32,7 @@ export type ExamUpdate = TablesUpdate<'exams'>
 export type QuestionUpdate = TablesUpdate<'questions'>
 export type ExamSessionUpdate = TablesUpdate<'exam_sessions'>
 export type QuestionBankUpdate = TablesUpdate<'question_bank'>
+export type UserSettingsUpdate = TablesUpdate<'user_settings'>
 
 // Custom types for frontend use
 export type ExamWithQuestions = Exam & {
@@ -60,7 +63,13 @@ export type StudentAnswer = {
 }
 
 export type ProctoringEvent = {
-  type: 'tab_switch' | 'window_blur' | 'fullscreen_exit' | 'suspicious_activity'
+  type: 'tab_switch' | 'focus_lost' | 'fullscreen_exit' | 'suspicious_activity'
   timestamp: string
   details?: any
+}
+
+export type ProctoringData = {
+  infractions: ProctoringEvent[]
+  fullscreen_exits?: number
+  tab_switches?: number
 }

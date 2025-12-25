@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { ExamSession, ExamSessionInsert, ExamSessionUpdate, StudentAnswer } from '@/lib/types'
+import { ExamSession, ExamSessionInsert, ExamSessionUpdate, StudentAnswer, ProctoringData, ProctoringEvent } from '@/lib/types'
 
 export async function createExamSession(session: ExamSessionInsert): Promise<ExamSession | null> {
   const supabase = await createClient()
@@ -248,34 +248,44 @@ export async function getExamSessions(examId: string): Promise<ExamSession[]> {
 
 export async function addProctoringEvent(
   sessionId: string,
-  eventType: string,
+  eventType: ProctoringEvent['type'],
   details?: any
 ): Promise<boolean> {
   const supabase = await createClient()
 
   // Get current proctoring data
-  const { data: session } = await supabase
+  const { data: session, error: fetchError } = await supabase
     .from('exam_sessions')
     .select('proctoring_data')
     .eq('id', sessionId)
     .single()
 
-  const currentData = session?.proctoring_data || []
-  const newEvent = {
-    type: eventType,
+  if (fetchError || !session) {
+    console.error('Error fetching session for proctoring event:', fetchError)
+    return false
+  }
+
+  const currentData = (session.proctoring_data as unknown as ProctoringData) || { infractions: [] }
+  const newEvent: ProctoringEvent = {
+    type: eventType as any,
     timestamp: new Date().toISOString(),
     details
   }
 
-  const { error } = await supabase
+  const updatedData: ProctoringData = {
+    ...currentData,
+    infractions: [...(currentData.infractions || []), newEvent]
+  }
+
+  const { error: updateError } = await supabase
     .from('exam_sessions')
     .update({
-      proctoring_data: [...currentData, newEvent]
+      proctoring_data: updatedData as any
     })
     .eq('id', sessionId)
 
-  if (error) {
-    console.error('Error adding proctoring event:', error)
+  if (updateError) {
+    console.error('Error adding proctoring event:', updateError)
     return false
   }
 
