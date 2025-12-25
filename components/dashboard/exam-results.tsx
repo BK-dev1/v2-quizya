@@ -4,19 +4,21 @@ import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { NeuCard, NeuCardHeader, NeuCardTitle, NeuCardContent } from '@/components/ui/neu-card'
 import { NeuButton } from '@/components/ui/neu-button'
-import { 
-  BarChart3, 
-  Users, 
-  TrendingUp, 
-  CheckCircle, 
+import {
+  BarChart3,
+  Users,
+  TrendingUp,
+  CheckCircle,
   XCircle,
   Download,
   Loader2,
   ArrowLeft,
-  ChevronDown
+  ChevronDown,
+  FileEdit
 } from 'lucide-react'
 import { toast } from 'sonner'
 import Link from 'next/link'
+import EssayGrading from './essay-grading'
 
 interface ExamSession {
   id: string
@@ -68,6 +70,7 @@ export default function ExamResultsPage() {
   const [data, setData] = useState<ExamResultsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [expandedStudents, setExpandedStudents] = useState<Set<string>>(new Set())
+  const [gradingSessionId, setGradingSessionId] = useState<string | null>(null)
 
   useEffect(() => {
     loadResults()
@@ -109,8 +112,8 @@ export default function ExamResultsPage() {
 
     const completedSessions = data.sessions.filter(s => s.status === 'completed')
     for (const session of completedSessions) {
-      const studentName = session.is_guest 
-        ? session.guest_name 
+      const studentName = session.is_guest
+        ? session.guest_name
         : session.student?.full_name || session.student?.email || 'Unknown'
       const email = session.is_guest ? session.guest_email : session.student?.email || ''
       const percentage = session.total_points > 0
@@ -151,6 +154,32 @@ export default function ExamResultsPage() {
 
   const completedSessions = data.sessions.filter(s => s.status === 'completed')
 
+  // Find sessions with essay questions that need grading
+  const sessionsWithEssays = completedSessions.filter(session => {
+    if (!session.answers || !data.questions) return false
+    return session.answers.some((answer: any) => {
+      const question = data.questions.find(q => q.id === answer.question_id)
+      return question?.question_type === 'essay'
+    })
+  })
+
+  const gradingSession = gradingSessionId
+    ? completedSessions.find(s => s.id === gradingSessionId)
+    : null
+
+  const essayQuestions = gradingSession && data.questions
+    ? data.questions.filter(q => q.question_type === 'essay').map(q => {
+      const answer = (gradingSession.answers as any[])?.find(a => a.question_id === q.id)
+      return {
+        question_id: q.id,
+        question_text: q.question_text,
+        answer: answer?.answer || '',
+        points_earned: answer?.points_earned || 0,
+        max_points: q.points
+      }
+    })
+    : []
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -164,7 +193,7 @@ export default function ExamResultsPage() {
           <h1 className="text-3xl font-bold">Exam Results</h1>
           <p className="text-muted-foreground">{data.exam.title}</p>
         </div>
-        <NeuButton 
+        <NeuButton
           onClick={downloadCSV}
           className="gap-2"
         >
@@ -273,6 +302,76 @@ export default function ExamResultsPage() {
         </NeuCardContent>
       </NeuCard>
 
+      {/* Essay Grading Section */}
+      {sessionsWithEssays.length > 0 && (
+        <NeuCard>
+          <NeuCardHeader>
+            <NeuCardTitle className="flex items-center gap-2">
+              <FileEdit className="h-5 w-5" />
+              Essay Grading ({sessionsWithEssays.length} {sessionsWithEssays.length === 1 ? 'submission' : 'submissions'})
+            </NeuCardTitle>
+          </NeuCardHeader>
+          <NeuCardContent>
+            {!gradingSessionId ? (
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground mb-4">
+                  Select a submission to grade essay questions
+                </p>
+                {sessionsWithEssays.map(session => {
+                  const studentName = session.is_guest
+                    ? session.guest_name
+                    : session.student?.full_name || session.student?.email || 'Unknown'
+                  const essayCount = data.questions.filter(q => q.question_type === 'essay').length
+
+                  return (
+                    <button
+                      key={session.id}
+                      onClick={() => setGradingSessionId(session.id)}
+                      className="w-full p-4 border border-border rounded-lg hover:bg-muted/30 transition-colors text-left"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium">{studentName}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {essayCount} essay {essayCount === 1 ? 'question' : 'questions'} to grade
+                          </p>
+                        </div>
+                        <ChevronDown className="h-5 w-5 -rotate-90" />
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            ) : (
+              <div>
+                <NeuButton
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setGradingSessionId(null)}
+                  className="mb-4"
+                >
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back to list
+                </NeuButton>
+                <EssayGrading
+                  sessionId={gradingSessionId}
+                  studentName={
+                    gradingSession?.is_guest
+                      ? gradingSession.guest_name || 'Guest'
+                      : gradingSession?.student?.full_name || gradingSession?.student?.email || 'Unknown'
+                  }
+                  essays={essayQuestions}
+                  onGraded={() => {
+                    setGradingSessionId(null)
+                    loadResults()
+                  }}
+                />
+              </div>
+            )}
+          </NeuCardContent>
+        </NeuCard>
+      )}
+
       {/* Student Submissions */}
       <NeuCard>
         <NeuCardHeader>
@@ -322,9 +421,8 @@ export default function ExamResultsPage() {
                         </div>
                       </div>
                       <ChevronDown
-                        className={`h-5 w-5 text-muted-foreground transition-transform ${
-                          isExpanded ? 'rotate-180' : ''
-                        }`}
+                        className={`h-5 w-5 text-muted-foreground transition-transform ${isExpanded ? 'rotate-180' : ''
+                          }`}
                       />
                     </button>
 
