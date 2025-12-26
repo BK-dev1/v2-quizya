@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
         full_name,
         role: safeRole
       },
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/auth/callback`
+      emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://quizya.vercel.app'}/api/auth/callback`
     }
   })
 
