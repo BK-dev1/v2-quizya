@@ -127,6 +127,7 @@ export type Database = {
           points: number
           order_index: number
           time_limit: number | null
+          keywords: string[] | null
           created_at: string
           updated_at: string
         }
@@ -140,6 +141,7 @@ export type Database = {
           points: number
           order_index: number
           time_limit?: number | null
+          keywords?: string[] | null
           created_at?: string
           updated_at?: string
         }
@@ -153,6 +155,7 @@ export type Database = {
           points?: number
           order_index?: number
           time_limit?: number | null
+          keywords?: string[] | null
           created_at?: string
           updated_at?: string
         }
@@ -179,6 +182,7 @@ export type Database = {
           score: number | null
           total_points: number
           status: 'not_started' | 'in_progress' | 'completed' | 'abandoned'
+          grading_status: 'pending' | 'graded' | 'not_required'
           answers: Json | null
           proctoring_data: Json | null
           created_at: string
@@ -196,6 +200,7 @@ export type Database = {
           score?: number | null
           total_points: number
           status?: 'not_started' | 'in_progress' | 'completed' | 'abandoned'
+          grading_status?: 'pending' | 'graded' | 'not_required'
           answers?: Json | null
           proctoring_data?: Json | null
           created_at?: string
@@ -213,6 +218,7 @@ export type Database = {
           score?: number | null
           total_points?: number
           status?: 'not_started' | 'in_progress' | 'completed' | 'abandoned'
+          grading_status?: 'pending' | 'graded' | 'not_required'
           answers?: Json | null
           proctoring_data?: Json | null
           created_at?: string

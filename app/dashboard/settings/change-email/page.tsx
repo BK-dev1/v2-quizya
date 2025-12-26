@@ -2,20 +2,22 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
-import { ArrowLeft, Mail, Shield } from "lucide-react"
+import { ArrowLeft, Mail, Shield, Loader2 } from "lucide-react"
 import { NeuCard } from "@/components/ui/neu-card"
 import { NeuButton } from "@/components/ui/neu-button"
 import { CredentialInput } from "@/components/ui/credential-input"
 import { ToastProvider, useToast } from "@/components/ui/toast-container"
+import { useAuth } from "@/lib/hooks/use-auth"
+import { createClient } from "@/lib/supabase/client"
 
 function ChangeEmailContent() {
   const { showToast } = useToast()
+  const { user } = useAuth()
+  const supabase = createClient()
   const [loading, setLoading] = useState(false)
   const [emailSent, setEmailSent] = useState(false)
-
-  const currentEmail = "sarah.johnson@university.edu"
 
   const [formData, setFormData] = useState({
     newEmail: "",
@@ -42,7 +44,7 @@ function ChangeEmailContent() {
       case "newEmail":
         if (!value) return "Email is required"
         if (!validateEmail(value)) return "Please enter a valid email"
-        if (value === currentEmail) return "New email must be different from current"
+        if (value === user?.email) return "New email must be different from current"
         return ""
       case "confirmEmail":
         if (!value) return "Please confirm your email"
@@ -85,6 +87,8 @@ function ChangeEmailContent() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
+    if (!user) return
+
     // Validate all fields
     const newErrors = {
       newEmail: validateField("newEmail", formData.newEmail),
@@ -100,12 +104,29 @@ function ChangeEmailContent() {
 
     setLoading(true)
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500))
+    try {
+      const { error } = await supabase.auth.updateUser({
+        email: formData.newEmail,
+      })
 
-    setLoading(false)
-    setEmailSent(true)
-    showToast("Verification email sent! Check your inbox.", "success")
+      if (error) throw error
+
+      setEmailSent(true)
+      showToast("Verification email sent! Check your inbox.", "success")
+    } catch (error: any) {
+      console.error('Error updating email:', error)
+      showToast(error.message || "Failed to update email address", "error")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (!user && !loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
   }
 
   if (emailSent) {
@@ -124,6 +145,14 @@ function ChangeEmailContent() {
           <p className="text-sm text-muted-foreground mb-6">
             The link will expire in 24 hours. An alert has also been sent to your current email.
           </p>
+          <div className="p-4 rounded-xl bg-amber-50 border border-amber-100 mb-6 text-left">
+            <p className="text-xs text-amber-800 font-medium mb-1 flex items-center gap-2">
+              <Shield className="w-3 h-3" /> Note on Session Refresh
+            </p>
+            <p className="text-xs text-amber-700">
+              After confirming your new email, you may need to **log out and log back in** for the changes to fully reflect across all parts of the application.
+            </p>
+          </div>
           <div className="flex flex-col gap-3">
             <NeuButton variant="secondary" onClick={() => setEmailSent(false)}>
               Change Email Address
@@ -174,7 +203,7 @@ function ChangeEmailContent() {
             <div className="space-y-2">
               <label className="block text-sm font-medium text-foreground">Current Email</label>
               <div className="h-14 w-full rounded-xl bg-muted/50 px-4 py-4 text-muted-foreground flex items-center">
-                {currentEmail}
+                {user?.email}
               </div>
             </div>
 

@@ -45,7 +45,7 @@ export async function PUT(request: NextRequest) {
       .upsert({
         user_id: user.id,
         ...body
-      })
+      }, { onConflict: 'user_id' })
       .select()
       .single()
 

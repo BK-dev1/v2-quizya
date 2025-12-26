@@ -63,7 +63,7 @@ export async function PUT(
     const currentAnswers = (session.answers as any[]) || []
     const updatedAnswers = currentAnswers.map(answer => {
       const question = questions.find(q => q.id === answer.question_id)
-      
+
       // If this is an essay question and we have a grade for it
       if (question?.question_type === 'essay' && gradeMap.has(answer.question_id)) {
         const newPoints = gradeMap.get(answer.question_id)!
@@ -73,7 +73,7 @@ export async function PUT(
           is_correct: newPoints > 0
         }
       }
-      
+
       return answer
     })
 
@@ -86,6 +86,7 @@ export async function PUT(
       .update({
         answers: updatedAnswers,
         score: totalScore,
+        grading_status: 'graded' as any,
         updated_at: new Date().toISOString()
       })
       .eq('id', sessionId)

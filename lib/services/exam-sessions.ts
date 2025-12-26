@@ -133,7 +133,7 @@ export async function submitExamSession(
   // 2. Fetch all questions for this exam AND exam duration
   const { data: questions, error: questionsError } = await supabase
     .from('questions')
-    .select('id, question_type, correct_answer, points')
+    .select('id, question_text, question_type, correct_answer, points, options, keywords')
     .eq('exam_id', session.exam_id)
 
   const { data: exam, error: examError } = await supabase
@@ -176,15 +176,51 @@ export async function submitExamSession(
 
     let isCorrect = false
 
+    const studentAnswerText = (ans.answer || '').trim()
+    const correctAnswerText = (question.correct_answer || '').trim()
+
     if (question.question_type === 'essay') {
       // Essays require manual grading, set to 0 for now
       isCorrect = false
     } else if (question.question_type === 'short_answer') {
-      // Case-insensitive comparison
-      isCorrect = (ans.answer || '').trim().toLowerCase() === (question.correct_answer || '').trim().toLowerCase()
+      // Check for exact match first
+      const isExactMatch = studentAnswerText.toLowerCase() === correctAnswerText.toLowerCase()
+
+      // If no exact match and we have keywords, check for keywords
+      if (!isExactMatch && question.keywords && Array.isArray(question.keywords) && question.keywords.length > 0) {
+        // Correct answer is correct if it contains any of the keywords
+        const lowerAnswer = studentAnswerText.toLowerCase()
+        isCorrect = question.keywords.some((kw: string) => lowerAnswer.includes(kw.toLowerCase().trim()))
+      } else if (!isExactMatch && correctAnswerText === 'undefined') {
+        // Special case: if correct_answer is 'undefined', rely ONLY on keywords
+        if (question.keywords && Array.isArray(question.keywords)) {
+          const lowerAnswer = studentAnswerText.toLowerCase()
+          isCorrect = question.keywords.some((kw: string) => lowerAnswer.includes(kw.toLowerCase().trim()))
+        }
+      } else {
+        isCorrect = isExactMatch
+      }
+    } else if (question.question_type === 'multiple_choice' || (question.question_type as string) === 'mcq') {
+      // Handle MCQ: Check if stored correct_answer is an index
+      const options = question.options as any[] | null
+      const isIndex = /^\d+$/.test(correctAnswerText)
+
+      if (isIndex && options && Array.isArray(options)) {
+        const index = parseInt(correctAnswerText)
+        const optionAtIndex = options[index]
+        const optionText = typeof optionAtIndex === 'string' ? optionAtIndex : optionAtIndex?.text
+
+        isCorrect = studentAnswerText === (optionText || '').trim()
+      } else {
+        // Fallback to exact match
+        isCorrect = studentAnswerText === correctAnswerText
+      }
+    } else if (question.question_type === 'true_false' || (question.question_type as string) === 'truefalse') {
+      // Robust True/False comparison
+      isCorrect = studentAnswerText.toLowerCase() === correctAnswerText.toLowerCase()
     } else {
-      // Exact match for multiple choice / true_false
-      isCorrect = ans.answer === question.correct_answer
+      // Default exact match for any other types
+      isCorrect = studentAnswerText === correctAnswerText
     }
 
     const pointsEarned = isCorrect ? question.points : 0
@@ -198,9 +234,14 @@ export async function submitExamSession(
     }
   })
 
+  // Determine grading status
+  const hasEssays = questions.some(q => q.question_type === 'essay')
+  const gradingStatus = hasEssays ? 'pending' : 'graded'
+
   return updateExamSession(sessionId, {
     submitted_at: new Date().toISOString(),
     status: 'completed',
+    grading_status: gradingStatus as any,
     answers: validatedAnswers as any,
     score: totalScore
   })

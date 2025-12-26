@@ -108,6 +108,8 @@ export default function SettingsPage() {
           setTimezone(notificationData.timezone || 'America/New_York')
           setCompactMode(notificationData.compact_mode || false)
           setDateFormat(notificationData.date_format || 'MM/DD/YYYY')
+          setTwoFactorEnabled(notificationData.two_factor_enabled || false)
+          setSessionTimeout(String(notificationData.session_timeout_minutes || "30"))
           if (notificationData.theme) {
             setTheme(notificationData.theme)
           }
@@ -171,7 +173,10 @@ export default function SettingsPage() {
         })
       })
 
-      if (!res.ok) throw new Error('Failed to save notifications')
+      if (!res.ok) {
+        const errorData = await res.json()
+        throw new Error(errorData.error || 'Failed to save notifications')
+      }
 
       toast.success('Notification preferences saved')
       return true
@@ -202,13 +207,47 @@ export default function SettingsPage() {
         })
       })
 
-      if (!res.ok) throw new Error('Failed to save appearance')
+      if (!res.ok) {
+        const errorData = await res.json()
+        throw new Error(errorData.error || 'Failed to save appearance')
+      }
 
-      toast.success('Appearance preferences saved')
+      toast.success('Appearance & Region preferences saved')
       return true
     } catch (error) {
       console.error('Error saving appearance:', error)
       toast.error('Failed to save appearance preferences')
+      return false
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const saveSecurity = async () => {
+    if (!user) return false
+
+    setSaving(true)
+    try {
+      const res = await fetch(`/api/settings/preferences`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_timeout_minutes: parseInt(sessionTimeout),
+          two_factor_enabled: twoFactorEnabled,
+          updated_at: new Date().toISOString(),
+        })
+      })
+
+      if (!res.ok) {
+        const errorData = await res.json()
+        throw new Error(errorData.error || 'Failed to save security settings')
+      }
+
+      toast.success('Security settings saved')
+      return true
+    } catch (error) {
+      console.error('Error saving security:', error)
+      toast.error('Failed to save security settings')
       return false
     } finally {
       setSaving(false)
@@ -505,13 +544,16 @@ export default function SettingsPage() {
                         {twoFactorEnabled ? "Enabled via authenticator app" : "Add an extra layer of security"}
                       </p>
                     </div>
-                    <NeuButton
-                      variant={twoFactorEnabled ? "secondary" : "primary"}
-                      size="sm"
-                      onClick={() => setTwoFactorEnabled(!twoFactorEnabled)}
-                    >
-                      {twoFactorEnabled ? "Disable" : "Enable"}
-                    </NeuButton>
+                    <div className="relative">
+                      <input
+                        type="checkbox"
+                        checked={twoFactorEnabled}
+                        onChange={(e) => setTwoFactorEnabled(e.target.checked)}
+                        className="sr-only peer"
+                      />
+                      <div className="w-12 h-7 rounded-full bg-muted peer-checked:bg-primary/20 transition-colors" />
+                      <div className="absolute top-1 left-1 w-5 h-5 rounded-full bg-muted-foreground peer-checked:bg-primary peer-checked:translate-x-5 transition-all cursor-pointer" />
+                    </div>
                   </div>
                 </div>
 
@@ -563,6 +605,19 @@ export default function SettingsPage() {
                     Delete Account
                   </NeuButton>
                 </div>
+              </div>
+
+              <div className="flex justify-end mt-6">
+                <NeuButton onClick={saveSecurity} disabled={saving}>
+                  {saving ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    "Save Changes"
+                  )}
+                </NeuButton>
               </div>
             </NeuCard>
           )}
@@ -668,8 +723,8 @@ export default function SettingsPage() {
                         key={format}
                         onClick={() => setDateFormat(format)}
                         className={`px-4 py-2 rounded-xl text-sm transition-all ${dateFormat === format
-                            ? "bg-primary/10 text-primary font-medium border-2 border-primary"
-                            : "border border-border hover:border-primary/50"
+                          ? "bg-primary/10 text-primary font-medium border-2 border-primary"
+                          : "border border-border hover:border-primary/50"
                           }`}
                       >
                         {format}
