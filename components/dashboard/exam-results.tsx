@@ -29,6 +29,7 @@ interface ExamSession {
   score: number
   total_points: number
   status: string
+  grading_status: 'pending' | 'graded' | 'not_required'
   submitted_at: string | null
   answers: any[]
   student: {
@@ -404,7 +405,19 @@ export default function ExamResultsPage() {
                       <div className="flex items-center gap-4 flex-1 text-left">
                         <div className="flex-1">
                           <p className="font-medium">{studentName}</p>
-                          <p className="text-sm text-muted-foreground">{studentEmail}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm text-muted-foreground">{studentEmail}</p>
+                            {session.grading_status === 'pending' && (
+                              <span className="px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700 text-[10px] font-bold uppercase tracking-wider">
+                                Pending Grading
+                              </span>
+                            )}
+                            {session.grading_status === 'graded' && (
+                              <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-[10px] font-bold uppercase tracking-wider">
+                                Graded
+                              </span>
+                            )}
+                          </div>
                         </div>
                         <div className="text-right">
                           <div className="flex items-center gap-2">

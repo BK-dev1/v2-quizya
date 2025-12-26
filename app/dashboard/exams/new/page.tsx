@@ -212,6 +212,7 @@ export default function NewExamPage() {
             options: q.options,
             correct_answer: q.correctAnswer,
             time_limit: q.timeLimit,
+            keywords: q.keywords,
             points: 1
           }))
         })

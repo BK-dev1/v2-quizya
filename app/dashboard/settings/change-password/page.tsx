@@ -10,9 +10,11 @@ import { NeuButton } from "@/components/ui/neu-button"
 import { CredentialInput } from "@/components/ui/credential-input"
 import { PasswordStrength } from "@/components/ui/password-strength"
 import { ToastProvider, useToast } from "@/components/ui/toast-container"
+import { createClient } from "@/lib/supabase/client"
 
 function ChangePasswordContent() {
   const { showToast } = useToast()
+  const supabase = createClient()
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
 
@@ -102,12 +104,35 @@ function ChangePasswordContent() {
 
     setLoading(true)
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500))
+    try {
+      // 1. Verify current password by attempting to sign in
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user?.email) throw new Error("User session not found")
 
-    setLoading(false)
-    setSuccess(true)
-    showToast("Password changed successfully!", "success")
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: formData.currentPassword,
+      })
+
+      if (signInError) {
+        throw new Error("Invalid current password. Please try again.")
+      }
+
+      // 2. Update to new password
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: formData.newPassword,
+      })
+
+      if (updateError) throw updateError
+
+      setSuccess(true)
+      showToast("Password changed successfully!", "success")
+    } catch (error: any) {
+      console.error('Error updating password:', error)
+      showToast(error.message || "Failed to update password", "error")
+    } finally {
+      setLoading(false)
+    }
   }
 
   if (success) {

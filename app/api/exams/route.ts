@@ -88,7 +88,8 @@ export async function POST(request: NextRequest) {
           correct_answer: String(q.correct_answer),
           order_index: q.order_index,
           points: q.points || 1,
-          time_limit: q.time_limit || null
+          time_limit: q.time_limit || null,
+          keywords: q.keywords || []
         }
       })
 
