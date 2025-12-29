@@ -4,6 +4,7 @@ import { Inter, Geist_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { ThemeProvider } from "@/components/theme-provider"
 import { AuthProvider } from "@/lib/hooks/use-auth"
+import { LanguageProvider } from "@/components/providers/LanguageProvider"
 import { Toaster } from "sonner"
 import "./globals.css"
 
@@ -49,8 +50,10 @@ export default function RootLayout({
       <body className={`font-sans antialiased`}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <AuthProvider>
-            {children}
-            <Toaster position="top-right" />
+            <LanguageProvider>
+              {children}
+              <Toaster position="top-right" />
+            </LanguageProvider>
           </AuthProvider>
         </ThemeProvider>
         <Analytics />

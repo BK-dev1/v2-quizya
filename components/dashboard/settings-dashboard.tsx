@@ -10,6 +10,7 @@ import { NeuInput } from "@/components/ui/neu-input"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
 import { User, Bell, Shield, Palette, Globe, Key, Camera, Check, Monitor, Mail, ChevronRight, Loader2 } from "lucide-react"
 import { toast } from "sonner"
+import { useTranslation } from 'react-i18next';
 
 type SettingsTab = "profile" | "notifications" | "security" | "appearance" | "language"
 
@@ -41,6 +42,7 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<SettingsTab>("profile")
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
+  const { i18n, t } = useTranslation();
 
   // Profile state
   const [userProfile, setUserProfile] = useState<Partial<UserProfile>>({
@@ -91,35 +93,61 @@ export default function SettingsPage() {
         bio: profile?.bio || '',
       })
 
-      // Load notification settings (if they exist)
-      const res = await fetch(`/api/settings/preferences?userId=${user?.id}`)
+      // Load user settings
+      const res = await fetch(`/api/settings/preferences`)
+      
       if (res.ok) {
-        const notificationData = await res.json()
-        if (notificationData) {
+        const settingsData = await res.json()
+        
+        if (settingsData && Object.keys(settingsData).length > 0) {
+          // Set notification settings
           setNotifications({
-            email_exam_start: notificationData.email_exam_start ?? true,
-            email_submissions: notificationData.email_submissions ?? true,
-            email_weekly_report: notificationData.email_weekly_report ?? false,
-            push_exam_start: notificationData.push_exam_start ?? true,
-            push_infractions: notificationData.push_infractions ?? true,
-            push_submissions: notificationData.push_submissions ?? false,
+            email_exam_start: settingsData.email_exam_start ?? true,
+            email_submissions: settingsData.email_submissions ?? true,
+            email_weekly_report: settingsData.email_weekly_report ?? false,
+            push_exam_start: settingsData.push_exam_start ?? true,
+            push_infractions: settingsData.push_infractions ?? true,
+            push_submissions: settingsData.push_submissions ?? false,
           })
-          setLanguage(notificationData.language || 'en')
-          setTimezone(notificationData.timezone || 'America/New_York')
-          setCompactMode(notificationData.compact_mode || false)
-          setDateFormat(notificationData.date_format || 'MM/DD/YYYY')
-          setTwoFactorEnabled(notificationData.two_factor_enabled || false)
-          setSessionTimeout(String(notificationData.session_timeout_minutes || "30"))
-          if (notificationData.theme) {
-            setTheme(notificationData.theme)
+          
+          // Set language and other settings
+          const savedLanguage = settingsData.language || 'en'
+          setLanguage(savedLanguage)
+          setTimezone(settingsData.timezone || 'America/New_York')
+          setCompactMode(settingsData.compact_mode || false)
+          setDateFormat(settingsData.date_format || 'MM/DD/YYYY')
+          setTwoFactorEnabled(settingsData.two_factor_enabled || false)
+          setSessionTimeout(String(settingsData.session_timeout_minutes || "30"))
+          
+          // Apply saved language immediately
+          if (savedLanguage !== i18n.language) {
+            await i18n.changeLanguage(savedLanguage)
           }
+          
+          // Apply theme if different
+          if (settingsData.theme && settingsData.theme !== theme) {
+            setTheme(settingsData.theme)
+          }
+          
+          // Update HTML direction for RTL languages
+          updateDocumentDirection(savedLanguage)
         }
       }
     } catch (error) {
       console.error('Error loading user settings:', error)
-      toast.error('Failed to load settings')
+      toast.error(t('loadSettingsFailed') || 'Failed to load settings')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const updateDocumentDirection = (lang: string) => {
+    if (lang === 'ar') {
+      document.documentElement.dir = 'rtl'
+      document.documentElement.lang = 'ar'
+    } else {
+      document.documentElement.dir = 'ltr'
+      document.documentElement.lang = lang
     }
   }
 
@@ -137,17 +165,19 @@ export default function SettingsPage() {
           institution: userProfile.institution,
           department: userProfile.department,
           bio: userProfile.bio,
-          updated_at: new Date().toISOString(),
         })
       })
 
-      if (!res.ok) throw new Error('Failed to update profile')
+      if (!res.ok) {
+        const errorData = await res.json()
+        throw new Error(errorData.error || t('profileUpdateFailed') || 'Failed to update profile')
+      }
 
-      toast.success('Profile updated successfully')
+      toast.success(t('profileUpdated') || 'Profile updated successfully')
       return true
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating profile:', error)
-      toast.error('Failed to update profile')
+      toast.error(error.message)
       return false
     } finally {
       setSaving(false)
@@ -169,20 +199,18 @@ export default function SettingsPage() {
           push_exam_start: notifications.push_exam_start,
           push_infractions: notifications.push_infractions,
           push_submissions: notifications.push_submissions,
-          updated_at: new Date().toISOString(),
         })
       })
-
+      
       if (!res.ok) {
-        const errorData = await res.json()
-        throw new Error(errorData.error || 'Failed to save notifications')
+        throw new Error(t('notificationsSaveFailed') || 'Failed to save notifications')
       }
 
-      toast.success('Notification preferences saved')
+      toast.success(t('notificationsSaved') || 'Notification preferences saved')
       return true
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving notifications:', error)
-      toast.error('Failed to save notification preferences')
+      toast.error(error.message)
       return false
     } finally {
       setSaving(false)
@@ -194,29 +222,33 @@ export default function SettingsPage() {
 
     setSaving(true)
     try {
+      const requestBody = {
+        compact_mode: compactMode,
+        theme: theme || 'system',
+        language: language,
+        timezone: timezone,
+        date_format: dateFormat,
+      }
+      
       const res = await fetch(`/api/settings/preferences`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          compact_mode: compactMode,
-          theme: theme || 'system',
-          language,
-          timezone,
-          date_format: dateFormat,
-          updated_at: new Date().toISOString(),
-        })
+        body: JSON.stringify(requestBody)
       })
 
       if (!res.ok) {
-        const errorData = await res.json()
-        throw new Error(errorData.error || 'Failed to save appearance')
+        throw new Error(t('appearanceSaveFailed') || 'Failed to save appearance')
       }
 
-      toast.success('Appearance & Region preferences saved')
+      // Apply language change immediately
+      await i18n.changeLanguage(language)
+      updateDocumentDirection(language)
+      
+      toast.success(t('appearanceSaved') || 'Appearance & Region preferences saved')
       return true
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving appearance:', error)
-      toast.error('Failed to save appearance preferences')
+      toast.error(error.message)
       return false
     } finally {
       setSaving(false)
@@ -234,20 +266,18 @@ export default function SettingsPage() {
         body: JSON.stringify({
           session_timeout_minutes: parseInt(sessionTimeout),
           two_factor_enabled: twoFactorEnabled,
-          updated_at: new Date().toISOString(),
         })
       })
 
       if (!res.ok) {
-        const errorData = await res.json()
-        throw new Error(errorData.error || 'Failed to save security settings')
+        throw new Error(t('securitySaveFailed') || 'Failed to save security settings')
       }
 
-      toast.success('Security settings saved')
+      toast.success(t('securitySaved') || 'Security settings saved')
       return true
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving security:', error)
-      toast.error('Failed to save security settings')
+      toast.error(error.message)
       return false
     } finally {
       setSaving(false)
@@ -265,18 +295,18 @@ export default function SettingsPage() {
   }
 
   const tabs = [
-    { id: "profile" as const, label: "Profile", icon: User },
-    { id: "notifications" as const, label: "Notifications", icon: Bell },
-    { id: "security" as const, label: "Security", icon: Shield },
-    { id: "appearance" as const, label: "Appearance", icon: Palette },
-    { id: "language" as const, label: "Language & Region", icon: Globe },
+    { id: "profile" as const, label: t('profile') || "Profile", icon: User },
+    { id: "notifications" as const, label: t('notifications') || "Notifications", icon: Bell },
+    { id: "security" as const, label: t('security') || "Security", icon: Shield },
+    { id: "appearance" as const, label: t('appearance') || "Appearance", icon: Palette },
+    { id: "language" as const, label: t('languageRegion') || "Language & Region", icon: Globe },
   ]
 
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <p className="text-red-600">Please log in to access settings.</p>
+          <p className="text-red-600">{t('pleaseLogin') || 'Please log in to access settings.'}</p>
         </div>
       </div>
     )
@@ -287,7 +317,7 @@ export default function SettingsPage() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p>Loading settings...</p>
+          <p>{t('loadingSettings') || 'Loading settings...'}</p>
         </div>
       </div>
     )
@@ -296,8 +326,8 @@ export default function SettingsPage() {
   return (
     <div className="p-4 md:p-6 lg:p-8">
       <div className="mb-8">
-        <h1 className="text-2xl md:text-3xl font-bold text-foreground">Settings</h1>
-        <p className="text-muted-foreground mt-1">Manage your account preferences</p>
+        <h1 className="text-2xl md:text-3xl font-bold text-foreground">{t('settings') || 'Settings'}</h1>
+        <p className="text-muted-foreground mt-1">{t('managePreferences') || 'Manage your account preferences'}</p>
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6">
@@ -325,7 +355,7 @@ export default function SettingsPage() {
           {/* Profile Tab */}
           {activeTab === "profile" && (
             <NeuCard className="p-6">
-              <h2 className="text-xl font-semibold mb-6">Profile Information</h2>
+              <h2 className="text-xl font-semibold mb-6">{t('profileInformation') || 'Profile Information'}</h2>
 
               {/* Avatar Section */}
               <div className="flex items-center gap-6 mb-8">
@@ -340,54 +370,54 @@ export default function SettingsPage() {
                   </button>
                 </div>
                 <div>
-                  <p className="font-medium text-foreground">{userProfile.full_name || 'No name set'}</p>
-                  <p className="text-sm text-muted-foreground capitalize">{profile?.role} Account</p>
-                  <button className="text-sm text-primary hover:underline mt-1">Change avatar</button>
+                  <p className="font-medium text-foreground">{userProfile.full_name || t('noNameSet') || 'No name set'}</p>
+                  <p className="text-sm text-muted-foreground capitalize">{profile?.role} {t('account') || 'Account'}</p>
+                  <button className="text-sm text-primary hover:underline mt-1">{t('changeAvatar') || 'Change avatar'}</button>
                 </div>
               </div>
 
               <div className="grid gap-6 md:grid-cols-2">
                 <NeuInput
-                  label="Full Name"
+                  label={t('fullName') || "Full Name"}
                   value={userProfile.full_name || ''}
                   onChange={(e) => setUserProfile({ ...userProfile, full_name: e.target.value })}
                 />
                 <NeuInput
-                  label="Username"
+                  label={t('username') || "Username"}
                   value={userProfile.username || ''}
                   onChange={(e) => setUserProfile({ ...userProfile, username: e.target.value })}
                 />
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-foreground">Email Address</label>
+                  <label className="block text-sm font-medium text-foreground">{t('emailAddress') || 'Email Address'}</label>
                   <div className="flex items-center gap-2">
                     <div className="flex-1 h-12 rounded-xl bg-muted/50 px-4 flex items-center text-muted-foreground text-sm">
                       {user.email}
                     </div>
                     <Link href="/dashboard/settings/change-email">
                       <NeuButton variant="secondary" size="sm">
-                        Change
+                        {t('change') || 'Change'}
                       </NeuButton>
                     </Link>
                   </div>
                 </div>
                 <NeuInput
-                  label="Institution"
+                  label={t('institution') || "Institution"}
                   value={userProfile.institution || ''}
                   onChange={(e) => setUserProfile({ ...userProfile, institution: e.target.value })}
                 />
                 <NeuInput
-                  label="Department"
+                  label={t('department') || "Department"}
                   value={userProfile.department || ''}
                   onChange={(e) => setUserProfile({ ...userProfile, department: e.target.value })}
                 />
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-foreground mb-2">Bio</label>
+                  <label className="block text-sm font-medium text-foreground mb-2">{t('bio') || 'Bio'}</label>
                   <textarea
                     value={userProfile.bio || ''}
                     onChange={(e) => setUserProfile({ ...userProfile, bio: e.target.value })}
                     rows={4}
                     className="w-full px-4 py-3 rounded-xl bg-input border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
-                    placeholder="Tell us about yourself..."
+                    placeholder={t('bioPlaceholder') || "Tell us about yourself..."}
                   />
                 </div>
               </div>
@@ -397,10 +427,10 @@ export default function SettingsPage() {
                   {saving ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Saving...
+                      {t('saving') || 'Saving...'}
                     </>
                   ) : (
-                    "Save Changes"
+                    t('saveChanges') || "Save Changes"
                   )}
                 </NeuButton>
               </div>
@@ -410,17 +440,17 @@ export default function SettingsPage() {
           {/* Notifications Tab */}
           {activeTab === "notifications" && (
             <NeuCard className="p-6">
-              <h2 className="text-xl font-semibold mb-6">Notification Preferences</h2>
+              <h2 className="text-xl font-semibold mb-6">{t('notificationPreferences') || 'Notification Preferences'}</h2>
 
               <div className="space-y-8">
                 {/* Email Notifications */}
                 <div>
-                  <h3 className="font-medium text-foreground mb-4">Email Notifications</h3>
+                  <h3 className="font-medium text-foreground mb-4">{t('emailNotifications') || 'Email Notifications'}</h3>
                   <div className="space-y-4">
                     {[
-                      { key: "email_exam_start", label: "Exam started", desc: "When students begin taking your exam" },
-                      { key: "email_submissions", label: "Exam submissions", desc: "When students complete and submit" },
-                      { key: "email_weekly_report", label: "Weekly summary", desc: "Performance digest every Monday" },
+                      { key: "email_exam_start", label: t('examStarted') || "Exam started", desc: t('examStartedDesc') || "When students begin taking your exam" },
+                      { key: "email_submissions", label: t('examSubmissions') || "Exam submissions", desc: t('examSubmissionsDesc') || "When students complete and submit" },
+                      { key: "email_weekly_report", label: t('weeklySummary') || "Weekly summary", desc: t('weeklySummaryDesc') || "Performance digest every Monday" },
                     ].map((item) => (
                       <label
                         key={item.key}
@@ -447,12 +477,12 @@ export default function SettingsPage() {
 
                 {/* Push Notifications */}
                 <div>
-                  <h3 className="font-medium text-foreground mb-4">Push Notifications</h3>
+                  <h3 className="font-medium text-foreground mb-4">{t('pushNotifications') || 'Push Notifications'}</h3>
                   <div className="space-y-4">
                     {[
-                      { key: "push_exam_start", label: "Exam activity", desc: "Real-time exam start alerts" },
-                      { key: "push_infractions", label: "Proctoring alerts", desc: "When infractions are detected" },
-                      { key: "push_submissions", label: "Instant submissions", desc: "Immediate submission alerts" },
+                      { key: "push_exam_start", label: t('examActivity') || "Exam activity", desc: t('examActivityDesc') || "Real-time exam start alerts" },
+                      { key: "push_infractions", label: t('proctoringAlerts') || "Proctoring alerts", desc: t('proctoringAlertsDesc') || "When infractions are detected" },
+                      { key: "push_submissions", label: t('instantSubmissions') || "Instant submissions", desc: t('instantSubmissionsDesc') || "Immediate submission alerts" },
                     ].map((item) => (
                       <label
                         key={item.key}
@@ -483,10 +513,10 @@ export default function SettingsPage() {
                   {saving ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Saving...
+                      {t('saving') || 'Saving...'}
                     </>
                   ) : (
-                    "Save Preferences"
+                    t('savePreferences') || "Save Preferences"
                   )}
                 </NeuButton>
               </div>
@@ -496,7 +526,7 @@ export default function SettingsPage() {
           {/* Security Tab */}
           {activeTab === "security" && (
             <NeuCard className="p-6">
-              <h2 className="text-xl font-semibold mb-6">Security Settings</h2>
+              <h2 className="text-xl font-semibold mb-6">{t('securitySettings') || 'Security Settings'}</h2>
 
               <div className="space-y-6">
                 {/* Email Change */}
@@ -508,7 +538,7 @@ export default function SettingsPage() {
                           <Mail className="w-5 h-5 text-primary" />
                         </div>
                         <div>
-                          <h3 className="font-medium text-foreground">Email Address</h3>
+                          <h3 className="font-medium text-foreground">{t('emailAddress') || 'Email Address'}</h3>
                           <p className="text-sm text-muted-foreground">{user.email}</p>
                         </div>
                       </div>
@@ -526,8 +556,8 @@ export default function SettingsPage() {
                           <Key className="w-5 h-5 text-primary" />
                         </div>
                         <div>
-                          <h3 className="font-medium text-foreground">Password</h3>
-                          <p className="text-sm text-muted-foreground">Update your password</p>
+                          <h3 className="font-medium text-foreground">{t('password') || 'Password'}</h3>
+                          <p className="text-sm text-muted-foreground">{t('updatePassword') || 'Update your password'}</p>
                         </div>
                       </div>
                       <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
@@ -539,9 +569,9 @@ export default function SettingsPage() {
                 <div className="p-4 rounded-xl border border-border">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="font-medium text-foreground">Two-Factor Authentication</h3>
+                      <h3 className="font-medium text-foreground">{t('twoFactorAuth') || 'Two-Factor Authentication'}</h3>
                       <p className="text-sm text-muted-foreground">
-                        {twoFactorEnabled ? "Enabled via authenticator app" : "Add an extra layer of security"}
+                        {twoFactorEnabled ? t('twoFactorEnabled') || "Enabled via authenticator app" : t('twoFactorDisabled') || "Add an extra layer of security"}
                       </p>
                     </div>
                     <div className="relative">
@@ -559,7 +589,7 @@ export default function SettingsPage() {
 
                 {/* Session Timeout */}
                 <div className="p-4 rounded-xl border border-border">
-                  <h3 className="font-medium text-foreground mb-4">Session Timeout</h3>
+                  <h3 className="font-medium text-foreground mb-4">{t('sessionTimeout') || 'Session Timeout'}</h3>
                   <div className="flex flex-wrap gap-3">
                     {["15", "30", "60", "120"].map((mins) => (
                       <button
@@ -570,7 +600,7 @@ export default function SettingsPage() {
                           : "border border-border hover:border-primary/50"
                           }`}
                       >
-                        {mins} min
+                        {mins} {t('min') || 'min'}
                       </button>
                     ))}
                   </div>
@@ -578,7 +608,7 @@ export default function SettingsPage() {
 
                 {/* Active Sessions */}
                 <div className="p-4 rounded-xl border border-border">
-                  <h3 className="font-medium text-foreground mb-4">Active Sessions</h3>
+                  <h3 className="font-medium text-foreground mb-4">{t('activeSessions') || 'Active Sessions'}</h3>
                   <div className="space-y-3">
                     <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
                       <div className="flex items-center gap-3">
@@ -586,23 +616,23 @@ export default function SettingsPage() {
                           <Monitor className="w-5 h-5 text-primary" />
                         </div>
                         <div>
-                          <p className="font-medium text-foreground text-sm">Current Browser Session</p>
-                          <p className="text-xs text-muted-foreground">Active now</p>
+                          <p className="font-medium text-foreground text-sm">{t('currentBrowserSession') || 'Current Browser Session'}</p>
+                          <p className="text-xs text-muted-foreground">{t('activeNow') || 'Active now'}</p>
                         </div>
                       </div>
-                      <span className="text-xs text-success font-medium">Active</span>
+                      <span className="text-xs text-success font-medium">{t('active') || 'Active'}</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Danger Zone */}
                 <div className="p-4 rounded-xl border-2 border-destructive/20">
-                  <h3 className="font-medium text-destructive mb-2">Danger Zone</h3>
+                  <h3 className="font-medium text-destructive mb-2">{t('dangerZone') || 'Danger Zone'}</h3>
                   <p className="text-sm text-muted-foreground mb-4">
-                    Permanently delete your account and all associated data.
+                    {t('deleteAccountWarning') || 'Permanently delete your account and all associated data.'}
                   </p>
                   <NeuButton variant="destructive" size="sm">
-                    Delete Account
+                    {t('deleteAccount') || 'Delete Account'}
                   </NeuButton>
                 </div>
               </div>
@@ -612,10 +642,10 @@ export default function SettingsPage() {
                   {saving ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Saving...
+                      {t('saving') || 'Saving...'}
                     </>
                   ) : (
-                    "Save Changes"
+                    t('saveChanges') || "Save Changes"
                   )}
                 </NeuButton>
               </div>
@@ -624,12 +654,12 @@ export default function SettingsPage() {
 
           {activeTab === "appearance" && (
             <NeuCard className="p-6">
-              <h2 className="text-xl font-semibold mb-6">Appearance</h2>
+              <h2 className="text-xl font-semibold mb-6">{t('appearance') || 'Appearance'}</h2>
 
               <div className="space-y-8">
                 {/* Theme Selection */}
                 <div>
-                  <h3 className="font-medium text-foreground mb-4">Theme</h3>
+                  <h3 className="font-medium text-foreground mb-4">{t('theme') || 'Theme'}</h3>
                   <ThemeToggle variant="buttons" />
                 </div>
 
@@ -637,9 +667,9 @@ export default function SettingsPage() {
                 <div className="p-4 rounded-xl border border-border">
                   <label className="flex items-center justify-between cursor-pointer">
                     <div>
-                      <h3 className="font-medium text-foreground">Compact Mode</h3>
+                      <h3 className="font-medium text-foreground">{t('compactMode') || 'Compact Mode'}</h3>
                       <p className="text-sm text-muted-foreground">
-                        Reduce spacing and padding throughout the interface
+                        {t('compactModeDesc') || 'Reduce spacing and padding throughout the interface'}
                       </p>
                     </div>
                     <div className="relative">
@@ -661,10 +691,10 @@ export default function SettingsPage() {
                   {saving ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Saving...
+                      {t('saving') || 'Saving...'}
                     </>
                   ) : (
-                    "Save Preferences"
+                    t('savePreferences') || "Save Preferences"
                   )}
                 </NeuButton>
               </div>
@@ -674,30 +704,30 @@ export default function SettingsPage() {
           {/* Language Tab */}
           {activeTab === "language" && (
             <NeuCard className="p-6">
-              <h2 className="text-xl font-semibold mb-6">Language & Region</h2>
+              <h2 className="text-xl font-semibold mb-6">{t('languageRegion') || 'Language & Region'}</h2>
 
               <div className="space-y-6">
                 {/* Language Selection */}
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">Language</label>
+                  <label className="block text-sm font-medium text-foreground mb-2">{t('language') || 'Language'}</label>
                   <select
                     value={language}
                     onChange={(e) => setLanguage(e.target.value)}
                     className="w-full h-12 px-4 rounded-xl bg-input border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                   >
                     <option value="en">English</option>
-                    <option value="es">Spanish</option>
                     <option value="fr">French</option>
+                    <option value="ar">Arabic</option>
+                    <option value="es">Spanish</option>
                     <option value="de">German</option>
                     <option value="zh">Chinese</option>
                     <option value="ja">Japanese</option>
-                    <option value="ar">Arabic</option>
                   </select>
                 </div>
 
                 {/* Timezone Selection */}
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">Timezone</label>
+                  <label className="block text-sm font-medium text-foreground mb-2">{t('timezone') || 'Timezone'}</label>
                   <select
                     value={timezone}
                     onChange={(e) => setTimezone(e.target.value)}
@@ -716,7 +746,7 @@ export default function SettingsPage() {
 
                 {/* Date Format */}
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">Date Format</label>
+                  <label className="block text-sm font-medium text-foreground mb-2">{t('dateFormat') || 'Date Format'}</label>
                   <div className="flex flex-wrap gap-3">
                     {["MM/DD/YYYY", "DD/MM/YYYY", "YYYY-MM-DD"].map((format) => (
                       <button
@@ -739,10 +769,10 @@ export default function SettingsPage() {
                   {saving ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Saving...
+                      {t('saving') || 'Saving...'}
                     </>
                   ) : (
-                    "Save Preferences"
+                    t('savePreferences') || "Save Preferences"
                   )}
                 </NeuButton>
               </div>
