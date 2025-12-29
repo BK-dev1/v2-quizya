@@ -17,6 +17,7 @@ import {
     User,
     CheckCircle2
 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 interface Question {
     id: string
@@ -53,6 +54,7 @@ export default function PublicExamDetailPage() {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [showAnswers, setShowAnswers] = useState(false)
+    const { t } = useTranslation()
 
     useEffect(() => {
         if (params.id) {
@@ -65,9 +67,9 @@ export default function PublicExamDetailPage() {
             const res = await fetch(`/api/public-exams/${params.id}`)
             if (!res.ok) {
                 if (res.status === 404) {
-                    setError('Exam not found')
+                    setError(t('examNotFound'))
                 } else {
-                    setError('Failed to load exam details')
+                    setError(t('failedToLoadExam'))
                 }
                 return
             }
@@ -76,7 +78,7 @@ export default function PublicExamDetailPage() {
             setExam(data)
         } catch (error) {
             console.error('Error loading exam details:', error)
-            setError('Failed to load exam details')
+            setError(t('failedToLoadExam'))
         } finally {
             setLoading(false)
         }
@@ -86,7 +88,7 @@ export default function PublicExamDetailPage() {
         if (question.question_type === 'true_false') {
             return (
                 <div className="space-y-2 mt-3">
-                    {['True', 'False'].map((option, idx) => (
+                    {[t('true'), t('false')].map((option, idx) => (
                         <div
                             key={idx}
                             className={`p-3 rounded-lg border ${showAnswers && option === question.correct_answer
@@ -142,11 +144,11 @@ export default function PublicExamDetailPage() {
                 <div className="mt-3">
                     <div className="p-3 rounded-lg border border-border bg-muted/30">
                         <p className="text-sm text-muted-foreground italic">
-                            {question.question_type === 'short_answer' ? 'Short answer question' : 'Essay question'}
+                            {question.question_type === 'short_answer' ? t('shortAnswerQuestion') : t('essayQuestion')}
                         </p>
                         {showAnswers && (
                             <div className="mt-2 pt-2 border-t border-border">
-                                <p className="text-sm font-medium text-green-600">Sample Answer:</p>
+                                <p className="text-sm font-medium text-green-600">{t('sampleAnswer')}</p>
                                 <p className="text-sm mt-1">{question.correct_answer}</p>
                             </div>
                         )}
@@ -163,7 +165,7 @@ export default function PublicExamDetailPage() {
             <div className="min-h-screen flex items-center justify-center">
                 <div className="text-center">
                     <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-                    <p>Loading exam details...</p>
+                    <p>{t('loadingExamDetails')}</p>
                 </div>
             </div>
         )
@@ -173,14 +175,14 @@ export default function PublicExamDetailPage() {
         return (
             <div className="min-h-screen flex items-center justify-center">
                 <NeuCard className="p-8 text-center max-w-md">
-                    <h2 className="text-xl font-semibold mb-2">{error || 'Exam not found'}</h2>
+                    <h2 className="text-xl font-semibold mb-2">{error || t('examNotFound')}</h2>
                     <p className="text-muted-foreground mb-4">
-                        The exam you're looking for doesn't exist or has been removed.
+                        {t('examNotFoundDescription')}
                     </p>
                     <Link href="/dashboard/question-bank">
                         <NeuButton>
                             <ArrowLeft className="h-4 w-4 mr-2" />
-                            Back to Question Bank
+                            {t('backToQuestionBank')}
                         </NeuButton>
                     </Link>
                 </NeuCard>
@@ -191,40 +193,34 @@ export default function PublicExamDetailPage() {
     return (
         <div className="min-h-screen p-4">
             <div className="max-w-4xl mx-auto">
-                {/* Header */}
                 <div className="mb-6">
                     <Link href="/dashboard/question-bank">
                         <NeuButton variant="outline" size="sm" className="mb-4">
                             <ArrowLeft className="h-4 w-4 mr-2" />
-                            Back to Question Bank
+                            {t('backToQuestionBank')}
                         </NeuButton>
                     </Link>
                 </div>
 
-                {/* Main Content */}
                 <NeuCard className="p-6 md:p-8 mb-6">
-                    {/* Badge */}
                     <div className="flex items-center gap-2 mb-4">
                         <Globe className="h-4 w-4 text-green-600" />
                         <span className="text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded-full">
-                            Public Exam
+                            {t('publicExam')}
                         </span>
                     </div>
 
-                    {/* Title */}
                     <h1 className="text-3xl font-bold mb-4">{exam.title}</h1>
 
-                    {/* Description */}
                     {exam.description && (
                         <p className="text-muted-foreground mb-6">{exam.description}</p>
                     )}
 
-                    {/* Stats Grid */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                         <div className="p-4 rounded-xl border border-border">
                             <div className="flex items-center gap-2 text-muted-foreground mb-1">
                                 <FileQuestion className="h-4 w-4" />
-                                <span className="text-sm">Questions</span>
+                                <span className="text-sm">{t('questions')}</span>
                             </div>
                             <p className="text-2xl font-bold">{exam.total_questions}</p>
                         </div>
@@ -232,15 +228,15 @@ export default function PublicExamDetailPage() {
                         <div className="p-4 rounded-xl border border-border">
                             <div className="flex items-center gap-2 text-muted-foreground mb-1">
                                 <Clock className="h-4 w-4" />
-                                <span className="text-sm">Duration</span>
+                                <span className="text-sm">{t('duration')}</span>
                             </div>
-                            <p className="text-2xl font-bold">{exam.duration_minutes}m</p>
+                            <p className="text-2xl font-bold">{exam.duration_minutes}{t('minutes')}</p>
                         </div>
 
                         <div className="p-4 rounded-xl border border-border">
                             <div className="flex items-center gap-2 text-muted-foreground mb-1">
                                 <Star className="h-4 w-4" />
-                                <span className="text-sm">Passing</span>
+                                <span className="text-sm">{t('passing')}</span>
                             </div>
                             <p className="text-2xl font-bold">{exam.passing_score}%</p>
                         </div>
@@ -248,13 +244,12 @@ export default function PublicExamDetailPage() {
                         <div className="p-4 rounded-xl border border-border">
                             <div className="flex items-center gap-2 text-muted-foreground mb-1">
                                 <Users className="h-4 w-4" />
-                                <span className="text-sm">Attempts</span>
+                                <span className="text-sm">{t('attempts')}</span>
                             </div>
                             <p className="text-2xl font-bold">{exam._count?.exam_sessions || 0}</p>
                         </div>
                     </div>
 
-                    {/* Creator Info */}
                     <div className="p-4 rounded-xl bg-muted/30 mb-6">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
@@ -262,39 +257,37 @@ export default function PublicExamDetailPage() {
                                     <User className="h-5 w-5 text-primary" />
                                 </div>
                                 <div>
-                                    <p className="text-sm text-muted-foreground">Created by</p>
+                                    <p className="text-sm text-muted-foreground">{t('createdBy')}</p>
                                     <p className="font-medium">
-                                        {exam.profiles?.full_name || exam.profiles?.username || 'Anonymous'}
+                                        {exam.profiles?.full_name || exam.profiles?.username || t('anonymous')}
                                     </p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                 <Calendar className="h-4 w-4" />
-                                <span>{new Date(exam.created_at).toLocaleDateString()}</span>
+                                <span>{t('created')} {new Date(exam.created_at).toLocaleDateString()}</span>
                             </div>
                         </div>
                     </div>
 
-                    {/* Actions */}
                     <div className="flex gap-3">
                         <Link href={`/join?exam=${exam.id}`} className="flex-1">
                             <NeuButton className="w-full">
-                                Take This Exam
+                                {t('takeThisExam')}
                             </NeuButton>
                         </Link>
                         <NeuButton
                             variant="outline"
                             onClick={() => setShowAnswers(!showAnswers)}
                         >
-                            {showAnswers ? 'Hide' : 'Show'} Answers
+                            {showAnswers ? t('hideAnswers') : t('showAnswers')}
                         </NeuButton>
                     </div>
                 </NeuCard>
 
-                {/* Questions Section */}
                 {exam.questions && exam.questions.length > 0 && (
                     <div className="space-y-4">
-                        <h2 className="text-2xl font-bold mb-4">Questions</h2>
+                        <h2 className="text-2xl font-bold mb-4">{t('questions')}</h2>
                         {exam.questions
                             .sort((a, b) => a.order_index - b.order_index)
                             .map((question, index) => (
@@ -307,11 +300,11 @@ export default function PublicExamDetailPage() {
                                             <div className="flex items-start justify-between mb-2">
                                                 <h3 className="text-lg font-medium">{question.question_text}</h3>
                                                 <span className="text-sm text-muted-foreground bg-muted px-2 py-1 rounded">
-                                                    {question.points} {question.points === 1 ? 'point' : 'points'}
+                                                    {question.points} {question.points === 1 ? t('point') : t('points')}
                                                 </span>
                                             </div>
                                             <p className="text-xs text-muted-foreground mb-2 capitalize">
-                                                {question.question_type.replace('_', ' ')}
+                                                {t(question.question_type.replace('_', ''))}
                                             </p>
                                             {renderQuestionOptions(question)}
                                         </div>

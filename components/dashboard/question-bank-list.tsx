@@ -18,6 +18,7 @@ import {
   Loader2,
   BookOpen
 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 interface PublicExam {
   id: string
@@ -41,6 +42,7 @@ export default function QuestionBankPage() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [categoryFilter, setCategoryFilter] = useState<'all' | 'popular' | 'recent'>('all')
+  const { t } = useTranslation()
 
   useEffect(() => {
     loadPublicExams()
@@ -63,7 +65,6 @@ export default function QuestionBankPage() {
     }
   }
 
-  // Filter exams based on search and category
   const filteredExams = publicExams.filter(exam => {
     const matchesSearch = exam.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          exam.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -87,7 +88,7 @@ export default function QuestionBankPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <p className="text-red-600">Please log in to access the question bank.</p>
+          <p className="text-red-600">{t('pleaseLogin')}</p>
         </div>
       </div>
     )
@@ -98,7 +99,7 @@ export default function QuestionBankPage() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p>Loading question bank...</p>
+          <p>{t('loadingQuestionBank')}</p>
         </div>
       </div>
     )
@@ -107,29 +108,27 @@ export default function QuestionBankPage() {
   return (
     <div className="min-h-screen  p-4">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
         <div className="mb-6">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-3xl font-bold ">Question Bank</h1>
-              <p className="">Discover and explore public examinations</p>
+              <h1 className="text-3xl font-bold ">{t('questionBank')}</h1>
+              <p className="">{t('discoverExplore')}</p>
             </div>
             {profile?.role === 'teacher' && (
               <Link href="/dashboard/exams/new">
                 <NeuButton>
                   <Plus className="h-4 w-4 mr-2" />
-                  Create Public Exam
+                  {t('createPublicExam')}
                 </NeuButton>
               </Link>
             )}
           </div>
 
-          {/* Search and Filters */}
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
               <NeuInput
-                placeholder="Search exams, topics, or authors..."
+                placeholder={t('searchPlaceholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -145,21 +144,19 @@ export default function QuestionBankPage() {
                   size="sm"
                   className="capitalize"
                 >
-                  {filterType === 'all' ? 'All' : 
-                   filterType === 'popular' ? 'Popular' : 'Recent'}
+                  {t(filterType)}
                 </NeuButton>
               ))}
             </div>
           </div>
         </div>
 
-        {/* Stats Bar */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           <NeuCard className="p-4">
             <div className="flex items-center gap-3">
               <BookOpen className="h-8 w-8 text-blue-600" />
               <div>
-                <p className="text-sm ">Total Public Exams</p>
+                <p className="text-sm ">{t('totalPublicExams')}</p>
                 <p className="text-xl font-bold ">{publicExams.length}</p>
               </div>
             </div>
@@ -169,7 +166,7 @@ export default function QuestionBankPage() {
             <div className="flex items-center gap-3">
               <Users className="h-8 w-8 text-green-600" />
               <div>
-                <p className="text-sm ">Total Attempts</p>
+                <p className="text-sm ">{t('totalAttempts')}</p>
                 <p className="text-xl font-bold ">
                   {publicExams.reduce((sum, exam) => sum + (exam._count?.exam_sessions || 0), 0)}
                 </p>
@@ -181,7 +178,7 @@ export default function QuestionBankPage() {
             <div className="flex items-center gap-3">
               <Globe className="h-8 w-8 text-purple-600" />
               <div>
-                <p className="text-sm ">Active Creators</p>
+                <p className="text-sm ">{t('activeCreators')}</p>
                 <p className="text-xl font-bold ">
                   {new Set(publicExams.map(exam => exam.profiles?.username).filter(Boolean)).size}
                 </p>
@@ -190,27 +187,26 @@ export default function QuestionBankPage() {
           </NeuCard>
         </div>
 
-        {/* Exams Grid */}
         {filteredExams.length === 0 ? (
           <NeuCard className="text-center p-12">
             <BookOpen className="h-12 w-12 text-slate-400 mx-auto mb-4" />
             {publicExams.length === 0 ? (
               <>
-                <h3 className="text-lg font-medium  mb-2">No public exams available</h3>
-                <p className="text-slate-500 mb-4">Be the first to create and share a public exam!</p>
+                <h3 className="text-lg font-medium  mb-2">{t('noPublicExams')}</h3>
+                <p className="text-slate-500 mb-4">{t('createPublicExamPrompt') || 'Be the first to create and share a public exam!'}</p>
                 {profile?.role === 'teacher' && (
                   <Link href="/dashboard/exams/new">
                     <NeuButton>
                       <Plus className="h-4 w-4 mr-2" />
-                      Create Public Exam
+                      {t('createPublicExam')}
                     </NeuButton>
                   </Link>
                 )}
               </>
             ) : (
               <>
-                <h3 className="text-lg font-medium  mb-2">No matching exams</h3>
-                <p className="text-slate-500">Try adjusting your search or filter criteria</p>
+                <h3 className="text-lg font-medium  mb-2">{t('noMatchingExams')}</h3>
+                <p className="text-slate-500">{t('adjustSearchFilter')}</p>
               </>
             )}
           </NeuCard>
@@ -222,7 +218,7 @@ export default function QuestionBankPage() {
                   <div className="flex items-center gap-2">
                     <Globe className="h-4 w-4 text-green-600" />
                     <span className="text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded-full">
-                      Public
+                      {t('public')}
                     </span>
                   </div>
                   
@@ -263,9 +259,9 @@ export default function QuestionBankPage() {
 
                 <div className="flex items-center justify-between">
                   <div className="text-sm">
-                    <span className="text-slate-500">By </span>
+                    <span className="text-slate-500">{t('by')} </span>
                     <span className="font-medium ">
-                      {exam.profiles?.username || 'Anonymous'}
+                      {exam.profiles?.username || t('anonymous')}
                     </span>
                   </div>
 
@@ -273,13 +269,13 @@ export default function QuestionBankPage() {
                     <Link href={`/public-exams/${exam.id}`}>
                       <NeuButton size="sm" variant="outline">
                         <Eye className="h-3 w-3 mr-1" />
-                        View
+                        {t('view')}
                       </NeuButton>
                     </Link>
                     
                     <Link href={`/join?exam=${exam.id}`}>
                       <NeuButton size="sm">
-                        Take Exam
+                        {t('takeExam')}
                       </NeuButton>
                     </Link>
                   </div>
@@ -287,7 +283,7 @@ export default function QuestionBankPage() {
 
                 <div className="mt-3 pt-3 border-t border-slate-100">
                   <div className="text-xs text-slate-500">
-                    Created {new Date(exam.created_at).toLocaleDateString()}
+                    {t('created')} {new Date(exam.created_at).toLocaleDateString()}
                   </div>
                 </div>
               </NeuCard>
@@ -295,11 +291,10 @@ export default function QuestionBankPage() {
           </div>
         )}
 
-        {/* Load More Button */}
         {filteredExams.length > 0 && filteredExams.length < publicExams.length && (
           <div className="text-center mt-8">
             <NeuButton variant="outline">
-              Load More Exams
+              {t('loadMoreExams')}
             </NeuButton>
           </div>
         )}

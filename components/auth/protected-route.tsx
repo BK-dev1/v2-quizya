@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
+import { useTranslation } from 'react-i18next'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
@@ -19,20 +20,22 @@ export function ProtectedRoute({
 }: ProtectedRouteProps) {
   const { user, profile, loading } = useAuth()
   const router = useRouter()
+  const { t } = useTranslation()
 
   useEffect(() => {
     if (!loading) {
       if (!user) {
-        // Not authenticated
         router.replace(redirectTo)
         return
       }
 
       if (profile && requireRole && profile.role !== requireRole) {
-        // Wrong role
-        toast.error(`Access denied. ${requireRole.charAt(0).toUpperCase() + requireRole.slice(1)} account required.`)
+        if (requireRole === 'teacher') {
+          toast.error(`${t('accessDenied')} ${t('teacherAccountRequired')}`)
+        } else {
+          toast.error(`${t('accessDenied')} ${t('studentAccountRequired')}`)
+        }
         
-        // Redirect based on user role
         if (profile.role === 'student') {
           router.replace('/join')
         } else {
@@ -41,21 +44,19 @@ export function ProtectedRoute({
         return
       }
     }
-  }, [user, profile, loading, router, requireRole, redirectTo])
+  }, [user, profile, loading, router, requireRole, redirectTo, t])
 
-  // Show loading screen while checking authentication
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground">Checking permissions...</p>
+          <p className="text-muted-foreground">{t('checkingPermissions')}</p>
         </div>
       </div>
     )
   }
 
-  // Don't render content if not authenticated or wrong role
   if (!user || !profile) {
     return null
   }
@@ -64,6 +65,5 @@ export function ProtectedRoute({
     return null
   }
 
-  // User is authenticated and has correct role
   return <>{children}</>
 }

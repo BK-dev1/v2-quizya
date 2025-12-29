@@ -21,10 +21,12 @@ import Link from 'next/link'
 import { toast } from 'sonner'
 import StudentDashboard from '@/components/dashboard/student-dashboard'
 import { DashboardSkeleton } from '@/components/dashboard/dashboard-skeleton'
+import { useTranslation } from 'react-i18next'
 
 export default function DashboardPage() {
   const { user, profile, loading: authLoading } = useAuth()
   const { exams, loading: examsLoading, deleteExam, fetchExams, pagination } = useExams()
+  const { t } = useTranslation()
   const [stats, setStats] = useState({
     totalExams: 0,
     activeExams: 0,
@@ -61,16 +63,16 @@ export default function DashboardPage() {
 
   const handleCopyRoomCode = (roomCode: string) => {
     navigator.clipboard.writeText(roomCode)
-    toast.success('Room code copied to clipboard!')
+    toast.success(t('roomCodeCopied') || 'Room code copied to clipboard!')
   }
 
   const handleDeleteExam = async (examId: string) => {
-    if (confirm('Are you sure you want to delete this exam?')) {
+    if (confirm(t('confirmDeleteExam') || 'Are you sure you want to delete this exam?')) {
       const success = await deleteExam(examId)
       if (success) {
-        toast.success('Exam deleted successfully')
+        toast.success(t('examDeleted') || 'Exam deleted successfully')
       } else {
-        toast.error('Failed to delete exam')
+        toast.error(t('deleteExamFailed') || 'Failed to delete exam')
       }
     }
   }
@@ -83,9 +85,9 @@ export default function DashboardPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <p className="text-red-600">Please sign in to access the dashboard</p>
+          <p className="text-red-600">{t('signInToAccess') || 'Please sign in to access the dashboard'}</p>
           <Link href="/auth/login">
-            <NeuButton className="mt-4">Sign In</NeuButton>
+            <NeuButton className="mt-4">{t('signIn') || 'Sign In'}</NeuButton>
           </Link>
         </div>
       </div>
@@ -101,7 +103,7 @@ export default function DashboardPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <p className="text-red-600">Access denied. Teacher account required.</p>
+          <p className="text-red-600">{t('accessDeniedTeacher') || 'Access denied. Teacher account required.'}</p>
         </div>
       </div>
     )
@@ -109,25 +111,25 @@ export default function DashboardPage() {
 
   const statsData = [
     {
-      label: "Total Exams",
+      label: t('totalExams') || "Total Exams",
       value: loadingStats ? "..." : stats.totalExams,
       icon: FileEdit,
       color: "text-blue-600"
     },
     {
-      label: "Active Exams",
+      label: t('activeExams') || "Active Exams",
       value: loadingStats ? "..." : stats.activeExams,
       icon: Globe,
       color: "text-green-600"
     },
     {
-      label: "Total Attempts",
+      label: t('totalAttempts') || "Total Attempts",
       value: loadingStats ? "..." : stats.totalSessions,
       icon: Users,
       color: "text-purple-600"
     },
     {
-      label: "Avg. Score",
+      label: t('avgScore') || "Avg. Score",
       value: loadingStats ? "..." : `${stats.avgScore}%`,
       icon: BarChart3,
       color: "text-orange-600"
@@ -140,9 +142,9 @@ export default function DashboardPage() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold  mb-2">
-            Welcome, {profile?.full_name || user.email}
+            {t('welcome') || 'Welcome'}, {profile?.full_name || user.email}
           </h1>
-          <p className="">Manage your exams and track student performance</p>
+          <p className="">{t('dashboardDescription') || 'Manage your exams and track student performance'}</p>
         </div>
 
         {/* Stats Grid */}
@@ -164,11 +166,11 @@ export default function DashboardPage() {
 
         {/* Actions */}
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold ">Your Exams</h2>
+          <h2 className="text-xl font-semibold ">{t('yourExams') || 'Your Exams'}</h2>
           <Link href="/dashboard/exams/new">
             <NeuButton>
               <Plus className="h-4 w-4 mr-2" />
-              Create Exam
+              {t('createExam') || 'Create Exam'}
             </NeuButton>
           </Link>
         </div>
@@ -190,12 +192,12 @@ export default function DashboardPage() {
         ) : exams.length === 0 ? (
           <NeuCard className="text-center p-12">
             <FileEdit className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium  mb-2">No exams yet</h3>
-            <p className="text-slate-500 mb-4">Create your first exam to get started</p>
+            <h3 className="text-lg font-medium  mb-2">{t('noExamsYet') || 'No exams yet'}</h3>
+            <p className="text-slate-500 mb-4">{t('createFirstExamPrompt') || 'Create your first exam to get started'}</p>
             <Link href="/dashboard/exams/new">
               <NeuButton>
                 <Plus className="h-4 w-4 mr-2" />
-                Create Your First Exam
+                {t('createFirstExam') || 'Create Your First Exam'}
               </NeuButton>
             </Link>
           </NeuCard>
@@ -216,7 +218,7 @@ export default function DashboardPage() {
                         ? 'bg-green-100 text-green-800'
                         : 'bg-gray-100 text-gray-800'
                         }`}>
-                        {exam.is_active ? 'Active' : 'Inactive'}
+                        {exam.is_active ? (t('active') || 'Active') : (t('inactive') || 'Inactive')}
                       </span>
                     </div>
 
@@ -225,16 +227,16 @@ export default function DashboardPage() {
                     )}
 
                     <div className="flex items-center gap-4 text-sm text-slate-500">
-                      <span>{exam.total_questions} questions</span>
-                      <span>{exam.duration_minutes} minutes</span>
-                      <span>Passing: {exam.passing_score}%</span>
+                      <span>{exam.total_questions} {t('questions') || 'questions'}</span>
+                      <span>{exam.duration_minutes} {t('minutes') || 'minutes'}</span>
+                      <span>{t('passing') || 'Passing'}: {exam.passing_score}%</span>
                       {exam.room_code && (
                         <button
                           onClick={() => handleCopyRoomCode(exam.room_code!)}
                           className="flex items-center gap-1 text-blue-600 hover:text-blue-700"
                         >
                           <Copy className="h-3 w-3" />
-                          Room: {exam.room_code}
+                          {t('room') || 'Room'}: {exam.room_code}
                         </button>
                       )}
                     </div>
@@ -244,14 +246,14 @@ export default function DashboardPage() {
                     <Link href={`/dashboard/exams/${exam.id}`}>
                       <NeuButton variant="secondary" size="sm">
                         <Eye className="h-4 w-4 mr-1" />
-                        View
+                        {t('view') || 'View'}
                       </NeuButton>
                     </Link>
 
                     <Link href={`/dashboard/exams/${exam.id}/monitor`}>
                       <NeuButton variant="secondary" size="sm">
                         <BarChart3 className="h-4 w-4 mr-1" />
-                        Monitor
+                        {t('monitor') || 'Monitor'}
                       </NeuButton>
                     </Link>
 
@@ -274,9 +276,9 @@ export default function DashboardPage() {
         {pagination.pages > 1 && (
           <div className="mt-6 flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
-              Showing {(currentPage - 1) * pagination.limit + 1} to{' '}
-              {Math.min(currentPage * pagination.limit, pagination.total)} of{' '}
-              {pagination.total} exams
+              {t('showingExams') || 'Showing'} {(currentPage - 1) * pagination.limit + 1} {t('to') || 'to'}{' '}
+              {Math.min(currentPage * pagination.limit, pagination.total)} {t('of') || 'of'}{' '}
+              {pagination.total} {t('exams') || 'exams'}
             </p>
             <div className="flex gap-2">
               <NeuButton
@@ -288,7 +290,7 @@ export default function DashboardPage() {
                   fetchExams(currentPage - 1)
                 }}
               >
-                Previous
+                {t('previous') || 'Previous'}
               </NeuButton>
               <NeuButton
                 variant="secondary"
@@ -299,7 +301,7 @@ export default function DashboardPage() {
                   fetchExams(currentPage + 1)
                 }}
               >
-                Next
+                {t('next') || 'Next'}
               </NeuButton>
             </div>
           </div>
@@ -311,8 +313,8 @@ export default function DashboardPage() {
             <NeuCard className="p-6 hover:shadow-lg transition-shadow cursor-pointer">
               <div className="text-center">
                 <FileEdit className="h-8 w-8 text-blue-600 mx-auto mb-3" />
-                <h3 className="font-medium  mb-1">Question Bank</h3>
-                <p className="text-sm ">Manage reusable questions</p>
+                <h3 className="font-medium  mb-1">{t('questionBank') || 'Question Bank'}</h3>
+                <p className="text-sm ">{t('manageReusableQuestions') || 'Manage reusable questions'}</p>
               </div>
             </NeuCard>
           </Link>
@@ -321,8 +323,8 @@ export default function DashboardPage() {
             <NeuCard className="p-6 hover:shadow-lg transition-shadow cursor-pointer">
               <div className="text-center">
                 <BarChart3 className="h-8 w-8 text-green-600 mx-auto mb-3" />
-                <h3 className="font-medium  mb-1">Analytics</h3>
-                <p className="text-sm ">View detailed reports</p>
+                <h3 className="font-medium  mb-1">{t('analytics') || 'Analytics'}</h3>
+                <p className="text-sm ">{t('viewDetailedReports') || 'View detailed reports'}</p>
               </div>
             </NeuCard>
           </Link>
@@ -331,8 +333,8 @@ export default function DashboardPage() {
             <NeuCard className="p-6 hover:shadow-lg transition-shadow cursor-pointer">
               <div className="text-center">
                 <Users className="h-8 w-8 text-purple-600 mx-auto mb-3" />
-                <h3 className="font-medium  mb-1">Settings</h3>
-                <p className="text-sm ">Account preferences</p>
+                <h3 className="font-medium  mb-1">{t('settings') || 'Settings'}</h3>
+                <p className="text-sm ">{t('accountPreferences') || 'Account preferences'}</p>
               </div>
             </NeuCard>
           </Link>

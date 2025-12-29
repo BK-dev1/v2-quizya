@@ -26,6 +26,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import { useNetworkStatus } from '@/lib/hooks/use-network-status'
+import { useTranslation } from 'react-i18next' // ADD THIS IMPORT
 
 export default function TakeExamPage() {
   const isOnline = useNetworkStatus()
@@ -33,6 +34,7 @@ export default function TakeExamPage() {
   const searchParams = useSearchParams()
   const { user } = useAuth()
   const supabase = createClient()
+  const { t } = useTranslation() // ADD THIS HOOK
 
   const [exam, setExam] = useState<Exam | null>(null)
   const [questions, setQuestions] = useState<Question[]>([])
@@ -78,7 +80,7 @@ export default function TakeExamPage() {
       setLoading(true)
       const res = await fetch(`/api/sessions/${sessionId}`)
       if (!res.ok) {
-        toast.error('Exam session not found')
+        toast.error(t('examSessionNotFound')) // TRANSLATED
         router.push('/join')
         return
       }
@@ -86,13 +88,13 @@ export default function TakeExamPage() {
       const sessionData = await res.json()
 
       if (!isGuest && (!user || sessionData.student_id !== user.id)) {
-        toast.error('Access denied')
+        toast.error(t('accessDenied')) // TRANSLATED
         router.push('/join')
         return
       }
 
       if (isGuest && (!guestData || sessionData.guest_email !== guestData.guestEmail)) {
-        toast.error('Access denied')
+        toast.error(t('accessDenied')) // TRANSLATED
         router.push('/join')
         return
       }
@@ -117,7 +119,7 @@ export default function TakeExamPage() {
 
       const questionsRes = await fetch(`/api/exams/${sessionData.exam.id}/questions`)
       if (!questionsRes.ok) {
-        toast.error('Failed to load questions')
+        toast.error(t('failedToLoadQuestions')) // TRANSLATED
         return
       }
 
@@ -187,17 +189,17 @@ export default function TakeExamPage() {
 
     } catch (error) {
       console.error('Error loading exam data:', error)
-      toast.error('Failed to load exam')
+      toast.error(t('failedToLoadExam')) // TRANSLATED
       router.push('/join')
     } finally {
       setLoading(false)
     }
-  }, [sessionId, isGuest, user, guestData, router])
+  }, [sessionId, isGuest, user, guestData, router, t]) // ADD t TO DEPENDENCIES
 
   const submitExam = useCallback(async () => {
     if (!session || !exam) return
     if (!isOnline) {
-      toast.error('You are offline. Please check your connection before submitting.')
+      toast.error(t('youAreOffline')) // TRANSLATED
       return
     }
     setSubmitting(true)
@@ -220,25 +222,25 @@ export default function TakeExamPage() {
       })
 
       if (!res.ok) {
-        toast.error('Failed to submit exam')
+        toast.error(t('failedToSubmitExam')) // TRANSLATED
         return
       }
 
-      toast.success('Exam submitted successfully!')
+      toast.success(t('examSubmittedSuccessfully')) // TRANSLATED
       if (isGuest) sessionStorage.removeItem('guestExamSession')
       router.replace(`/results?session=${sessionId}`)
     } catch (error) {
       console.error('Error submitting exam:', error)
-      toast.error('Failed to submit exam')
+      toast.error(t('failedToSubmitExam')) // TRANSLATED
     } finally {
       setSubmitting(false)
     }
-  }, [session, exam, isOnline, questions, answers, sessionId, isGuest, router])
+  }, [session, exam, isOnline, questions, answers, sessionId, isGuest, router, t]) // ADD t TO DEPENDENCIES
 
   const handleTimeUp = useCallback(() => {
-    toast.info('Time is up! Submitting your exam...')
+    toast.info(t('timeIsUpSubmitting')) // TRANSLATED
     submitExam()
-  }, [submitExam])
+  }, [submitExam, t]) // ADD t TO DEPENDENCIES
 
   const recordInfraction = useCallback(async (type: string) => {
     const now = Date.now()
@@ -250,10 +252,10 @@ export default function TakeExamPage() {
     setInfractions(prev => prev + 1)
     setWarningCount(prev => prev + 1)
 
-    toast.error("Proctoring Alert: Don't leave the exam tab!", {
-      description: `Your activity is being monitored.`,
+    toast.error(t('proctoringAlert'), { // TRANSLATED
+      description: t('activityMonitored'), // TRANSLATED
       duration: 4000,
-      id: 'proctoring-alert' // Use a stable ID to prevent duplicate toasts
+      id: 'proctoring-alert'
     })
 
     try {
@@ -269,7 +271,7 @@ export default function TakeExamPage() {
     } catch (e) {
       console.error("Failed to record infraction", e)
     }
-  }, [sessionId])
+  }, [sessionId, t]) // ADD t TO DEPENDENCIES
 
   const startExamSession = useCallback(async () => {
     try {
@@ -304,7 +306,7 @@ export default function TakeExamPage() {
     setAnswers(newAnswers)
 
     if (!isOnline) {
-      toast.warning('Offline: Answer saved locally only', { id: 'offline-save' })
+      toast.warning(t('offlineSaveLocal'), { id: 'offline-save' }) // TRANSLATED
       return
     }
 
@@ -324,10 +326,10 @@ export default function TakeExamPage() {
       const next = new Set(prev)
       if (next.has(questionId)) {
         next.delete(questionId)
-        toast.success("Question unmarked")
+        toast.success(t('questionUnmarked')) // TRANSLATED
       } else {
         next.add(questionId)
-        toast.info("Question marked for review")
+        toast.info(t('questionMarkedForReview')) // TRANSLATED
       }
       return next
     })
@@ -336,13 +338,13 @@ export default function TakeExamPage() {
   // EFFECTS
   useEffect(() => {
     if (!sessionId) {
-      toast.error('No exam session found')
+      toast.error(t('examSessionNotFound')) // TRANSLATED
       router.push('/join')
       return
     }
     loadExamData()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionId])
+  }, [sessionId, t]) // ADD t TO DEPENDENCIES
 
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -393,17 +395,17 @@ export default function TakeExamPage() {
         const newStatus = payload.new.status
         const currentExamStatus = examRef.current?.status
         if (newStatus === 'active' && currentExamStatus === 'upcoming') {
-          toast.success('The exam has started!')
+          toast.success(t('theExamHasStarted')) // TRANSLATED
           setExam(prev => prev ? ({ ...prev, status: 'active' }) : null)
           startExamSession()
         } else if (newStatus === 'ended' && currentExamStatus !== 'ended') {
-          toast.info('The teacher has ended the exam.')
+          toast.info(t('teacherEndedExam')) // TRANSLATED
           submitExam()
         }
       })
       .subscribe()
     return () => { supabase.removeChannel(channel) }
-  }, [exam?.id, session?.id, startExamSession, submitExam])
+  }, [exam?.id, session?.id, startExamSession, submitExam, t]) // ADD t TO DEPENDENCIES
 
   useEffect(() => {
     if (!exam || exam.status !== 'active' || timeLeft === 0) return
@@ -438,7 +440,7 @@ export default function TakeExamPage() {
           if (prev === null) return null
           if (prev <= 1) {
             if (questionTimerRef.current) clearInterval(questionTimerRef.current)
-            toast.warning("Time's up for this question!")
+            toast.warning(t('timesUpQuestion')) // TRANSLATED
             if (currentQuestionIndex < questions.length - 1) {
               setCurrentQuestionIndex(idx => idx + 1)
             }
@@ -452,14 +454,14 @@ export default function TakeExamPage() {
     return () => {
       if (questionTimerRef.current) clearInterval(questionTimerRef.current)
     }
-  }, [currentQuestionIndex, questions])
+  }, [currentQuestionIndex, questions, t]) // ADD t TO DEPENDENCIES
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center space-y-4">
           <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto" />
-          <p className="text-muted-foreground animate-pulse">Loading your exam...</p>
+          <p className="text-muted-foreground animate-pulse">{t('loadingYourExam')}</p> {/* TRANSLATED */}
         </div>
       </div>
     )
@@ -473,12 +475,12 @@ export default function TakeExamPage() {
             <AlertTriangle className="w-10 h-10 text-red-600" />
           </div>
           <div className="space-y-2">
-            <h1 className="text-2xl font-bold">Exam link is incorrect</h1>
+            <h1 className="text-2xl font-bold">{t('examLinkIncorrect')}</h1> {/* TRANSLATED */}
             <p className="text-muted-foreground">
-              Wait for the teacher to start the exam.
+              {t('waitTeacherStart')} {/* TRANSLATED */}
             </p>
           </div>
-          <NeuButton onClick={() => router.push('/join')}>Return to Join</NeuButton>
+          <NeuButton onClick={() => router.push('/join')}>{t('returnToJoin')}</NeuButton> {/* TRANSLATED */}
         </NeuCard>
       </div>
     )
@@ -503,28 +505,28 @@ export default function TakeExamPage() {
               <h1 className="text-3xl font-black tracking-tight">{exam.title}</h1>
               <div className="inline-flex items-center gap-2 px-3 py-1 bg-secondary rounded-full text-sm font-medium text-secondary-foreground">
                 <Loader2 className="w-3 h-3 animate-spin" />
-                Waiting Room
+                {t('waitingRoom')} {/* TRANSLATED */}
               </div>
             </div>
 
             <div className="bg-card border-2 border-border rounded-2xl p-6 space-y-4">
               <p className="text-muted-foreground text-lg">
-                The exam has not started yet. Please stay on this page.
+                {t('waitTeacherStart')} {/* TRANSLATED */}
               </p>
               <div className="flex flex-col gap-2 text-sm text-left">
                 <div className="flex justify-between items-center p-2 bg-secondary/50 rounded-lg">
-                  <span className="text-muted-foreground">Student:</span>
+                  <span className="text-muted-foreground">{t('student') || 'Student:'}</span>
                   <span className="font-bold">{isGuest ? guestData?.guestName : user?.email}</span>
                 </div>
                 <div className="flex justify-between items-center p-2 bg-secondary/50 rounded-lg">
-                  <span className="text-muted-foreground">Status:</span>
-                  <span className="font-bold text-primary">Ready to start</span>
+                  <span className="text-muted-foreground">{t('status') || 'Status:'}</span>
+                  <span className="font-bold text-primary">{t('readyToStart')}</span> {/* TRANSLATED */}
                 </div>
               </div>
             </div>
 
             <p className="text-xs text-muted-foreground">
-              Don't refresh! The exam will start automatically when the teacher begins.
+              {t('dontRefresh')} {/* TRANSLATED */}
             </p>
           </NeuCard>
         </motion.div>
@@ -541,12 +543,12 @@ export default function TakeExamPage() {
             <EyeOff className="w-10 h-10 text-amber-600" />
           </div>
           <div className="space-y-2">
-            <h1 className="text-2xl font-bold">Exam Ended</h1>
+            <h1 className="text-2xl font-bold">{t('examEnded')}</h1> {/* TRANSLATED */}
             <p className="text-muted-foreground">
-              This exam has already ended. If you believe this is an error, please contact your instructor.
+              {t('contactInstructor')} {/* TRANSLATED */}
             </p>
           </div>
-          <NeuButton onClick={() => router.push('/')}>Return Home</NeuButton>
+          <NeuButton onClick={() => router.push('/')}>{t('returnHome')}</NeuButton> {/* TRANSLATED */}
         </NeuCard>
       </div>
     )
@@ -561,7 +563,7 @@ export default function TakeExamPage() {
   if (questions.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <p className="text-muted-foreground">No questions available for this exam.</p>
+        <p className="text-muted-foreground">{t('noQuestionsAvailable')}</p> {/* TRANSLATED */}
       </div>
     )
   }
@@ -576,8 +578,8 @@ export default function TakeExamPage() {
       <NeuModal
         open={showQuestionMap}
         onClose={() => setShowQuestionMap(false)}
-        title="Question Map"
-        description="Jump to a specific question or review your progress."
+        title={t('questionMap')} // TRANSLATED
+        description={t('jumpToQuestion')} // TRANSLATED
       >
         <div className="grid grid-cols-5 gap-2 max-h-[60vh] overflow-y-auto p-1">
           {questions.map((q, idx) => {
@@ -614,13 +616,13 @@ export default function TakeExamPage() {
         </div>
         <div className="mt-4 flex gap-4 text-xs text-muted-foreground justify-center">
           <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded bg-green-50 border border-green-500/50" /> Answered
+            <div className="w-3 h-3 rounded bg-green-50 border border-green-500/50" /> {t('answered')} {/* TRANSLATED */}
           </div>
           <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded bg-amber-50 border-2 border-dashed border-amber-400" /> Marked
+            <div className="w-3 h-3 rounded bg-amber-50 border-2 border-dashed border-amber-400" /> {t('marked')} {/* TRANSLATED */}
           </div>
           <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded bg-card border-2 border-border" /> Unanswered
+            <div className="w-3 h-3 rounded bg-card border-2 border-border" /> {t('unanswered')} {/* TRANSLATED */}
           </div>
         </div>
       </NeuModal>
@@ -639,7 +641,7 @@ export default function TakeExamPage() {
               className="gap-2"
             >
               <LayoutGrid className="w-4 h-4" />
-              <span className="hidden sm:inline">Question Map</span>
+              <span className="hidden sm:inline">{t('questionMap')}</span> {/* TRANSLATED */}
               <span className="inline sm:hidden">{currentQuestionIndex + 1} / {questions.length}</span>
             </NeuButton>
           </div>
@@ -648,7 +650,7 @@ export default function TakeExamPage() {
             {!isOnline && (
               <div className="flex items-center gap-2 text-xs font-bold text-red-600 bg-red-50 px-3 py-1.5 rounded-full border border-red-100 animate-pulse">
                 <WifiOff className="w-4 h-4" />
-                OFFLINE
+                {t('offline') || 'OFFLINE'}
               </div>
             )}
 
@@ -656,12 +658,12 @@ export default function TakeExamPage() {
             {exam?.proctoring_enabled && infractions > 0 && (
               <div className="flex items-center gap-2 text-xs font-bold text-orange-700 bg-orange-100 px-3 py-1.5 rounded-full border-2 border-orange-300 animate-pulse">
                 <AlertTriangle className="w-4 h-4" />
-                <span>{infractions} {infractions === 1 ? 'Warning' : 'Warnings'}</span>
+                <span>{infractions} {infractions === 1 ? t('warning') || 'Warning' : t('warnings') || 'Warnings'}</span>
               </div>
             )}
 
             <div className="flex flex-col items-end">
-              <span className="text-[10px] uppercase font-bold text-muted-foreground">Time Remaining</span>
+              <span className="text-[10px] uppercase font-bold text-muted-foreground">{t('timeRemaining')}</span> {/* TRANSLATED */}
               <NeuTimer
                 totalSeconds={totalTime}
                 remainingSeconds={timeLeft}
@@ -682,7 +684,7 @@ export default function TakeExamPage() {
 
       {!isOnline && (
         <div className="bg-red-600 text-white text-center py-2 text-sm font-medium animate-in slide-in-from-top duration-300">
-          You are currently offline. Answers will be saved locally.
+          {t('offlineAnswersSaved')} {/* TRANSLATED */}
         </div>
       )}
 
@@ -705,7 +707,7 @@ export default function TakeExamPage() {
                     </span>
                     <div className="flex flex-col">
                       <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground opacity-70">
-                        Question
+                        {t('question')} {/* TRANSLATED */}
                       </span>
                       <span className="text-sm font-bold capitalize">
                         {currentQuestion.question_type.replace('_', ' ')}
@@ -714,12 +716,12 @@ export default function TakeExamPage() {
                   </div>
                   <div className="flex items-center gap-4">
                     <div className="flex flex-col items-end">
-                      <span className="text-[10px] uppercase font-bold text-muted-foreground">Points</span>
+                      <span className="text-[10px] uppercase font-bold text-muted-foreground">{t('points')}</span> {/* TRANSLATED */}
                       <span className="text-lg font-black text-primary">{currentQuestion.points}</span>
                     </div>
                     {questionTimeLeft !== null && (
                       <div className="flex flex-col items-end">
-                        <span className="text-[10px] uppercase font-bold text-muted-foreground">Limit</span>
+                        <span className="text-[10px] uppercase font-bold text-muted-foreground">{t('limit')}</span> {/* TRANSLATED */}
                         <div className={cn(
                           "flex items-center gap-1.5 font-mono font-bold px-3 py-1 rounded-lg border-2",
                           questionTimeLeft < 30
@@ -827,14 +829,14 @@ export default function TakeExamPage() {
                       <textarea
                         className="w-full p-6 text-xl font-medium border-4 border-border rounded-3xl focus:ring-8 focus:ring-primary/10 focus:border-primary transition-all outline-none bg-card resize-y min-h-[200px] shadow-sm group-hover:shadow-md"
                         rows={currentQuestion.question_type === 'essay' ? 10 : 5}
-                        placeholder="Start typing your answer here..."
+                        placeholder={t('startTypingAnswer')}  
                         value={answers[currentQuestion.id] || ''}
                         onChange={(e) => saveAnswer(currentQuestion.id, e.target.value)}
                       />
                       <div className="absolute bottom-6 right-6 flex items-center gap-2 px-3 py-1 bg-secondary rounded-full text-[10px] font-black uppercase text-muted-foreground border-2 border-border shadow-sm">
-                        <span>Words: {((answers[currentQuestion.id] || '').trim().split(/\s+/).filter(Boolean).length)}</span>
+                        <span>{t('words')}: {((answers[currentQuestion.id] || '').trim().split(/\s+/).filter(Boolean).length)}</span> {/* TRANSLATED */}
                         <span className="opacity-30">|</span>
-                        <span>Chars: {(answers[currentQuestion.id] || '').length}</span>
+                        <span>{t('chars')}: {(answers[currentQuestion.id] || '').length}</span> {/* TRANSLATED */}
                       </div>
                     </div>
                   )}
@@ -851,7 +853,7 @@ export default function TakeExamPage() {
                     className="gap-3 px-6 h-14 rounded-2xl font-bold"
                   >
                     <ArrowLeft className="w-5 h-5 stroke-[3px]" />
-                    <span className="hidden sm:inline">Previous</span>
+                    <span className="hidden sm:inline">{t('previous')}</span> {/* TRANSLATED */}
                   </NeuButton>
 
                   <NeuButton
@@ -865,7 +867,7 @@ export default function TakeExamPage() {
                     )}
                   >
                     <Flag className={cn("w-5 h-5", isMarked ? "fill-amber-600 stroke-[3px]" : "stroke-[2px]")} />
-                    <span className="hidden sm:inline">{isMarked ? 'Question Marked' : 'Mark for Review'}</span>
+                    <span className="hidden sm:inline">{isMarked ? t('questionMarked') : t('markForReview')}</span> {/* TRANSLATED */}
                   </NeuButton>
                 </div>
 
@@ -874,7 +876,7 @@ export default function TakeExamPage() {
                     onClick={() => setCurrentQuestionIndex(currentQuestionIndex + 1)}
                     className="gap-3 px-8 h-14 rounded-2xl font-black text-lg shadow-[8px_8px_0px_0px_rgba(var(--primary-rgb),0.2)] hover:shadow-none translate-y-[-4px] hover:translate-y-0"
                   >
-                    Next Question
+                    {t('nextQuestion')} {/* TRANSLATED */}
                     <ArrowRight className="w-5 h-5 stroke-[3px]" />
                   </NeuButton>
                 ) : (
@@ -887,7 +889,7 @@ export default function TakeExamPage() {
                       <Loader2 className="w-6 h-6 animate-spin" />
                     ) : (
                       <>
-                        Complete & Submit
+                        {t('completeSubmit')} {/* TRANSLATED */}
                         <Check className="w-6 h-6 stroke-[4px]" />
                       </>
                     )}

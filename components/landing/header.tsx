@@ -4,9 +4,11 @@ import * as React from "react"
 import Link from "next/link"
 import { NeuButton } from "@/components/ui/neu-button"
 import { Menu, X } from "lucide-react"
+import { useTranslation } from 'react-i18next'
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = React.useState(false)
+  const { t } = useTranslation()
 
   return (
     <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
@@ -24,42 +26,34 @@ export function Header() {
             href="/features"
             className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
           >
-            Features
+            {t('features')}
           </Link>
           <Link
             href="/pricing"
             className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
           >
-            Pricing
+            {t('pricing')}
           </Link>
           <Link
             href="/about"
             className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
           >
-            About
+            {t('about')}
           </Link>
         </div>
 
         <div className="hidden md:flex items-center gap-3">
           <Link href="/auth/login">
             <NeuButton variant="ghost" size="sm">
-              Log in
+              {t('login')}
             </NeuButton>
           </Link>
           <Link href="/auth/signup">
-            <NeuButton size="sm">Get Started</NeuButton>
+            <NeuButton size="sm">{t('getStarted')}</NeuButton>
           </Link>
         </div>
 
-        {/* Mobile Menu Button */}
-        <button
-          className="md:hidden p-2 rounded-lg hover:bg-muted transition-colors"
-          onClick={() => setIsMenuOpen(!isMenuOpen)}
-          aria-expanded={isMenuOpen}
-          aria-label="Toggle menu"
-        >
-          {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-        </button>
+        
       </nav>
 
       {/* Mobile Menu */}
@@ -71,31 +65,31 @@ export function Header() {
               className="block py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
               onClick={() => setIsMenuOpen(false)}
             >
-              Features
+              {t('features')}
             </Link>
             <Link
               href="/pricing"
               className="block py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
               onClick={() => setIsMenuOpen(false)}
             >
-              Pricing
+              {t('pricing')}
             </Link>
             <Link
               href="/about"
               className="block py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
               onClick={() => setIsMenuOpen(false)}
             >
-              About
+              {t('about')}
             </Link>
             <div className="pt-4 flex flex-col gap-3">
               <Link href="/auth/login" onClick={() => setIsMenuOpen(false)}>
                 <NeuButton variant="ghost" size="sm" className="w-full">
-                  Log in
+                  {t('login')}
                 </NeuButton>
               </Link>
               <Link href="/auth/signup" onClick={() => setIsMenuOpen(false)}>
                 <NeuButton size="sm" className="w-full">
-                  Get Started
+                  {t('getStarted')}
                 </NeuButton>
               </Link>
             </div>

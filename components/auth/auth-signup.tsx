@@ -9,10 +9,12 @@ import { NeuButton } from '@/components/ui/neu-button'
 import { Eye, EyeOff, Loader2, Check } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
+import { useTranslation } from 'react-i18next'
 
 export default function SignupPage() {
   const router = useRouter()
   const { signUp, loading } = useAuth()
+  const { t } = useTranslation()
   
   const [formData, setFormData] = useState({
     fullName: '',
@@ -29,28 +31,28 @@ export default function SignupPage() {
 
   const validateForm = () => {
     if (!formData.fullName.trim()) {
-      toast.error('Full name is required')
+      toast.error(t('fullNameRequired'))
       return false
     }
     
     if (!formData.email.trim()) {
-      toast.error('Email is required')
+      toast.error(t('emailRequired'))
       return false
     }
     
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(formData.email)) {
-      toast.error('Please enter a valid email address')
+      toast.error(t('validEmail'))
       return false
     }
     
     if (formData.password.length < 6) {
-      toast.error('Password must be at least 6 characters long')
+      toast.error(t('passwordLength'))
       return false
     }
     
     if (formData.password !== formData.confirmPassword) {
-      toast.error('Passwords do not match')
+      toast.error(t('passwordsDontMatch'))
       return false
     }
     
@@ -72,22 +74,20 @@ export default function SignupPage() {
       )
       
       if (error) {
-        // Provide specific error messages
         if (error.includes('already registered') || error.includes('duplicate')) {
-          toast.error('This email is already registered. Please log in instead.')
+          toast.error(t('emailAlreadyRegistered'))
         } else if (error.includes('weak') || error.includes('password')) {
-          toast.error('Password is too weak. Please use a stronger password.')
+          toast.error(t('weakPassword'))
         } else {
           toast.error(error)
         }
       } else {
-        toast.success('Account created successfully! Please check your email to verify your account.')
+        toast.success(t('accountCreated'))
         setVerificationSent(true)
         setVerificationEmail(formData.email)
-        // Don't redirect - show verification pending message
       }
     } catch (err) {
-      toast.error('An error occurred during signup')
+      toast.error(t('errorOccurredSignup'))
       console.error('Signup error:', err)
     } finally {
       setIsLoading(false)
@@ -106,13 +106,12 @@ export default function SignupPage() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p>Loading...</p>
+          <p>{t('loading')}</p>
         </div>
       </div>
     )
   }
 
-  // Show verification pending message
   if (verificationSent) {
     return (
       <div className="min-h-screen w-full flex items-center justify-center">
@@ -123,28 +122,28 @@ export default function SignupPage() {
                 <Check className="h-6 w-6 text-green-600" />
               </div>
             </div>
-            <h2 className="text-2xl font-bold mb-2">Verify Your Email</h2>
+            <h2 className="text-2xl font-bold mb-2">{t('verifyEmail')}</h2>
             <p className="text-slate-600 mb-4">
-              We've sent a verification link to <strong>{verificationEmail}</strong>
+              {t('verificationSent')} <strong>{verificationEmail}</strong>
             </p>
             <div className="bg-slate-50 rounded-lg p-4 mb-6 text-left">
               <p className="text-sm text-slate-700 mb-2">
-                <strong>Next steps:</strong>
+                <strong>{t('nextSteps')}</strong>
               </p>
               <ol className="text-sm text-slate-600 space-y-2 list-decimal list-inside">
-                <li>Check your email inbox (and spam folder)</li>
-                <li>Click the verification link in the email</li>
-                <li>Return here to sign in</li>
+                <li>{t('checkEmailInbox')}</li>
+                <li>{t('clickVerificationLink')}</li>
+                <li>{t('returnToSignIn')}</li>
               </ol>
             </div>
             <NeuButton
               onClick={() => router.push('/auth/login')}
               className="w-full mb-4"
             >
-              Go to Login
+              {t('goToLogin')}
             </NeuButton>
             <p className="text-xs text-slate-500">
-              Didn't receive an email? Check your spam folder or try signing up again.
+              {t('didntReceiveEmail')}
             </p>
           </div>
         </NeuCard>
@@ -156,42 +155,42 @@ export default function SignupPage() {
     <div className="min-h-screen w-full flex items-center justify-center ">
       <NeuCard className="w-full max-w-lg p-8">
         <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold  mb-2">Create Account</h1>
-          <p className="">Join Quizya to create and manage exams</p>
+          <h1 className="text-2xl font-bold  mb-2">{t('createAccount')}</h1>
+          <p className="">{t('joinQuizya')}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label className="block text-sm font-medium  mb-2">
-              Full Name
+              {t('fullName')}
             </label>
             <NeuInput
               type="text"
               name="fullName"
               value={formData.fullName}
               onChange={handleInputChange}
-              placeholder="Enter your full name"
+              placeholder={t('enterFullName')}
               required
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium  mb-2">
-              Email Address
+              {t('emailAddress')}
             </label>
             <NeuInput
               type="email"
               name="email"
               value={formData.email}
               onChange={handleInputChange}
-              placeholder="Enter your email"
+              placeholder={t('enterEmail')}
               required
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium  mb-2">
-              Account Type
+              {t('accountType')}
             </label>
             <select
               name="role"
@@ -200,14 +199,14 @@ export default function SignupPage() {
               className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent "
               required
             >
-              <option value="student">Student</option>
-              <option value="teacher">Teacher</option>
+              <option value="student">{t('student')}</option>
+              <option value="teacher">{t('teacher')}</option>
             </select>
           </div>
 
           <div>
             <label className="block text-sm font-medium  mb-2">
-              Password
+              {t('password')}
             </label>
             <div className="relative">
               <NeuInput
@@ -215,7 +214,7 @@ export default function SignupPage() {
                 name="password"
                 value={formData.password}
                 onChange={handleInputChange}
-                placeholder="Create a password"
+                placeholder={t('enterPassword')}
                 className="pr-10"
                 required
               />
@@ -231,7 +230,7 @@ export default function SignupPage() {
 
           <div>
             <label className="block text-sm font-medium  mb-2">
-              Confirm Password
+              {t('confirmPassword')}
             </label>
             <div className="relative">
               <NeuInput
@@ -239,7 +238,7 @@ export default function SignupPage() {
                 name="confirmPassword"
                 value={formData.confirmPassword}
                 onChange={handleInputChange}
-                placeholder="Confirm your password"
+                placeholder={t('confirmYourPassword')}
                 className="pr-10"
                 required
               />
@@ -261,22 +260,22 @@ export default function SignupPage() {
             {isLoading ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                Creating Account...
+                {t('creatingAccount')}
               </>
             ) : (
-              'Create Account'
+              t('createAccountButton')
             )}
           </NeuButton>
         </form>
 
         <div className="mt-6 space-y-4">
           <div className="text-center ">
-            <span className="text-sm">Already have an account? </span>
+            <span className="text-sm">{t('alreadyHaveAccount')} </span>
             <Link 
               href="/auth/login" 
               className="text-sm text-blue-600 hover:text-blue-500 font-medium"
             >
-              Sign in
+              {t('signIn')}
             </Link>
           </div>
 
@@ -285,7 +284,7 @@ export default function SignupPage() {
               href="/join" 
               className="text-sm text-green-600 hover:text-green-500 font-medium"
             >
-              Join an exam as guest
+              {t('joinExamAsGuest')}
             </Link>
           </div>
         </div>

@@ -25,6 +25,7 @@ import {
 } from 'lucide-react'
 import { Exam } from '@/lib/types'
 import { toast } from 'sonner'
+import { useTranslation } from 'react-i18next'
 
 export default function ExamsPage() {
   const { user, profile } = useAuth()
@@ -33,6 +34,7 @@ export default function ExamsPage() {
   const [filter, setFilter] = useState<'all' | 'active' | 'inactive'>('all')
   const [examStats, setExamStats] = useState<Record<string, { sessions: number; avgScore: number }>>({})
   const [loadingStats, setLoadingStats] = useState(true)
+  const { t } = useTranslation()
 
   useEffect(() => {
     if (user && exams.length > 0) {
@@ -66,16 +68,16 @@ export default function ExamsPage() {
 
   const handleCopyRoomCode = (roomCode: string) => {
     navigator.clipboard.writeText(roomCode)
-    toast.success('Room code copied to clipboard!')
+    toast.success(t('roomCodeCopied'))
   }
 
   const handleDeleteExam = async (examId: string, title: string) => {
-    if (confirm(`Are you sure you want to delete "${title}"?`)) {
+    if (confirm(`${t('confirmDeleteExam')} "${title}"?`)) {
       const success = await deleteExam(examId)
       if (success) {
-        toast.success('Exam deleted successfully')
+        toast.success(t('examDeleted'))
       } else {
-        toast.error('Failed to delete exam')
+        toast.error(t('deleteExamFailed'))
       }
     }
   }
@@ -89,17 +91,16 @@ export default function ExamsPage() {
       })
 
       if (!res.ok) {
-        toast.error('Failed to update exam status')
+        toast.error(t('updateStatusFailed'))
       } else {
-        toast.success(`Exam ${!exam.is_active ? 'activated' : 'deactivated'}`)
-        window.location.reload() // Refresh to show updated data
+        toast.success(t(exam.is_active ? 'examDeactivated' : 'examActivated'))
+        window.location.reload()
       }
     } catch (error) {
-      toast.error('Failed to update exam status')
+      toast.error(t('updateStatusFailed'))
     }
   }
 
-  // Filter exams based on search and filter
   const filteredExams = exams.filter(exam => {
     const matchesSearch = exam.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       exam.description?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -115,7 +116,7 @@ export default function ExamsPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <p className="text-red-600">Access denied. Teacher account required.</p>
+          <p className="text-red-600">{t('accessDeniedTeacher')}</p>
         </div>
       </div>
     )
@@ -126,7 +127,7 @@ export default function ExamsPage() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p>Loading exams...</p>
+          <p>{t('loadingExams')}</p>
         </div>
       </div>
     )
@@ -135,27 +136,25 @@ export default function ExamsPage() {
   return (
     <div className="min-h-screen  p-4">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
         <div className="mb-6">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-3xl font-bold ">Your Exams</h1>
-              <p className="">Create and manage your examinations</p>
+              <h1 className="text-3xl font-bold ">{t('yourExams')}</h1>
+              <p className="">{t('manageExamsDescription')}</p>
             </div>
             <Link href="/dashboard/exams/new">
               <NeuButton>
                 <Plus className="h-4 w-4 mr-2" />
-                Create Exam
+                {t('createExam')}
               </NeuButton>
             </Link>
           </div>
 
-          {/* Search and Filters */}
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
               <NeuInput
-                placeholder="Search exams..."
+                placeholder={t('searchExamsPlaceholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -171,32 +170,31 @@ export default function ExamsPage() {
                   size="sm"
                   className="capitalize"
                 >
-                  {filterType}
+                  {t(filterType)}
                 </NeuButton>
               ))}
             </div>
           </div>
         </div>
 
-        {/* Exams List */}
         {filteredExams.length === 0 ? (
           <NeuCard className="text-center p-12">
             <FileQuestion className="h-12 w-12 text-slate-400 mx-auto mb-4" />
             {exams.length === 0 ? (
               <>
-                <h3 className="text-lg font-medium  mb-2">No exams yet</h3>
-                <p className="text-slate-500 mb-4">Create your first exam to get started</p>
+                <h3 className="text-lg font-medium  mb-2">{t('noExamsYet')}</h3>
+                <p className="text-slate-500 mb-4">{t('createFirstExamPrompt')}</p>
                 <Link href="/dashboard/exams/new">
                   <NeuButton>
                     <Plus className="h-4 w-4 mr-2" />
-                    Create Your First Exam
+                    {t('createFirstExam')}
                   </NeuButton>
                 </Link>
               </>
             ) : (
               <>
-                <h3 className="text-lg font-medium  mb-2">No matching exams</h3>
-                <p className="text-slate-500">Try adjusting your search or filter criteria</p>
+                <h3 className="text-lg font-medium  mb-2">{t('noMatchingExams')}</h3>
+                <p className="text-slate-500">{t('adjustSearchFilter')}</p>
               </>
             )}
           </NeuCard>
@@ -213,9 +211,9 @@ export default function ExamsPage() {
                         <h3 className="text-lg font-semibold ">{exam.title}</h3>
 
                         {exam.is_public ? (
-                          <Globe className="h-4 w-4 text-green-600" title="Public exam" />
+                          <Globe className="h-4 w-4 text-green-600" title={t('publicExam')} />
                         ) : (
-                          <Lock className="h-4 w-4 text-slate-400" title="Private exam" />
+                          <Lock className="h-4 w-4 text-slate-400" title={t('privateExam')} />
                         )}
 
                         <button
@@ -224,7 +222,7 @@ export default function ExamsPage() {
                               ? 'text-green-600 hover:bg-green-50'
                               : 'text-red-600 hover:bg-red-50'
                             }`}
-                          title={exam.is_active ? 'Deactivate exam' : 'Activate exam'}
+                          title={exam.is_active ? t('deactivateExam') : t('activateExam')}
                         >
                           {exam.is_active ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
                         </button>
@@ -233,7 +231,7 @@ export default function ExamsPage() {
                             ? 'bg-green-100 text-green-800'
                             : 'bg-gray-100 text-gray-800'
                           }`}>
-                          {exam.is_active ? 'Active' : 'Inactive'}
+                          {exam.is_active ? t('active') : t('inactive')}
                         </span>
                       </div>
 
@@ -244,26 +242,26 @@ export default function ExamsPage() {
                       <div className="flex items-center gap-6 text-sm text-slate-500 mb-3">
                         <div className="flex items-center gap-1">
                           <FileQuestion className="h-4 w-4" />
-                          {exam.total_questions} questions
+                          {exam.total_questions} {t('questions')}
                         </div>
                         <div className="flex items-center gap-1">
                           <Clock className="h-4 w-4" />
-                          {exam.duration_minutes} minutes
+                          {exam.duration_minutes} {t('minutes')}
                         </div>
                         <div className="flex items-center gap-1">
                           <Users className="h-4 w-4" />
-                          {loadingStats ? '...' : stats.sessions} attempts
+                          {loadingStats ? '...' : stats.sessions} {t('attempts')}
                         </div>
                         {!loadingStats && stats.sessions > 0 && (
                           <div>
-                            Avg: {stats.avgScore}%
+                            {t('avg')}: {stats.avgScore}%
                           </div>
                         )}
                       </div>
 
                       {exam.room_code && (
                         <div className="flex items-center gap-2">
-                          <span className="text-sm ">Room Code:</span>
+                          <span className="text-sm ">{t('roomCode')}</span>
                           <button
                             onClick={() => handleCopyRoomCode(exam.room_code!)}
                             className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700"
@@ -279,14 +277,14 @@ export default function ExamsPage() {
                       <Link href={`/dashboard/exams/${exam.id}`}>
                         <NeuButton variant="outline" size="sm">
                           <Eye className="h-4 w-4 mr-1" />
-                          View
+                          {t('view')}
                         </NeuButton>
                       </Link>
 
                       <Link href={`/dashboard/exams/${exam.id}/monitor`}>
                         <NeuButton variant="outline" size="sm">
                           <Users className="h-4 w-4 mr-1" />
-                          Monitor
+                          {t('monitor')}
                         </NeuButton>
                       </Link>
 
