@@ -197,7 +197,7 @@ export default function SignupPage() {
               name="role"
               value={formData.role}
               onChange={handleInputChange}
-              className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent "
+              className="flex h-12 w-full rounded-lg bg-input px-4 py-3 text-base border border-border text-foreground transition-all duration-150 ease-out hover:border-muted-foreground/50 focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-50"
               required
             >
               <option value="student">Student</option>
