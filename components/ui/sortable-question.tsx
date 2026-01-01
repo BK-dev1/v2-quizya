@@ -108,34 +108,52 @@ export function SortableQuestion({
           {/* MCQ Options */}
           {question.type === "mcq" && question.options && (
             <div className="space-y-3">
-              <label className="text-sm font-medium">Answer Options</label>
-              {question.options.map((option, optIndex) => (
-                <div key={optIndex} className="flex items-center gap-3">
-                  <button
-                    onClick={() => onUpdate({ correctAnswer: optIndex })}
-                    className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-colors ${
-                      question.correctAnswer === optIndex
-                        ? "border-success bg-success text-success-foreground"
-                        : "border-border hover:border-primary"
-                    }`}
-                    aria-label={`Mark option ${optIndex + 1} as correct`}
-                  >
-                    {question.correctAnswer === optIndex && <Check className="w-4 h-4" />}
-                  </button>
-                  <input
-                    type="text"
-                    placeholder={`Option ${optIndex + 1}`}
-                    value={option}
-                    onChange={(e) => {
-                      const newOptions = [...question.options!]
-                      newOptions[optIndex] = e.target.value
-                      onUpdate({ options: newOptions })
-                    }}
-                    className="flex-1 h-10 px-4 rounded-xl bg-input border border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring text-sm"
-                  />
-                </div>
-              ))}
-              <p className="text-xs text-muted-foreground">Click the circle to mark the correct answer</p>
+              <label className="text-sm font-medium">Answer Options (Select one or more correct answers)</label>
+              {question.options.map((option, optIndex) => {
+                const correctAnswerArray = Array.isArray(question.correctAnswer) 
+                  ? question.correctAnswer 
+                  : typeof question.correctAnswer === 'number' 
+                    ? [question.correctAnswer] 
+                    : []
+                const isCorrect = correctAnswerArray.includes(optIndex)
+                
+                return (
+                  <div key={optIndex} className="flex items-center gap-3">
+                    <button
+                      onClick={() => {
+                        let newCorrectAnswers: number[]
+                        if (isCorrect) {
+                          newCorrectAnswers = correctAnswerArray.filter(idx => idx !== optIndex)
+                        } else {
+                          // Add to correct answers
+                          newCorrectAnswers = [...correctAnswerArray, optIndex]
+                        }
+                        onUpdate({ correctAnswer: newCorrectAnswers.length === 1 ? newCorrectAnswers[0] : newCorrectAnswers })
+                      }}
+                      className={`w-8 h-8 rounded border-2 flex items-center justify-center transition-colors ${
+                        isCorrect
+                          ? "border-success bg-success text-success-foreground"
+                          : "border-border hover:border-primary"
+                      }`}
+                      aria-label={`Mark option ${optIndex + 1} as correct`}
+                    >
+                      {isCorrect && <Check className="w-4 h-4" />}
+                    </button>
+                    <input
+                      type="text"
+                      placeholder={`Option ${optIndex + 1}`}
+                      value={option}
+                      onChange={(e) => {
+                        const newOptions = [...question.options!]
+                        newOptions[optIndex] = e.target.value
+                        onUpdate({ options: newOptions })
+                      }}
+                      className="flex-1 h-10 px-4 rounded-xl bg-input border border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring text-sm"
+                    />
+                  </div>
+                )
+              })}
+              <p className="text-xs text-muted-foreground">Click the checkbox to mark correct answer(s). You can select multiple correct answers.</p>
             </div>
           )}
 

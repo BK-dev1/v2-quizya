@@ -118,6 +118,9 @@ export async function submitExamSession(
 ): Promise<ExamSession | null> {
   const supabase = await createClient()
 
+  console.log('[submitExamSession] Starting submission for session:', sessionId)
+  console.log('[submitExamSession] Received answers:', JSON.stringify(answers, null, 2))
+
   // 1. Get the session to find the exam_id
   const { data: session, error: sessionError } = await supabase
     .from('exam_sessions')
@@ -146,6 +149,8 @@ export async function submitExamSession(
     console.error('Error fetching exam data:', questionsError || examError)
     return null
   }
+
+  console.log('[submitExamSession] Found', questions.length, 'questions')
 
   // 2.5 Validation Logic (Time Check)
   if (session.started_at && exam.duration_minutes) {
@@ -176,7 +181,7 @@ export async function submitExamSession(
 
     let isCorrect = false
 
-    const studentAnswerText = (ans.answer || '').trim()
+    const studentAnswerText = Array.isArray(ans.answer) ? '' : String(ans.answer || '').trim()
     const correctAnswerText = (question.correct_answer || '').trim()
 
     if (question.question_type === 'essay') {
@@ -201,26 +206,93 @@ export async function submitExamSession(
         isCorrect = isExactMatch
       }
     } else if (question.question_type === 'multiple_choice' || (question.question_type as string) === 'mcq') {
-      // Handle MCQ: Check if stored correct_answer is an index
       const options = question.options as any[] | null
-      const isIndex = /^\d+$/.test(correctAnswerText)
-
-      if (isIndex && options && Array.isArray(options)) {
-        const index = parseInt(correctAnswerText)
-        const optionAtIndex = options[index]
-        const optionText = typeof optionAtIndex === 'string' ? optionAtIndex : optionAtIndex?.text
-
-        isCorrect = studentAnswerText === (optionText || '').trim()
+      
+      console.log(`[MCQ Grading] Question: ${question.question_text}`)
+      console.log(`[MCQ Grading] Student answer:`, ans.answer)
+      console.log(`[MCQ Grading] Correct answer (raw):`, correctAnswerText)
+      let studentAnswers: string[]
+      if (Array.isArray(ans.answer)) {
+        studentAnswers = ans.answer.map((a: any) => String(a).trim())
       } else {
-        // Fallback to exact match
-        isCorrect = studentAnswerText === correctAnswerText
+        studentAnswers = ans.answer ? [String(ans.answer).trim()] : []
       }
+      
+      console.log(`[MCQ Grading] Student answers parsed:`, studentAnswers)
+      
+      let correctAnswers: string[] = []
+      
+      try {
+        const parsed = JSON.parse(correctAnswerText)
+        console.log(`[MCQ Grading] Parsed as JSON:`, parsed)
+        
+        if (Array.isArray(parsed)) {
+          correctAnswers = parsed
+            .map((idx: number) => {
+              if (options && Array.isArray(options) && idx >= 0 && idx < options.length) {
+                const option = options[idx]
+                return typeof option === 'string' ? option.trim() : (option?.text || '').trim()
+              }
+              return null
+            })
+            .filter((val: string | null): val is string => val !== null)
+        } else if (typeof parsed === 'number') {
+          if (options && Array.isArray(options) && parsed >= 0 && parsed < options.length) {
+            const option = options[parsed]
+            correctAnswers = [typeof option === 'string' ? option.trim() : (option?.text || '').trim()]
+          }
+        }
+      } catch {
+        console.log(`[MCQ Grading] Not JSON, checking if single or comma-separated indices`)
+        
+        if (/^[\d,\s]+$/.test(correctAnswerText)) {
+          const indices = correctAnswerText.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n))
+          console.log(`[MCQ Grading] Found comma-separated indices:`, indices)
+          
+          if (indices.length > 0 && options && Array.isArray(options)) {
+            correctAnswers = indices
+              .map((idx: number) => {
+                if (idx >= 0 && idx < options.length) {
+                  const option = options[idx]
+                  return typeof option === 'string' ? option.trim() : (option?.text || '').trim()
+                }
+                return null
+              })
+              .filter((val: string | null): val is string => val !== null)
+          }
+        } else if (/^\d+$/.test(correctAnswerText)) {
+          // Single index
+          const index = parseInt(correctAnswerText)
+          if (options && Array.isArray(options) && index >= 0 && index < options.length) {
+            const optionAtIndex = options[index]
+            const optionText = typeof optionAtIndex === 'string' ? optionAtIndex : optionAtIndex?.text
+            correctAnswers = [(optionText || '').trim()]
+          }
+        } else {
+          correctAnswers = [correctAnswerText]
+        }
+      }
+      
+      console.log(`[MCQ Grading] Correct answers parsed:`, correctAnswers)
+      
+      if (correctAnswers.length === 0) {
+        isCorrect = false
+      } else {
+        const sortedStudent = [...studentAnswers].sort()
+        const sortedCorrect = [...correctAnswers].sort()
+        isCorrect = sortedStudent.length === sortedCorrect.length &&
+                   sortedStudent.every((ans, idx) => ans === sortedCorrect[idx])
+      }
+      
+      console.log(`[MCQ Grading] Is correct:`, isCorrect)
     } else if (question.question_type === 'true_false' || (question.question_type as string) === 'truefalse') {
       // Robust True/False comparison
-      isCorrect = studentAnswerText.toLowerCase() === correctAnswerText.toLowerCase()
+      const studentAnswer = Array.isArray(ans.answer) ? '' : String(ans.answer || '').trim()
+      isCorrect = studentAnswer.toLowerCase() === correctAnswerText.toLowerCase()
     } else {
       // Default exact match for any other types
-      isCorrect = studentAnswerText === correctAnswerText
+      const studentAnswer = Array.isArray(ans.answer) ? '' : String(ans.answer || '').trim()
+      isCorrect = studentAnswer === correctAnswerText
     }
 
     const pointsEarned = isCorrect ? question.points : 0

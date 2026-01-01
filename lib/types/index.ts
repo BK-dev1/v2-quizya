@@ -57,7 +57,7 @@ export type QuestionOption = {
 
 export type StudentAnswer = {
   question_id: string
-  answer: string
+  answer: string | string[]
   is_correct: boolean
   points_earned: number
 }

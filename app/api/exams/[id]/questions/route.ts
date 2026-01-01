@@ -30,7 +30,7 @@ export async function POST(
 
     if (examError || !exam) return NextResponse.json({ error: 'Exam not found' }, { status: 404 })
     if (exam.created_by !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    if (exam.status === 'published') return NextResponse.json({ error: 'Cannot edit published exam' }, { status: 400 })
+    if (exam.status === 'ended') return NextResponse.json({ error: 'Cannot edit ended exam' }, { status: 400 })
 
     // Validate questions
     for (const q of questions) {
@@ -51,13 +51,19 @@ export async function POST(
       if (q.question_type === 'mcq') dbType = 'multiple_choice'
       else if (q.question_type === 'truefalse') dbType = 'true_false'
       else if (q.question_type === 'shortanswer') dbType = 'short_answer'
+      let correctAnswerValue: string
+      if (Array.isArray(q.correct_answer)) {
+        correctAnswerValue = JSON.stringify(q.correct_answer)
+      } else {
+        correctAnswerValue = String(q.correct_answer)
+      }
 
       return {
         exam_id: id,
         question_text: q.question_text,
         question_type: dbType,
         options: q.options || null,
-        correct_answer: String(q.correct_answer),
+        correct_answer: correctAnswerValue,
         order_index: q.order_index || null,
         points: q.points || 1,
         time_limit: q.time_limit || null
