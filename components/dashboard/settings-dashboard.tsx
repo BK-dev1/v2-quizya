@@ -95,10 +95,10 @@ export default function SettingsPage() {
 
       // Load user settings
       const res = await fetch(`/api/settings/preferences`)
-      
+
       if (res.ok) {
         const settingsData = await res.json()
-        
+
         if (settingsData && Object.keys(settingsData).length > 0) {
           // Set notification settings
           setNotifications({
@@ -109,7 +109,7 @@ export default function SettingsPage() {
             push_infractions: settingsData.push_infractions ?? true,
             push_submissions: settingsData.push_submissions ?? false,
           })
-          
+
           // Set language and other settings
           const savedLanguage = settingsData.language || 'en'
           setLanguage(savedLanguage)
@@ -118,19 +118,16 @@ export default function SettingsPage() {
           setDateFormat(settingsData.date_format || 'MM/DD/YYYY')
           setTwoFactorEnabled(settingsData.two_factor_enabled || false)
           setSessionTimeout(String(settingsData.session_timeout_minutes || "30"))
-          
+
           // Apply saved language immediately
           if (savedLanguage !== i18n.language) {
             await i18n.changeLanguage(savedLanguage)
           }
-          
+
           // Apply theme if different
           if (settingsData.theme && settingsData.theme !== theme) {
             setTheme(settingsData.theme)
           }
-          
-          // Update HTML direction for RTL languages
-          updateDocumentDirection(savedLanguage)
         }
       }
     } catch (error) {
@@ -141,15 +138,6 @@ export default function SettingsPage() {
     }
   }
 
-  const updateDocumentDirection = (lang: string) => {
-    if (lang === 'ar') {
-      document.documentElement.dir = 'rtl'
-      document.documentElement.lang = 'ar'
-    } else {
-      document.documentElement.dir = 'ltr'
-      document.documentElement.lang = lang
-    }
-  }
 
   const saveProfile = async () => {
     if (!user) return false
@@ -201,7 +189,7 @@ export default function SettingsPage() {
           push_submissions: notifications.push_submissions,
         })
       })
-      
+
       if (!res.ok) {
         throw new Error(t('notificationsSaveFailed') || 'Failed to save notifications')
       }
@@ -229,7 +217,7 @@ export default function SettingsPage() {
         timezone: timezone,
         date_format: dateFormat,
       }
-      
+
       const res = await fetch(`/api/settings/preferences`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -242,8 +230,7 @@ export default function SettingsPage() {
 
       // Apply language change immediately
       await i18n.changeLanguage(language)
-      updateDocumentDirection(language)
-      
+
       toast.success(t('appearanceSaved') || 'Appearance & Region preferences saved')
       return true
     } catch (error: any) {

@@ -18,7 +18,7 @@ export function Footer() {
               <span className="font-bold text-xl">Quizya</span>
             </Link>
             <p className="text-sm text-muted-foreground">
-              The modern way to create and take online exams with confidence.
+              {t('modernWayConfidence')}
             </p>
           </div>
 
@@ -37,7 +37,7 @@ export function Footer() {
               </li>
               <li>
                 <Link href="/integrations" className="hover:text-foreground transition-colors">
-                  Integrations
+                  {t('integrations')}
                 </Link>
               </li>
             </ul>
@@ -53,12 +53,12 @@ export function Footer() {
               </li>
               <li>
                 <Link href="/blog" className="hover:text-foreground transition-colors">
-                  Blog
+                  {t('blog')}
                 </Link>
               </li>
               <li>
                 <Link href="/contact" className="hover:text-foreground transition-colors">
-                  Contact
+                  {t('contact')}
                 </Link>
               </li>
             </ul>

@@ -168,11 +168,11 @@ export default function ExamMonitor({ examId }: ExamMonitorProps) {
                 <div>
                     <h1 className="text-2xl font-bold flex items-center gap-2">
                         {exam.title}
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${exam.status === 'active' ? 'bg-green-100 text-green-700 border-green-200' :
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border uppercase ${exam.status === 'active' ? 'bg-green-100 text-green-700 border-green-200' :
                             exam.status === 'ended' ? 'bg-red-100 text-red-700 border-red-200' :
                                 'bg-amber-100 text-amber-700 border-amber-200'
                             }`}>
-                            {exam.status?.toUpperCase()}
+                            {t(exam.status || '')}
                         </span>
                     </h1>
                     <p className="text-muted-foreground text-sm flex items-center gap-2">
@@ -305,7 +305,7 @@ export default function ExamMonitor({ examId }: ExamMonitorProps) {
                                 <div className="flex items-center gap-6">
                                     <div className="text-right">
                                         <p className="text-sm font-medium">{t('status') || 'Status'}</p>
-                                        <p className="text-xs text-muted-foreground capitalize">{session.status.replace('_', ' ')}</p>
+                                        <p className="text-xs text-muted-foreground capitalize">{t(session.status)}</p>
                                     </div>
                                     <div className="text-right">
                                         <p className="text-sm font-medium">{t('score') || 'Score'}</p>

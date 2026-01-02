@@ -13,6 +13,25 @@ export function LanguageProvider({ children }: LanguageProviderProps) {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
 
+  // Effect to handle RTL/LTR and language attributes globally
+  useEffect(() => {
+    const handleLanguageChange = (lng: string) => {
+      document.documentElement.lang = lng;
+      document.documentElement.dir = lng === 'ar' ? 'rtl' : 'ltr';
+    };
+
+    // Initialize based on current language
+    handleLanguageChange(i18n.language);
+
+    // Listen for changes
+    i18n.on('languageChanged', handleLanguageChange);
+
+    return () => {
+      i18n.off('languageChanged', handleLanguageChange);
+    };
+  }, []);
+
+  // Effect to load user preference
   useEffect(() => {
     const loadUserLanguage = async () => {
       if (user) {
@@ -22,18 +41,9 @@ export function LanguageProvider({ children }: LanguageProviderProps) {
           if (res.ok) {
             const settings = await res.json();
             const userLanguage = settings?.language;
-            
+
             if (userLanguage && userLanguage !== i18n.language) {
               await i18n.changeLanguage(userLanguage);
-              
-              // Update HTML direction for RTL languages
-              if (userLanguage === 'ar') {
-                document.documentElement.dir = 'rtl';
-                document.documentElement.lang = 'ar';
-              } else {
-                document.documentElement.dir = 'ltr';
-                document.documentElement.lang = userLanguage;
-              }
             }
           }
         } catch (error) {

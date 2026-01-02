@@ -156,7 +156,7 @@ export default function StudentDashboard() {
                                                     </span>
                                                 ) : (
                                                     <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs font-bold uppercase">
-                                                        {session.status.replace('_', ' ')}
+                                                        {t(session.status)}
                                                     </span>
                                                 )}
                                             </div>

@@ -40,8 +40,13 @@ interface Question {
 
 type Step = 'details' | 'questions' | 'settings' | 'review'
 
+import { useTranslation } from "react-i18next"
+
+// ... imports
+
 export default function NewExamPage() {
   const router = useRouter()
+  const { t } = useTranslation()
   // Steps State
   const [currentStep, setCurrentStep] = React.useState<Step>('details')
 
@@ -243,10 +248,10 @@ export default function NewExamPage() {
 
   // Steps UI Indicators
   const steps = [
-    { id: 'details', label: 'Details', icon: FileText },
-    { id: 'questions', label: 'Questions', icon: List },
-    { id: 'settings', label: 'Settings', icon: Settings },
-    { id: 'review', label: 'Review', icon: CheckCircle },
+    { id: 'details', label: t('details'), icon: FileText },
+    { id: 'questions', label: t('questions'), icon: List },
+    { id: 'settings', label: t('configuration'), icon: Settings }, // Settings -> configuration
+    { id: 'review', label: t('review'), icon: CheckCircle },
   ]
 
   return (
@@ -256,21 +261,22 @@ export default function NewExamPage() {
         <div className="flex items-center gap-4">
           <Link href="/dashboard/exams">
             <NeuButton variant="ghost" size="sm">
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeft className="w-4 h-4 rtl:rotate-180" />
             </NeuButton>
           </Link>
           <div>
-            <h1 className="text-2xl font-bold">Create New Exam</h1>
-            <p className="text-sm text-muted-foreground">Step {steps.findIndex(s => s.id === currentStep) + 1} of 4: {steps.find(s => s.id === currentStep)?.label}</p>
+            <h1 className="text-2xl font-bold">{t('createNewExam')}</h1>
+            <p className="text-sm text-muted-foreground">{t('stepOf', { current: steps.findIndex(s => s.id === currentStep) + 1, total: 4, label: steps.find(s => s.id === currentStep)?.label })}</p>
           </div>
         </div>
 
         <div className="flex gap-2">
           <NeuButton variant="secondary" onClick={() => setShowPreview(true)} className="gap-2">
-            <Eye className="w-4 h-4" /> Preview
+            <Eye className="w-4 h-4" /> {t('preview')}
           </NeuButton>
         </div>
       </div>
+
 
       {/* Stepper */}
       <div className="flex justify-between items-center relative mb-8 px-4">
@@ -324,20 +330,20 @@ export default function NewExamPage() {
         {currentStep === 'details' && (
           <NeuCard className="max-w-2xl mx-auto">
             <NeuCardHeader>
-              <NeuCardTitle>Exam Details</NeuCardTitle>
+              <NeuCardTitle>{t('examDetails')}</NeuCardTitle>
             </NeuCardHeader>
             <NeuCardContent className="space-y-4">
               <NeuInput
-                label="Exam Title"
-                placeholder="e.g., Introduction to Computer Science"
+                label={t('examTitlePlaceholder').split(':')[0]} // Hack fallback or specific key
+                placeholder={t('examTitlePlaceholder')}
                 value={examTitle}
                 onChange={(e) => setExamTitle(e.target.value)}
                 required
               />
               <div className="space-y-2">
-                <label className="text-sm font-medium">Description</label>
+                <label className="text-sm font-medium">{t('description')}</label>
                 <textarea
-                  placeholder="Describe the exam content, rules, etc."
+                  placeholder={t('examDescriptionPlaceholder')}
                   value={examDescription}
                   onChange={(e) => setExamDescription(e.target.value)}
                   rows={4}
@@ -355,29 +361,29 @@ export default function NewExamPage() {
             <div className="lg:col-span-1 space-y-4">
               <NeuCard>
                 <NeuCardHeader>
-                  <NeuCardTitle className="text-lg">Tools</NeuCardTitle>
+                  <NeuCardTitle className="text-lg">{t('tools')}</NeuCardTitle>
                 </NeuCardHeader>
                 <NeuCardContent className="space-y-2">
-                  <p className="text-xs text-muted-foreground mb-4">Add questions to your exam.</p>
+                  <p className="text-xs text-muted-foreground mb-4">{t('addQuestionsDesc')}</p>
                   <NeuButton variant="secondary" className="w-full justify-start gap-2" onClick={() => addQuestion("mcq")}>
-                    <Plus className="w-4 h-4" /> Multiple Choice
+                    <Plus className="w-4 h-4" /> {t('multipleChoice')}
                   </NeuButton>
                   <NeuButton variant="secondary" className="w-full justify-start gap-2" onClick={() => addQuestion("truefalse")}>
-                    <Plus className="w-4 h-4" /> True / False
+                    <Plus className="w-4 h-4" /> {t('trueFalse')}
                   </NeuButton>
                   <NeuButton variant="secondary" className="w-full justify-start gap-2" onClick={() => addQuestion("shortanswer")}>
-                    <Plus className="w-4 h-4" /> Short Answer
+                    <Plus className="w-4 h-4" /> {t('shortAnswer')}
                   </NeuButton>
                   <NeuButton variant="secondary" className="w-full justify-start gap-2" onClick={() => addQuestion("essay")}>
-                    <Plus className="w-4 h-4" /> Essay
+                    <Plus className="w-4 h-4" /> {t('essay')}
                   </NeuButton>
                 </NeuCardContent>
               </NeuCard>
               <NeuCard>
                 <NeuCardContent className="pt-6 text-center">
                   <p className="text-2xl font-bold">{questions.length}</p>
-                  <p className="text-sm text-muted-foreground">Total Questions</p>
-                  <p className="text-xs text-muted-foreground mt-2">Est. Duration: {estimatedDuration} min</p>
+                  <p className="text-sm text-muted-foreground">{t('totalQuestions')}</p>
+                  <p className="text-xs text-muted-foreground mt-2">{t('estDuration')}: {estimatedDuration} min</p>
                 </NeuCardContent>
               </NeuCard>
             </div>
@@ -417,13 +423,13 @@ export default function NewExamPage() {
         {currentStep === 'settings' && (
           <NeuCard className="max-w-2xl mx-auto">
             <NeuCardHeader>
-              <NeuCardTitle>Configuration</NeuCardTitle>
+              <NeuCardTitle>{t('configuration')}</NeuCardTitle>
             </NeuCardHeader>
             <NeuCardContent className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium flex items-center gap-2">
-                    <Clock className="w-4 h-4" /> Duration (min)
+                    <Clock className="w-4 h-4" /> {t('durationMin')}
                   </label>
                   <input
                     type="number"
@@ -434,7 +440,7 @@ export default function NewExamPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Passing Score (%)</label>
+                  <label className="text-sm font-medium">{t('passingScorePercent')}</label>
                   <input
                     type="number"
                     min={0}
@@ -452,10 +458,10 @@ export default function NewExamPage() {
               <div className="flex items-center justify-between p-4 rounded-lg border border-border bg-amber-50/10">
                 <div>
                   <span className="text-sm font-bold flex items-center gap-2 text-amber-200">
-                    <ShieldAlert className="w-4 h-4" /> Enable Proctoring
+                    <ShieldAlert className="w-4 h-4" /> {t('enableProctoring')}
                   </span>
                   <p className="text-xs text-muted-foreground mt-1 max-w-[300px]">
-                    Flags suspicious behavior like tab switching and fullscreen exits.
+                    {t('proctoringDesc')}
                   </p>
                 </div>
                 <button
@@ -464,14 +470,14 @@ export default function NewExamPage() {
                   role="switch"
                   aria-checked={proctoringEnabled}
                 >
-                  <span className={`block w-5 h-5 bg-white rounded-full shadow transition-transform ${proctoringEnabled ? "translate-x-6" : "translate-x-0.5"}`} />
+                  <span className={`block w-5 h-5 bg-white rounded-full shadow transition-transform ${proctoringEnabled ? "translate-x-6 rtl:-translate-x-6" : "translate-x-0.5 rtl:-translate-x-0.5"}`} />
                 </button>
               </div>
 
               <div className="space-y-4">
                 <label className="flex items-center justify-between cursor-pointer">
                   <span className="text-sm font-medium flex items-center gap-2">
-                    <Shuffle className="w-4 h-4" /> Shuffle Questions
+                    <Shuffle className="w-4 h-4" /> {t('shuffleQuestions')}
                   </span>
                   <button
                     onClick={() => setShuffleQuestions(!shuffleQuestions)}
@@ -479,12 +485,12 @@ export default function NewExamPage() {
                     role="switch"
                     aria-checked={shuffleQuestions}
                   >
-                    <span className={`block w-5 h-5 bg-white rounded-full shadow transition-transform ${shuffleQuestions ? "translate-x-6" : "translate-x-0.5"}`} />
+                    <span className={`block w-5 h-5 bg-white rounded-full shadow transition-transform ${shuffleQuestions ? "translate-x-6 rtl:-translate-x-6" : "translate-x-0.5 rtl:-translate-x-0.5"}`} />
                   </button>
                 </label>
                 <label className="flex items-center justify-between cursor-pointer">
                   <span className="text-sm font-medium flex items-center gap-2">
-                    <Shuffle className="w-4 h-4" /> Shuffle Choices
+                    <Shuffle className="w-4 h-4" /> {t('shuffleChoices')}
                   </span>
                   <button
                     onClick={() => setShuffleChoices(!shuffleChoices)}
@@ -492,12 +498,12 @@ export default function NewExamPage() {
                     role="switch"
                     aria-checked={shuffleChoices}
                   >
-                    <span className={`block w-5 h-5 bg-white rounded-full shadow transition-transform ${shuffleChoices ? "translate-x-6" : "translate-x-0.5"}`} />
+                    <span className={`block w-5 h-5 bg-white rounded-full shadow transition-transform ${shuffleChoices ? "translate-x-6 rtl:-translate-x-6" : "translate-x-0.5 rtl:-translate-x-0.5"}`} />
                   </button>
                 </label>
                 <label className="flex items-center justify-between cursor-pointer">
                   <span className="text-sm font-medium flex items-center gap-2">
-                    <Globe className="w-4 h-4" /> Make Public
+                    <Globe className="w-4 h-4" /> {t('makePublic')}
                   </span>
                   <button
                     onClick={handlePublicToggle}
@@ -505,7 +511,7 @@ export default function NewExamPage() {
                     role="switch"
                     aria-checked={isPublic}
                   >
-                    <span className={`block w-5 h-5 bg-white rounded-full shadow transition-transform ${isPublic ? "translate-x-6" : "translate-x-0.5"}`} />
+                    <span className={`block w-5 h-5 bg-white rounded-full shadow transition-transform ${isPublic ? "translate-x-6 rtl:-translate-x-6" : "translate-x-0.5 rtl:-translate-x-0.5"}`} />
                   </button>
                 </label>
               </div>
@@ -514,7 +520,7 @@ export default function NewExamPage() {
               <NeuCard className="bg-muted/30">
                 <NeuCardContent className="pt-6">
                   <RoomCodeWidget roomCode={roomCode} qrCodeUrl="" showQR={false} onToggleQR={() => { }} />
-                  <p className="text-center text-xs text-muted-foreground mt-2">Auto-generated Room Code</p>
+                  <p className="text-center text-xs text-muted-foreground mt-2">{t('autoGeneratedRoomCode')}</p>
                 </NeuCardContent>
               </NeuCard>
 
@@ -527,40 +533,40 @@ export default function NewExamPage() {
           <div className="max-w-2xl mx-auto space-y-6">
             <NeuCard>
               <NeuCardHeader>
-                <NeuCardTitle>Review & Save</NeuCardTitle>
+                <NeuCardTitle>{t('reviewSave')}</NeuCardTitle>
               </NeuCardHeader>
               <NeuCardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <p className="text-muted-foreground">Title</p>
+                    <p className="text-muted-foreground">{t('title') || 'Title'}</p>
                     <p className="font-semibold">{examTitle}</p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground">Total Questions</p>
+                    <p className="text-muted-foreground">{t('totalQuestions')}</p>
                     <p className="font-semibold">{questions.length}</p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground">Duration</p>
+                    <p className="text-muted-foreground">{t('duration')}</p>
                     <p className="font-semibold">{duration} min</p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground">Passing Score</p>
+                    <p className="text-muted-foreground">{t('passing')}</p>
                     <p className="font-semibold">{passingScore}%</p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground">Proctoring</p>
+                    <p className="text-muted-foreground">{t('proctoring') || 'Proctoring'}</p>
                     <p className={`font-semibold ${proctoringEnabled ? 'text-amber-600' : ''}`}>
-                      {proctoringEnabled ? 'Enabled' : 'Disabled'}
+                      {proctoringEnabled ? t('enabled') : t('disabled')}
                     </p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground">Visibility</p>
-                    <p className="font-semibold">{isPublic ? 'Public' : 'Private'}</p>
+                    <p className="text-muted-foreground">{t('visibility')}</p>
+                    <p className="font-semibold">{isPublic ? t('public') : t('private')}</p>
                   </div>
                 </div>
                 <div className="pt-4 border-t border-border">
-                  <p className="text-muted-foreground text-sm mb-2">Description</p>
-                  <p className="text-sm italic">{examDescription || 'No description provided.'}</p>
+                  <p className="text-muted-foreground text-sm mb-2">{t('description')}</p>
+                  <p className="text-sm italic">{examDescription || t('noDescription')}</p>
                 </div>
               </NeuCardContent>
             </NeuCard>
@@ -568,7 +574,7 @@ export default function NewExamPage() {
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex gap-3 text-sm text-blue-800">
               <CheckCircle className="w-5 h-5 shrink-0" />
               <p>
-                Ready to launch? Once saved, you can share the room code with students immediately.
+                {t('readyToLaunch')}
               </p>
             </div>
           </div>
@@ -581,19 +587,19 @@ export default function NewExamPage() {
           <div>
             {currentStep !== 'details' && (
               <NeuButton variant="secondary" onClick={prevStep} className="gap-2">
-                <ArrowLeft className="w-4 h-4" /> Back
+                <ArrowLeft className="w-4 h-4 rtl:rotate-180" /> {t('back')}
               </NeuButton>
             )}
           </div>
           <div>
             {currentStep !== 'review' ? (
               <NeuButton onClick={nextStep} className="gap-2 bg-primary text-primary-foreground">
-                Next Step <ArrowRight className="w-4 h-4" />
+                {t('nextStep')} <ArrowRight className="w-4 h-4 rtl:rotate-180" />
               </NeuButton>
             ) : (
               <NeuButton onClick={handleSave} disabled={isSaving} className="gap-2 bg-green-600 hover:bg-green-700 text-white w-40">
                 {isSaving ? <span className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" /> : <Save className="w-4 h-4" />}
-                Create Exam
+                {t('createExam')}
               </NeuButton>
             )}
           </div>
@@ -601,46 +607,45 @@ export default function NewExamPage() {
       </div>
 
       {/* Public Warning Modal */}
-      <NeuModal open={showPublicWarning} onClose={() => setShowPublicWarning(false)} title="Make Exam Public?">
+      <NeuModal open={showPublicWarning} onClose={() => setShowPublicWarning(false)} title={t('makeExamPublic')}>
         {/* ... (Existing modal content) ... */}
         <div className="space-y-4">
           <p className="text-muted-foreground">
-            Public exams can be discovered and taken by anyone with the room code. Are you sure you want to make this
-            exam public?
+            {t('publicWarning')}
           </p>
           <div className="flex justify-end gap-3">
             <NeuButton variant="secondary" onClick={() => setShowPublicWarning(false)}>
-              Cancel
+              {t('cancel')}
             </NeuButton>
-            <NeuButton onClick={confirmPublic}>Yes, Make Public</NeuButton>
+            <NeuButton onClick={confirmPublic}>{t('yesMakePublic')}</NeuButton>
           </div>
         </div>
       </NeuModal>
 
       {/* Preview Modal */}
-      <NeuModal open={showPreview} onClose={() => setShowPreview(false)} title="Exam Preview">
+      <NeuModal open={showPreview} onClose={() => setShowPreview(false)} title={t('examPreview')}>
         {/* ... (Existing preview content) ... */}
         <div className="space-y-4 max-h-[60vh] overflow-y-auto">
           <div className="p-4 rounded-xl bg-muted/50">
-            <h3 className="font-semibold">{examTitle || "Untitled Exam"}</h3>
-            <p className="text-sm text-muted-foreground mt-1">{examDescription || "No description"}</p>
+            <h3 className="font-semibold">{examTitle || t('untitledExam')}</h3>
+            <p className="text-sm text-muted-foreground mt-1">{examDescription || t('noDescription')}</p>
             <div className="flex gap-4 mt-3 text-sm text-muted-foreground">
               <span>{duration} min</span>
-              <span>{questions.length} questions</span>
+              <span>{questions.length} {t('questions')}</span>
             </div>
           </div>
 
           {questions.map((q, i) => (
             <div key={q.id} className="p-4 rounded-xl border border-border">
               <p className="font-medium">
-                {i + 1}. {q.text || "Untitled Question"}
+                {i + 1}. {q.text || t('untitledQuestion')}
               </p>
               {q.type === "mcq" && q.options && (
                 <div className="mt-3 space-y-2">
                   {q.options.map((opt, oi) => (
                     <div key={oi} className="flex items-center gap-2">
                       <div className="w-4 h-4 rounded-full border border-border" />
-                      <span className="text-sm">{opt || `Option ${oi + 1}`}</span>
+                      <span className="text-sm">{opt || `${t('option')} ${oi + 1}`}</span>
                     </div>
                   ))}
                 </div>
@@ -650,7 +655,7 @@ export default function NewExamPage() {
           ))}
         </div>
         <div className="flex justify-end mt-4">
-          <NeuButton onClick={() => setShowPreview(false)}>Close Preview</NeuButton>
+          <NeuButton onClick={() => setShowPreview(false)}>{t('closePreview')}</NeuButton>
         </div>
       </NeuModal>
     </div>
