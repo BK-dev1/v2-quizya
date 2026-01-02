@@ -19,12 +19,12 @@ BEGIN
   ) THEN
     ALTER TABLE exams
     ADD COLUMN status exam_status NOT NULL DEFAULT 'upcoming';
+    UPDATE exams SET status = 'active';
   END IF;
 END $$;
 
 
--- Update existing exams to 'active' so current users aren't blocked
-UPDATE exams SET status = 'active';
+
 
 -- Create index for status
 CREATE INDEX IF NOT EXISTS idx_exams_status

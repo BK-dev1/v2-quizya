@@ -40,7 +40,7 @@ export default function TakeExamPage() {
   const [questions, setQuestions] = useState<Question[]>([])
   const [session, setSession] = useState<ExamSession | null>(null)
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
-  const [answers, setAnswers] = useState<Record<string, string | string[]>>({})
+  const [answers, setAnswers] = useState<Record<string, string | number[]>>({})
   const [markedQuestions, setMarkedQuestions] = useState<Set<string>>(new Set())
   const [showQuestionMap, setShowQuestionMap] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -226,7 +226,6 @@ export default function TakeExamPage() {
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}))
-        console.error('Submit failed:', errorData)
         toast.error(errorData.error || t('failedToSubmitExam')) // TRANSLATED
         return
       }
@@ -306,7 +305,7 @@ export default function TakeExamPage() {
     }
   }, [sessionId, loadExamData])
 
-  const saveAnswer = async (questionId: string, answer: string | string[]) => {
+  const saveAnswer = async (questionId: string, answer: string | number[]) => {
     const newAnswers = { ...answers, [questionId]: answer }
     setAnswers(newAnswers)
 
@@ -326,29 +325,29 @@ export default function TakeExamPage() {
     }
   }
 
-  const toggleMultipleChoiceAnswer = (questionId: string, optionValue: string) => {
+  const toggleMultipleChoiceAnswer = (questionId: string, optionIndex: number) => {
     const currentAnswer = answers[questionId]
-    let newAnswer: string[]
+    let newAnswer: number[]
     
     if (Array.isArray(currentAnswer)) {
       // If already an array, toggle the option
-      if (currentAnswer.includes(optionValue)) {
-        newAnswer = currentAnswer.filter(v => v !== optionValue)
+      if (currentAnswer.includes(optionIndex)) {
+        newAnswer = currentAnswer.filter(v => v !== optionIndex)
       } else {
-        newAnswer = [...currentAnswer, optionValue]
+        newAnswer = [...currentAnswer, optionIndex]
       }
-    } else if (currentAnswer === optionValue) {
+    } else if (typeof currentAnswer === 'number' && currentAnswer === optionIndex) {
       // If it's a single value that matches, remove it
       newAnswer = []
-    } else if (currentAnswer) {
+    } else if (typeof currentAnswer === 'number') {
       // If it's a different single value, make it an array with both
-      newAnswer = [currentAnswer, optionValue]
+      newAnswer = [currentAnswer, optionIndex]
     } else {
       // No answer yet, start with this one
-      newAnswer = [optionValue]
+      newAnswer = [optionIndex]
     }
     
-    saveAnswer(questionId, newAnswer.length === 0 ? '' : newAnswer)
+    saveAnswer(questionId, newAnswer.length === 0 ? [] : newAnswer)
   }
 
   const toggleMarkQuestion = (questionId: string) => {
@@ -780,8 +779,8 @@ export default function TakeExamPage() {
                         const val = option.text || option
                         const currentAnswer = answers[currentQuestion.id]
                         const isSelected = Array.isArray(currentAnswer) 
-                          ? currentAnswer.includes(val)
-                          : currentAnswer === val
+                          ? currentAnswer.includes(index)
+                          : typeof currentAnswer === 'number' && currentAnswer === index
                         
                         return (
                           <motion.div
@@ -800,9 +799,9 @@ export default function TakeExamPage() {
                               <input
                                 type="checkbox"
                                 name={`question-${currentQuestion.id}`}
-                                value={val}
+                                value={index}
                                 checked={isSelected}
-                                onChange={() => toggleMultipleChoiceAnswer(currentQuestion.id, val)}
+                                onChange={() => toggleMultipleChoiceAnswer(currentQuestion.id, index)}
                                 className="sr-only"
                               />
                               <div className={cn(
@@ -867,14 +866,18 @@ export default function TakeExamPage() {
                         className="w-full p-6 text-xl font-medium border-4 border-border rounded-3xl focus:ring-8 focus:ring-primary/10 focus:border-primary transition-all outline-none bg-card resize-y min-h-[200px] shadow-sm group-hover:shadow-md"
                         rows={currentQuestion.question_type === 'essay' ? 10 : 5}
                         placeholder={t('startTypingAnswer')}  
-                        value={answers[currentQuestion.id] || ''}
+                        value={typeof answers[currentQuestion.id] === 'string' ? answers[currentQuestion.id] as string : ''}
                         onChange={(e) => saveAnswer(currentQuestion.id, e.target.value)}
                       />
                       <div className="absolute bottom-6 right-6 flex items-center gap-2 px-3 py-1 bg-secondary rounded-full text-[10px] font-black uppercase text-muted-foreground border-2 border-border shadow-sm">
                         <span>{t('words')}: {(() => {
                           const answer = answers[currentQuestion.id]
                           if (typeof answer === 'string') {
-                            return answer.trim().split(/\s+/).filter(Boolean).length
+                            const trimmed = answer.trim()
+                            if (trimmed === '') {
+                              return 0
+                            }
+                            return trimmed.split(/\s+/).length
                           }
                           return 0
                         })()}</span> 

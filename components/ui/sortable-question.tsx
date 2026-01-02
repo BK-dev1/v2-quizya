@@ -128,14 +128,14 @@ export function SortableQuestion({
                           // Add to correct answers
                           newCorrectAnswers = [...correctAnswerArray, optIndex]
                         }
-                        onUpdate({ correctAnswer: newCorrectAnswers.length === 1 ? newCorrectAnswers[0] : newCorrectAnswers })
+                        onUpdate({ correctAnswer: newCorrectAnswers })
                       }}
                       className={`w-8 h-8 rounded border-2 flex items-center justify-center transition-colors ${
                         isCorrect
                           ? "border-success bg-success text-success-foreground"
                           : "border-border hover:border-primary"
                       }`}
-                      aria-label={`Mark option ${optIndex + 1} as correct`}
+                      aria-label={`${isCorrect ? "Unmark" : "Mark"} option ${optIndex + 1} as correct answer (multiple answers allowed)`}
                     >
                       {isCorrect && <Check className="w-4 h-4" />}
                     </button>
