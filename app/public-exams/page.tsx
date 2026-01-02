@@ -121,7 +121,7 @@ export default function PublicExamsPage() {
         ) : (
           <>
             <p className="text-sm text-muted-foreground mb-4">
-              Showing {filteredExams.length} exam{filteredExams.length !== 1 ? "s" : ""}
+              {t('showing')} {filteredExams.length} {t('exams')}
             </p>
 
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -134,7 +134,7 @@ export default function PublicExamsPage() {
                   </p>
 
                   <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
-                    {exam.description || "No description provided."}
+                    {exam.description || t('noDescription')}
                   </p>
 
                   <div className="mt-auto pt-4 border-t border-border/50">
@@ -144,7 +144,7 @@ export default function PublicExamsPage() {
                         className="flex items-center gap-2 px-3 py-2 rounded-lg neu-flat hover:bg-muted/50 transition-colors text-sm"
                         disabled={!exam.room_code}
                       >
-                        <code className="font-mono text-primary">{exam.room_code || 'No Code'}</code>
+                        <code className="font-mono text-primary">{exam.room_code || t('noCode')}</code>
                         {copiedCode === exam.room_code ? (
                           <Check className="w-4 h-4 text-green-600" />
                         ) : (
@@ -162,8 +162,8 @@ export default function PublicExamsPage() {
 
             {filteredExams.length === 0 && (
               <NeuCard className="p-12 text-center">
-                <h3 className="font-semibold text-foreground mb-2">No exams found</h3>
-                <p className="text-muted-foreground">Try adjusting your search</p>
+                <h3 className="font-semibold text-foreground mb-2">{t('noExamsFound')}</h3>
+                <p className="text-muted-foreground">{t('adjustSearch')}</p>
               </NeuCard>
             )}
           </>

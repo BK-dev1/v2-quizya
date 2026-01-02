@@ -115,6 +115,7 @@
   --sidebar-ring: oklch(0.7 0.2 280);
 }
 
+
 @theme inline {
   --font-sans: "Inter", "Inter Fallback", system-ui, sans-serif;
   --font-mono: "Geist Mono", "Geist Mono Fallback", monospace;
@@ -160,10 +161,16 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
+/* Arabic Font Override */
+:root[lang="ar"] {
+  --font-sans: var(--font-cairo), "Inter", system-ui, sans-serif;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }
@@ -222,10 +229,12 @@
 
 /* Timer pulse animation */
 @keyframes timer-pulse {
+
   0%,
   100% {
     opacity: 1;
   }
+
   50% {
     opacity: 0.6;
   }
@@ -256,7 +265,7 @@
   flex-direction: row-reverse;
 }
 
-[dir="rtl"] .space-x-2 > :not([hidden]) ~ :not([hidden]) {
+[dir="rtl"] .space-x-2> :not([hidden])~ :not([hidden]) {
   --tw-space-x-reverse: 1;
 }
 

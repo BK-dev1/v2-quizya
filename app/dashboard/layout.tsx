@@ -21,12 +21,14 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 
+import { useTranslation } from "react-i18next"
+
 const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/dashboard/exams", label: "My Exams", icon: FileEdit },
-  { href: "/dashboard/question-bank", label: "Question Bank", icon: Database },
-  { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3 },
-  { href: "/dashboard/settings", label: "Settings", icon: Settings },
+  { href: "/dashboard", label: "dashboard", icon: LayoutDashboard },
+  { href: "/dashboard/exams", label: "myExams", icon: FileEdit },
+  { href: "/dashboard/question-bank", label: "questionBank", icon: Database },
+  { href: "/dashboard/analytics", label: "analytics", icon: BarChart3 },
+  { href: "/dashboard/settings", label: "settings", icon: Settings },
 ]
 
 export default function DashboardLayout({
@@ -40,16 +42,17 @@ export default function DashboardLayout({
   const [sidebarOpen, setSidebarOpen] = React.useState(false)
   const [userMenuOpen, setUserMenuOpen] = React.useState(false)
   const [signingOut, setSigningOut] = React.useState(false)
+  const { t } = useTranslation()
 
   const handleSignOut = async () => {
     setSigningOut(true)
     try {
       await signOut()
-      toast.success('Signed out successfully')
+      toast.success(t('signedOutSuccessfully') || 'Signed out successfully')
       router.replace('/auth/login')
     } catch (error) {
       console.error('Error signing out:', error)
-      toast.error('Failed to sign out')
+      toast.error(t('failedToSignOut') || 'Failed to sign out')
     } finally {
       setSigningOut(false)
       setUserMenuOpen(false)
@@ -67,11 +70,11 @@ export default function DashboardLayout({
   }
 
   const getUserDisplayName = () => {
-    return profile?.full_name || profile?.username || user?.email?.split('@')[0] || 'User'
+    return profile?.full_name || profile?.username || user?.email?.split('@')[0] || t('user')
   }
 
   const getUserEmail = () => {
-    return user?.email || 'No email'
+    return user?.email || t('noEmail') || 'No email'
   }
 
   // Show loading screen while auth is loading
@@ -80,7 +83,7 @@ export default function DashboardLayout({
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground">Loading...</p>
+          <p className="text-muted-foreground">{t('loading')}</p>
         </div>
       </div>
     )
@@ -113,7 +116,7 @@ export default function DashboardLayout({
       {sidebarOpen && (
         <div className="lg:hidden fixed inset-0 z-50">
           <div className="absolute inset-0 bg-foreground/20 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
-          <aside className="absolute left-0 top-0 bottom-0 w-72 bg-sidebar p-4 neu-card animate-in slide-in-from-left">
+          <aside className="absolute left-0 rtl:right-0 top-0 bottom-0 w-72 bg-sidebar p-4 neu-card animate-in slide-in-from-left rtl:slide-in-from-right">
             <div className="flex items-center justify-between mb-8">
               <Link href="/dashboard" className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
@@ -140,14 +143,14 @@ export default function DashboardLayout({
                   )}
                 >
                   <item.icon className="w-5 h-5" />
-                  {item.label}
+                  {t(item.label)}
                 </Link>
               ))}
             </nav>
 
             <div className="absolute bottom-4 left-4 right-4">
-              <NeuButton 
-                variant="ghost" 
+              <NeuButton
+                variant="ghost"
                 className="w-full justify-start gap-3"
                 onClick={handleSignOut}
                 disabled={signingOut}
@@ -155,12 +158,12 @@ export default function DashboardLayout({
                 {signingOut ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    Signing Out...
+                    {t('signingOut')}
                   </>
                 ) : (
                   <>
                     <LogOut className="w-5 h-5" />
-                    Log Out
+                    {t('logOut')}
                   </>
                 )}
               </NeuButton>
@@ -170,7 +173,7 @@ export default function DashboardLayout({
       )}
 
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:flex lg:w-64 lg:flex-col bg-sidebar border-r border-sidebar-border">
+      <aside className="hidden lg:fixed lg:inset-y-0 lg:left-0 rtl:lg:right-0 rtl:lg:left-auto lg:flex lg:w-64 lg:flex-col bg-sidebar border-r rtl:border-l rtl:border-r-0 border-sidebar-border">
         <div className="flex flex-col flex-1 p-4">
           <Link href="/dashboard" className="flex items-center gap-2 px-2 mb-8">
             <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
@@ -192,7 +195,7 @@ export default function DashboardLayout({
                 )}
               >
                 <item.icon className="w-5 h-5" />
-                {item.label}
+                {t(item.label)}
               </Link>
             ))}
           </nav>
@@ -223,7 +226,7 @@ export default function DashboardLayout({
                   onClick={() => setUserMenuOpen(false)}
                 >
                   <Settings className="w-4 h-4" />
-                  Settings
+                  {t('settings')}
                 </Link>
                 <button
                   onClick={handleSignOut}
@@ -233,12 +236,12 @@ export default function DashboardLayout({
                   {signingOut ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      Signing Out...
+                      {t('signingOut')}
                     </>
                   ) : (
                     <>
                       <LogOut className="w-4 h-4" />
-                      Log Out
+                      {t('logOut')}
                     </>
                   )}
                 </button>
@@ -249,7 +252,7 @@ export default function DashboardLayout({
       </aside>
 
       {/* Main Content */}
-      <div className="lg:pl-64">
+      <div className="lg:pl-64 rtl:lg:pr-64 rtl:lg:pl-0">
         {/* Desktop Header */}
         <header className="hidden lg:flex items-center justify-between px-8 h-16 border-b border-border">
           <div>{/* Breadcrumb or page title could go here */}</div>
