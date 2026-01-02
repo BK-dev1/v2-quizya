@@ -40,7 +40,7 @@ export default function TakeExamPage() {
   const [questions, setQuestions] = useState<Question[]>([])
   const [session, setSession] = useState<ExamSession | null>(null)
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
-  const [answers, setAnswers] = useState<Record<string, string>>({})
+  const [answers, setAnswers] = useState<Record<string, string | number[]>>({})
   const [markedQuestions, setMarkedQuestions] = useState<Set<string>>(new Set())
   const [showQuestionMap, setShowQuestionMap] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -204,12 +204,15 @@ export default function TakeExamPage() {
     }
     setSubmitting(true)
     try {
-      const studentAnswers = questions.map(question => ({
-        question_id: question.id,
-        answer: answers[question.id] || '',
-        is_correct: false,
-        points_earned: 0
-      }))
+      const studentAnswers = questions.map(question => {
+        const answer = answers[question.id]
+        return {
+          question_id: question.id,
+          answer: answer || '',
+          is_correct: false,
+          points_earned: 0
+        }
+      })
 
       const res = await fetch(`/api/sessions/${sessionId}`, {
         method: 'PUT',
@@ -222,7 +225,8 @@ export default function TakeExamPage() {
       })
 
       if (!res.ok) {
-        toast.error(t('failedToSubmitExam')) // TRANSLATED
+        const errorData = await res.json().catch(() => ({}))
+        toast.error(errorData.error || t('failedToSubmitExam')) // TRANSLATED
         return
       }
 
@@ -301,7 +305,7 @@ export default function TakeExamPage() {
     }
   }, [sessionId, loadExamData])
 
-  const saveAnswer = async (questionId: string, answer: string) => {
+  const saveAnswer = async (questionId: string, answer: string | number[]) => {
     const newAnswers = { ...answers, [questionId]: answer }
     setAnswers(newAnswers)
 
@@ -319,6 +323,31 @@ export default function TakeExamPage() {
     } catch (error) {
       console.error('Error saving answer:', error)
     }
+  }
+
+  const toggleMultipleChoiceAnswer = (questionId: string, optionIndex: number) => {
+    const currentAnswer = answers[questionId]
+    let newAnswer: number[]
+    
+    if (Array.isArray(currentAnswer)) {
+      // If already an array, toggle the option
+      if (currentAnswer.includes(optionIndex)) {
+        newAnswer = currentAnswer.filter(v => v !== optionIndex)
+      } else {
+        newAnswer = [...currentAnswer, optionIndex]
+      }
+    } else if (typeof currentAnswer === 'number' && currentAnswer === optionIndex) {
+      // If it's a single value that matches, remove it
+      newAnswer = []
+    } else if (typeof currentAnswer === 'number') {
+      // If it's a different single value, make it an array with both
+      newAnswer = [currentAnswer, optionIndex]
+    } else {
+      // No answer yet, start with this one
+      newAnswer = [optionIndex]
+    }
+    
+    saveAnswer(questionId, newAnswer.length === 0 ? [] : newAnswer)
   }
 
   const toggleMarkQuestion = (questionId: string) => {
@@ -748,7 +777,11 @@ export default function TakeExamPage() {
                     <div className="grid gap-4">
                       {(currentQuestion.options as any).map((option: any, index: number) => {
                         const val = option.text || option
-                        const isSelected = answers[currentQuestion.id] === val
+                        const currentAnswer = answers[currentQuestion.id]
+                        const isSelected = Array.isArray(currentAnswer) 
+                          ? currentAnswer.includes(index)
+                          : typeof currentAnswer === 'number' && currentAnswer === index
+                        
                         return (
                           <motion.div
                             key={index}
@@ -764,11 +797,11 @@ export default function TakeExamPage() {
                               )}
                             >
                               <input
-                                type="radio"
+                                type="checkbox"
                                 name={`question-${currentQuestion.id}`}
-                                value={val}
+                                value={index}
                                 checked={isSelected}
-                                onChange={(e) => saveAnswer(currentQuestion.id, e.target.value)}
+                                onChange={() => toggleMultipleChoiceAnswer(currentQuestion.id, index)}
                                 className="sr-only"
                               />
                               <div className={cn(
@@ -784,6 +817,9 @@ export default function TakeExamPage() {
                           </motion.div>
                         )
                       })}
+                      <p className="text-xs text-muted-foreground text-center mt-2">
+                        Select one or more answers (multiple selections allowed)
+                      </p>
                     </div>
                   )}
 
@@ -830,13 +866,29 @@ export default function TakeExamPage() {
                         className="w-full p-6 text-xl font-medium border-4 border-border rounded-3xl focus:ring-8 focus:ring-primary/10 focus:border-primary transition-all outline-none bg-card resize-y min-h-[200px] shadow-sm group-hover:shadow-md"
                         rows={currentQuestion.question_type === 'essay' ? 10 : 5}
                         placeholder={t('startTypingAnswer')}  
-                        value={answers[currentQuestion.id] || ''}
+                        value={typeof answers[currentQuestion.id] === 'string' ? answers[currentQuestion.id] as string : ''}
                         onChange={(e) => saveAnswer(currentQuestion.id, e.target.value)}
                       />
                       <div className="absolute bottom-6 right-6 flex items-center gap-2 px-3 py-1 bg-secondary rounded-full text-[10px] font-black uppercase text-muted-foreground border-2 border-border shadow-sm">
-                        <span>{t('words')}: {((answers[currentQuestion.id] || '').trim().split(/\s+/).filter(Boolean).length)}</span> {/* TRANSLATED */}
+                        <span>{t('words')}: {(() => {
+                          const answer = answers[currentQuestion.id]
+                          if (typeof answer === 'string') {
+                            const trimmed = answer.trim()
+                            if (trimmed === '') {
+                              return 0
+                            }
+                            return trimmed.split(/\s+/).length
+                          }
+                          return 0
+                        })()}</span> 
                         <span className="opacity-30">|</span>
-                        <span>{t('chars')}: {(answers[currentQuestion.id] || '').length}</span> {/* TRANSLATED */}
+                        <span>{t('chars')}: {(() => {
+                          const answer = answers[currentQuestion.id]
+                          if (typeof answer === 'string') {
+                            return answer.length
+                          }
+                          return 0
+                        })()}</span> 
                       </div>
                     </div>
                   )}
