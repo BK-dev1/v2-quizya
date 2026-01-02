@@ -1,6 +1,11 @@
+"use client"
+
 import Link from "next/link"
+import { useTranslation } from 'react-i18next'
 
 export function Footer() {
+  const { t } = useTranslation()
+
   return (
     <footer className="border-t border-border bg-muted/30">
       <div className="max-w-6xl mx-auto px-4 py-12">
@@ -13,68 +18,68 @@ export function Footer() {
               <span className="font-bold text-xl">Quizya</span>
             </Link>
             <p className="text-sm text-muted-foreground">
-              The modern way to create and take online exams with confidence.
+              {t('modernWayConfidence')}
             </p>
           </div>
 
           <div>
-            <h3 className="font-semibold mb-4">Product</h3>
+            <h3 className="font-semibold mb-4">{t('product')}</h3>
             <ul className="space-y-3 text-sm text-muted-foreground">
               <li>
                 <Link href="/features" className="hover:text-foreground transition-colors">
-                  Features
+                  {t('features')}
                 </Link>
               </li>
               <li>
                 <Link href="/pricing" className="hover:text-foreground transition-colors">
-                  Pricing
+                  {t('pricing')}
                 </Link>
               </li>
               <li>
                 <Link href="/integrations" className="hover:text-foreground transition-colors">
-                  Integrations
+                  {t('integrations')}
                 </Link>
               </li>
             </ul>
           </div>
 
           <div>
-            <h3 className="font-semibold mb-4">Company</h3>
+            <h3 className="font-semibold mb-4">{t('company')}</h3>
             <ul className="space-y-3 text-sm text-muted-foreground">
               <li>
                 <Link href="/about" className="hover:text-foreground transition-colors">
-                  About
+                  {t('about')}
                 </Link>
               </li>
               <li>
                 <Link href="/blog" className="hover:text-foreground transition-colors">
-                  Blog
+                  {t('blog')}
                 </Link>
               </li>
               <li>
                 <Link href="/contact" className="hover:text-foreground transition-colors">
-                  Contact
+                  {t('contact')}
                 </Link>
               </li>
             </ul>
           </div>
 
           <div>
-            <h3 className="font-semibold mb-4">Legal</h3>
+            <h3 className="font-semibold mb-4">{t('legal')}</h3>
             <ul className="space-y-3 text-sm text-muted-foreground">
               <li>
                 <Link href="/privacy" className="hover:text-foreground transition-colors">
-                  Privacy Policy
+                  {t('privacyPolicy')}
                 </Link>
               </li>
               <li>
                 <Link href="/terms" className="hover:text-foreground transition-colors">
-                  Terms of Service
+                  {t('termsOfService')}
                 </Link>
               </li>
               <li>
                 <Link href="/accessibility" className="hover:text-foreground transition-colors">
-                  Accessibility
+                  {t('accessibility')}
                 </Link>
               </li>
             </ul>
@@ -82,7 +87,7 @@ export function Footer() {
         </div>
 
         <div className="mt-12 pt-8 border-t border-border flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} Quizya. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} Quizya. {t('allRightsReserved')}</p>
           <div className="flex items-center gap-6">
             <Link href="#" className="hover:text-foreground transition-colors" aria-label="Twitter">
               Twitter

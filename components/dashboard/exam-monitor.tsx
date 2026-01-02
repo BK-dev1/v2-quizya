@@ -19,6 +19,7 @@ import {
     Search
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { useTranslation } from 'react-i18next'
 
 interface ExamMonitorProps {
     examId: string
@@ -27,6 +28,7 @@ interface ExamMonitorProps {
 export default function ExamMonitor({ examId }: ExamMonitorProps) {
     const router = useRouter()
     const supabase = createClient()
+    const { t } = useTranslation()
 
     const [exam, setExam] = useState<Exam | null>(null)
     const [sessions, setSessions] = useState<ExamSession[]>([])
@@ -73,7 +75,7 @@ export default function ExamMonitor({ examId }: ExamMonitorProps) {
                 if (prev.find(s => s.id === payload.new.id)) return prev
                 return [...prev, payload.new as ExamSession]
             })
-            toast.info('New student joined')
+            toast.info(t('newStudentJoined') || 'New student joined')
         } else if (payload.eventType === 'UPDATE') {
             setSessions(prev => prev.map(s =>
                 s.id === payload.new.id ? { ...s, ...payload.new } : s
@@ -86,8 +88,8 @@ export default function ExamMonitor({ examId }: ExamMonitorProps) {
             const oldInfractions = (oldSession?.proctoring_data as any)?.infractions?.length || 0
 
             if (newInfractions > oldInfractions) {
-                toast.error(`Infraction detected: ${newSession.guest_name || newSession.guest_email}`, {
-                    description: "Student switched tabs or lost focus."
+                toast.error(t('infractionDetected') || `Infraction detected: ${newSession.guest_name || newSession.guest_email}`, {
+                    description: t('infractionDescription') || "Student switched tabs or lost focus."
                 })
             }
         }
@@ -97,7 +99,7 @@ export default function ExamMonitor({ examId }: ExamMonitorProps) {
         try {
             const [examRes, sessionsRes] = await Promise.all([
                 fetch(`/api/exams/${examId}`),
-                fetch(`/api/exams/${examId}/sessions`) // We probably need to create/verify this endpoint
+                fetch(`/api/exams/${examId}/sessions`)
             ])
 
             if (examRes.ok) {
@@ -135,12 +137,12 @@ export default function ExamMonitor({ examId }: ExamMonitorProps) {
 
             if (res.ok) {
                 setExam({ ...exam, status })
-                toast.success(`Exam is now ${status.toUpperCase()}`)
+                toast.success(t('examStatusUpdated') || `Exam is now ${status.toUpperCase()}`)
             } else {
-                toast.error('Failed to update status')
+                toast.error(t('updateStatusFailed') || 'Failed to update status')
             }
         } catch (e) {
-            toast.error('Error updating status')
+            toast.error(t('updateStatusError') || 'Error updating status')
         }
     }
 
@@ -149,8 +151,8 @@ export default function ExamMonitor({ examId }: ExamMonitorProps) {
         (s.guest_name || 'Guest').toLowerCase().includes(filter.toLowerCase())
     )
 
-    if (loading) return <div className="p-8 text-center text-muted-foreground">Loading monitor...</div>
-    if (!exam) return <div className="p-8 text-center text-destructive">Exam not found</div>
+    if (loading) return <div className="p-8 text-center text-muted-foreground">{t('loadingMonitor') || 'Loading monitor...'}</div>
+    if (!exam) return <div className="p-8 text-center text-destructive">{t('examNotFound') || 'Exam not found'}</div>
 
     const activeCount = sessions.filter(s => s.status === 'in_progress').length
     const completedCount = sessions.filter(s => s.status === 'completed').length
@@ -166,16 +168,16 @@ export default function ExamMonitor({ examId }: ExamMonitorProps) {
                 <div>
                     <h1 className="text-2xl font-bold flex items-center gap-2">
                         {exam.title}
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${exam.status === 'active' ? 'bg-green-100 text-green-700 border-green-200' :
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border uppercase ${exam.status === 'active' ? 'bg-green-100 text-green-700 border-green-200' :
                             exam.status === 'ended' ? 'bg-red-100 text-red-700 border-red-200' :
                                 'bg-amber-100 text-amber-700 border-amber-200'
                             }`}>
-                            {exam.status?.toUpperCase()}
+                            {t(exam.status || '')}
                         </span>
                     </h1>
                     <p className="text-muted-foreground text-sm flex items-center gap-2">
-                        Code: <code className="bg-muted px-1 rounded">{exam.room_code || 'N/A'}</code>
-                        • Duration: {exam.duration_minutes}m
+                        {t('code') || 'Code'}: <code className="bg-muted px-1 rounded">{exam.room_code || 'N/A'}</code>
+                        • {t('duration') || 'Duration'}: {exam.duration_minutes}m
                     </p>
                 </div>
 
@@ -185,7 +187,7 @@ export default function ExamMonitor({ examId }: ExamMonitorProps) {
                             className="bg-green-600 hover:bg-green-700 gap-2 text-white"
                             onClick={() => updateStatus('active')}
                         >
-                            <Play className="w-4 h-4" /> Start Exam
+                            <Play className="w-4 h-4" /> {t('startExam') || 'Start Exam'}
                         </NeuButton>
                     )}
 
@@ -194,7 +196,7 @@ export default function ExamMonitor({ examId }: ExamMonitorProps) {
                             className="bg-red-600 hover:bg-red-700 gap-2 text-white"
                             onClick={() => updateStatus('ended')}
                         >
-                            <Square className="w-4 h-4" /> End Exam
+                            <Square className="w-4 h-4" /> {t('endExam') || 'End Exam'}
                         </NeuButton>
                     )}
 
@@ -204,7 +206,7 @@ export default function ExamMonitor({ examId }: ExamMonitorProps) {
                             className="gap-2"
                             onClick={() => updateStatus('active')}
                         >
-                            <RefreshCw className="w-4 h-4" /> Resume
+                            <RefreshCw className="w-4 h-4" /> {t('resumeExam') || 'Resume'}
                         </NeuButton>
                     )}
 
@@ -217,9 +219,9 @@ export default function ExamMonitor({ examId }: ExamMonitorProps) {
                             console.log('Manual refresh triggered')
                             fetchSessions()
                         }}
-                        title="Manually refresh session data"
+                        title={t('manualRefresh') || "Manually refresh session data"}
                     >
-                        <RefreshCw className="w-4 h-4" /> Refresh
+                        <RefreshCw className="w-4 h-4" /> {t('refresh') || 'Refresh'}
                     </NeuButton>
                 </div>
             </div>
@@ -232,7 +234,7 @@ export default function ExamMonitor({ examId }: ExamMonitorProps) {
                     </div>
                     <div>
                         <p className="text-2xl font-bold">{sessions.length}</p>
-                        <p className="text-xs text-muted-foreground">Joined</p>
+                        <p className="text-xs text-muted-foreground">{t('joined') || 'Joined'}</p>
                     </div>
                 </NeuCard>
                 <NeuCard className="p-4 flex items-center gap-4">
@@ -241,7 +243,7 @@ export default function ExamMonitor({ examId }: ExamMonitorProps) {
                     </div>
                     <div>
                         <p className="text-2xl font-bold">{activeCount}</p>
-                        <p className="text-xs text-muted-foreground">Active</p>
+                        <p className="text-xs text-muted-foreground">{t('active') || 'Active'}</p>
                     </div>
                 </NeuCard>
                 <NeuCard className="p-4 flex items-center gap-4">
@@ -250,7 +252,7 @@ export default function ExamMonitor({ examId }: ExamMonitorProps) {
                     </div>
                     <div>
                         <p className="text-2xl font-bold">{completedCount}</p>
-                        <p className="text-xs text-muted-foreground">Finished</p>
+                        <p className="text-xs text-muted-foreground">{t('finished') || 'Finished'}</p>
                     </div>
                 </NeuCard>
                 <NeuCard className="p-4 flex items-center gap-4">
@@ -259,7 +261,7 @@ export default function ExamMonitor({ examId }: ExamMonitorProps) {
                     </div>
                     <div>
                         <p className="text-2xl font-bold">{infractionCount}</p>
-                        <p className="text-xs text-muted-foreground">Infractions</p>
+                        <p className="text-xs text-muted-foreground">{t('infractions') || 'Infractions'}</p>
                     </div>
                 </NeuCard>
             </div>
@@ -267,12 +269,12 @@ export default function ExamMonitor({ examId }: ExamMonitorProps) {
             {/* Student List */}
             <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                    <h2 className="text-lg font-semibold">Live Participants</h2>
+                    <h2 className="text-lg font-semibold">{t('liveParticipants') || 'Live Participants'}</h2>
                     <div className="relative w-64">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                         <input
                             type="text"
-                            placeholder="Search student..."
+                            placeholder={t('searchStudentPlaceholder') || "Search student..."}
                             value={filter}
                             onChange={(e) => setFilter(e.target.value)}
                             className="w-full pl-9 pr-4 py-2 rounded-lg border bg-background text-sm"
@@ -292,21 +294,21 @@ export default function ExamMonitor({ examId }: ExamMonitorProps) {
                                 <div className="flex items-center gap-4">
                                     <div className={`w-2 h-2 rounded-full ${session.status === 'completed' ? 'bg-green-500' :
                                         session.status === 'in_progress' ? 'bg-blue-500 animate-pulse' :
-                                            'bg-slate-300'
+                                            'bg-muted'
                                         }`} />
                                     <div>
-                                        <p className="font-medium">{session.guest_name || session.guest_email || 'Unknown'}</p>
+                                        <p className="font-medium">{session.guest_name || session.guest_email || t('unknown') || 'Unknown'}</p>
                                         <p className="text-xs text-muted-foreground">{session.guest_email}</p>
                                     </div>
                                 </div>
 
                                 <div className="flex items-center gap-6">
                                     <div className="text-right">
-                                        <p className="text-sm font-medium">Status</p>
-                                        <p className="text-xs text-muted-foreground capitalize">{session.status.replace('_', ' ')}</p>
+                                        <p className="text-sm font-medium">{t('status') || 'Status'}</p>
+                                        <p className="text-xs text-muted-foreground capitalize">{t(session.status)}</p>
                                     </div>
                                     <div className="text-right">
-                                        <p className="text-sm font-medium">Score</p>
+                                        <p className="text-sm font-medium">{t('score') || 'Score'}</p>
                                         <p className="text-xs text-muted-foreground">
                                             {session.score !== null ? `${Math.round((session.score / (session.total_points || 1)) * 100)}%` : '--'}
                                         </p>
@@ -316,7 +318,7 @@ export default function ExamMonitor({ examId }: ExamMonitorProps) {
                                             <EyeOff className={cn("w-3 h-3", infractions > 0 && "animate-pulse")} />
                                             <p className="text-sm">{infractions}</p>
                                         </div>
-                                        <p className="text-xs opacity-75">Alerts</p>
+                                        <p className="text-xs opacity-75">{t('alerts') || 'Alerts'}</p>
                                     </div>
                                 </div>
                             </NeuCard>
@@ -325,7 +327,7 @@ export default function ExamMonitor({ examId }: ExamMonitorProps) {
 
                     {filteredSessions.length === 0 && (
                         <div className="text-center py-8 text-muted-foreground">
-                            No participants found.
+                            {t('noParticipantsFound') || 'No participants found.'}
                         </div>
                     )}
                 </div>

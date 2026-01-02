@@ -1,61 +1,63 @@
 "use client"
 import { NeuCard, NeuCardHeader, NeuCardTitle, NeuCardDescription, NeuCardContent } from "@/components/ui/neu-card"
 import { FileEdit, Shield, BarChart3, Clock, QrCode, Shuffle, Users, Lock } from "lucide-react"
-
-const features = [
-  {
-    icon: FileEdit,
-    title: "Exam Builder",
-    description: "Create MCQ, True/False, Short Answer, and Essay questions with an intuitive drag-and-drop interface.",
-  },
-  {
-    icon: Shield,
-    title: "Advanced Proctoring",
-    description: "Fullscreen enforcement, copy protection, and tab-switching detection to ensure exam integrity.",
-  },
-  {
-    icon: BarChart3,
-    title: "Real-time Analytics",
-    description: "Track student performance, question difficulty, and time spent with comprehensive dashboards.",
-  },
-  {
-    icon: Clock,
-    title: "Flexible Timing",
-    description: "Set global exam timers or per-question time limits to match your assessment needs.",
-  },
-  {
-    icon: QrCode,
-    title: "Easy Access",
-    description: "Students join instantly with room codes or QR codes. No account required to take an exam.",
-  },
-  {
-    icon: Shuffle,
-    title: "Randomization",
-    description: "Shuffle questions and answer choices to prevent cheating and ensure fair assessments.",
-  },
-  {
-    icon: Users,
-    title: "Live Monitoring",
-    description: "Watch student progress in real-time with infraction alerts and instant notifications.",
-  },
-  {
-    icon: Lock,
-    title: "Secure & Private",
-    description: "Your data is encrypted and secure. We never share student information with third parties.",
-  },
-]
+import { useTranslation } from 'react-i18next'
 
 export function FeaturesSection() {
+  const { t } = useTranslation()
+
+  const features = [
+    {
+      icon: FileEdit,
+      title: t('examBuilder'),
+      description: t('examBuilderDesc'),
+    },
+    {
+      icon: Shield,
+      title: t('advancedProctoring'),
+      description: t('advancedProctoringDesc'),
+    },
+    {
+      icon: BarChart3,
+      title: t('realTimeAnalytics'),
+      description: t('realTimeAnalyticsDesc'),
+    },
+    {
+      icon: Clock,
+      title: t('flexibleTiming'),
+      description: t('flexibleTimingDesc'),
+    },
+    {
+      icon: QrCode,
+      title: t('easyAccess'),
+      description: t('easyAccessDesc'),
+    },
+    {
+      icon: Shuffle,
+      title: t('randomization'),
+      description: t('randomizationDesc'),
+    },
+    {
+      icon: Users,
+      title: t('liveMonitoring'),
+      description: t('liveMonitoringDesc'),
+    },
+    {
+      icon: Lock,
+      title: t('securePrivate'),
+      description: t('securePrivateDesc'),
+    },
+  ]
+
   return (
     <section className="py-20 px-4" aria-labelledby="features-heading">
       <div className="max-w-6xl mx-auto space-y-12">
         <div className="text-center space-y-4">
           <h2 id="features-heading" className="text-3xl md:text-4xl font-bold">
-            Everything You Need for Online Exams
+            {t('featuresHeading')}
           </h2>
           <p className="max-w-2xl mx-auto text-muted-foreground text-lg">
-            From exam creation to results analysis, Quizya provides all the tools teachers and students need for
-            successful online assessments.
+            {t('featuresDescription')}
           </p>
         </div>
 

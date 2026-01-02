@@ -7,6 +7,7 @@ import { NeuCard } from '@/components/ui/neu-card'
 import { NeuInput } from '@/components/ui/neu-input'
 import { NeuButton } from '@/components/ui/neu-button'
 import { toast } from 'sonner'
+import { useTranslation } from 'react-i18next'
 
 export function GuestJoinForm() {
   const [roomCode, setRoomCode] = useState('')
@@ -15,11 +16,11 @@ export function GuestJoinForm() {
   
   const { joinExamAsGuest, validateGuestInfo, loading, error } = useGuestExamAccess()
   const router = useRouter()
+  const { t } = useTranslation()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    // Validate inputs
     const validationError = validateGuestInfo(guestName, guestEmail)
     if (validationError) {
       toast.error(validationError)
@@ -27,7 +28,7 @@ export function GuestJoinForm() {
     }
 
     if (!roomCode.trim()) {
-      toast.error('Room code is required')
+      toast.error(t('roomCodeRequired'))
       return
     }
 
@@ -35,8 +36,7 @@ export function GuestJoinForm() {
       const result = await joinExamAsGuest(roomCode.toUpperCase(), guestName, guestEmail)
       
       if (result) {
-        toast.success('Successfully joined exam!')
-        // Store guest info in sessionStorage for exam taking
+        toast.success(t('successfullyJoined'))
         sessionStorage.setItem('guestExamSession', JSON.stringify({
           sessionId: result.session.id,
           examId: result.exam.id,
@@ -48,7 +48,7 @@ export function GuestJoinForm() {
         router.push(`/exam/take?session=${result.session.id}`)
       }
     } catch (err) {
-      toast.error(error || 'Failed to join exam')
+      toast.error(error || t('failedToJoin'))
     }
   }
 
@@ -56,20 +56,20 @@ export function GuestJoinForm() {
     <div className="min-h-screen w-full flex items-center justify-center ">
       <NeuCard className="w-full max-w-lg p-8">
         <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold  mb-2">Join Exam</h1>
-          <p className="">Enter your details to join the exam</p>
+          <h1 className="text-2xl font-bold  mb-2">{t('joinExam')}</h1>
+          <p className="">{t('enterDetails')}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label className="block text-sm font-medium  mb-2">
-              Room Code
+              {t('roomCode')}
             </label>
             <NeuInput
               type="text"
               value={roomCode}
               onChange={(e) => setRoomCode(e.target.value)}
-              placeholder="Enter room code"
+              placeholder={t('enterRoomCode')}
               className="uppercase"
               maxLength={10}
               required
@@ -78,26 +78,26 @@ export function GuestJoinForm() {
 
           <div>
             <label className="block text-sm font-medium  mb-2">
-              Your Name
+              {t('yourName')}
             </label>
             <NeuInput
               type="text"
               value={guestName}
               onChange={(e) => setGuestName(e.target.value)}
-              placeholder="Enter your full name"
+              placeholder={t('enterFullName')}
               required
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium  mb-2">
-              Your Email
+              {t('yourEmail')}
             </label>
             <NeuInput
               type="email"
               value={guestEmail}
               onChange={(e) => setGuestEmail(e.target.value)}
-              placeholder="Enter your email"
+              placeholder={t('enterEmail')}
               required
             />
           </div>
@@ -113,18 +113,18 @@ export function GuestJoinForm() {
             disabled={loading}
             className="w-full"
           >
-            {loading ? 'Joining...' : 'Join Exam'}
+            {loading ? t('joining') : t('joinExam')}
           </NeuButton>
         </form>
 
         <div className="mt-6 text-center">
           <p className="text-sm ">
-            Have an account?{' '}
+            {t('haveAccount')}{' '}
             <a 
               href="/auth/login" 
               className="text-blue-600 hover:text-blue-500 font-medium"
             >
-              Sign in instead
+              {t('signInInstead')}
             </a>
           </p>
         </div>

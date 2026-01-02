@@ -8,6 +8,7 @@ import { Loader2, CheckCircle, XCircle, Home, Award } from 'lucide-react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
 import { useWindowSize } from 'react-use'
 import Confetti from 'react-confetti'
+import { useTranslation } from 'react-i18next'
 
 interface ResultData {
   score: number
@@ -26,6 +27,7 @@ export default function ExamResults() {
   const [loading, setLoading] = useState(true)
   const [result, setResult] = useState<ResultData | null>(null)
   const { width, height } = useWindowSize()
+  const { t } = useTranslation()
 
   useEffect(() => {
     if (!sessionId) {
@@ -42,15 +44,12 @@ export default function ExamResults() {
 
       const session = await res.json()
 
-      // Calculate derived stats
       const totalQuestions = session.exam.total_questions || 0
       const score = Number(session.score) || 0
-      const totalPoints = session.total_points || 0 // Assuming backend provides this or we calculate
-      // Fallback if totalPoints is 0 to avoid division by zero
+      const totalPoints = session.total_points || 0
       const percentage = totalPoints > 0 ? (score / totalPoints) * 100 : 0
       const passed = percentage >= (session.exam.passing_score || 0)
 
-      // Count correct answers from session.answers array
       const correctCount = Array.isArray(session.answers)
         ? session.answers.filter((a: any) => a.is_correct).length
         : 0
@@ -74,7 +73,10 @@ export default function ExamResults() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-secondary/30">
-        <Loader2 className="w-10 h-10 animate-spin text-primary" />
+        <div className="text-center">
+          <Loader2 className="w-10 h-10 animate-spin text-primary mx-auto mb-4" />
+          <p>{t('loadingResults')}</p>
+        </div>
       </div>
     )
   }
@@ -83,16 +85,16 @@ export default function ExamResults() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-secondary/30">
         <div className="text-center">
-          <p className="text-destructive mb-4">Could not load results.</p>
-          <NeuButton onClick={() => router.push('/')}>Go Home</NeuButton>
+          <p className="text-destructive mb-4">{t('couldNotLoadResults')}</p>
+          <NeuButton onClick={() => router.push('/')}>{t('goHome')}</NeuButton>
         </div>
       </div>
     )
   }
 
   const data = [
-    { name: 'Correct', value: result.correctAnswers, color: '#22c55e' },
-    { name: 'Incorrect', value: result.totalQuestions - result.correctAnswers, color: '#ef4444' },
+    { name: t('correct'), value: result.correctAnswers, color: '#22c55e' },
+    { name: t('incorrect'), value: result.totalQuestions - result.correctAnswers, color: '#ef4444' },
   ]
 
   return (
@@ -101,20 +103,18 @@ export default function ExamResults() {
 
       <div className="max-w-4xl mx-auto space-y-8">
         <NeuCard className="p-8 md:p-12 text-center relative overflow-hidden">
-          {/* Header Status */}
           <div className="mb-8 relative z-10">
             <div className={`w-24 h-24 mx-auto mb-6 rounded-full flex items-center justify-center shadow-lg ${result.passed ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
               {result.passed ? <Award className="w-12 h-12" /> : <XCircle className="w-12 h-12" />}
             </div>
             <h1 className="text-4xl font-bold mb-2">
-              {result.passed ? 'Congratulations!' : 'Keep Practicing!'}
+              {result.passed ? t('congratulations') : t('keepPracticing')}
             </h1>
             <p className="text-lg text-muted-foreground">
-              You have {result.passed ? 'passed' : 'failed'} the exam.
+              {result.passed ? t('youHavePassed') : t('youHaveFailed')}
             </p>
           </div>
 
-          {/* Score Display */}
           <div className="grid md:grid-cols-2 gap-8 items-center mb-8">
             <div className="h-64 relative">
               <ResponsiveContainer width="100%" height="100%">
@@ -137,7 +137,7 @@ export default function ExamResults() {
               </ResponsiveContainer>
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                 <span className="text-4xl font-bold">{Math.round(result.percentage)}%</span>
-                <span className="text-sm text-muted-foreground">Score</span>
+                <span className="text-sm text-muted-foreground">{t('score')}</span>
               </div>
             </div>
 
@@ -147,7 +147,7 @@ export default function ExamResults() {
                   <CheckCircle className="w-5 h-5" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Correct Answers</p>
+                  <p className="text-sm text-muted-foreground">{t('correctAnswers')}</p>
                   <p className="text-xl font-bold">{result.correctAnswers} / {result.totalQuestions}</p>
                 </div>
               </div>
@@ -156,21 +156,20 @@ export default function ExamResults() {
                   <Award className="w-5 h-5" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Points Earned</p>
+                  <p className="text-sm text-muted-foreground">{t('pointsEarned')}</p>
                   <p className="text-xl font-bold">{result.score} / {result.totalPoints}</p>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Actions */}
           <div className="flex flex-wrap items-center justify-center gap-4">
             <NeuButton
               onClick={() => router.push('/')}
               className="gap-2"
             >
               <Home className="w-4 h-4" />
-              Back to Home
+              {t('backToHome')}
             </NeuButton>
           </div>
         </NeuCard>

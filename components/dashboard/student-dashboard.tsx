@@ -9,9 +9,6 @@ import {
     RotateCcw,
     Clock,
     Calendar,
-    CheckCircle,
-    XCircle,
-    Loader2,
     FileQuestion,
     Trophy,
     ArrowRight
@@ -20,11 +17,13 @@ import Link from 'next/link'
 import { toast } from 'sonner'
 import { ExamSession } from '@/lib/types'
 import { DashboardSkeleton } from '@/components/dashboard/dashboard-skeleton'
+import { useTranslation } from 'react-i18next'
 
 export default function StudentDashboard() {
     const { user, profile } = useAuth()
     const [sessions, setSessions] = useState<ExamSession[]>([])
     const [loading, setLoading] = useState(true)
+    const { t } = useTranslation()
 
     useEffect(() => {
         if (user) {
@@ -39,11 +38,11 @@ export default function StudentDashboard() {
                 const data = await res.json()
                 setSessions(data)
             } else {
-                toast.error('Failed to load history')
+                toast.error(t('failedLoadAnalytics'))
             }
         } catch (error) {
             console.error('Error loading sessions:', error)
-            toast.error('Failed to load history')
+            toast.error(t('failedLoadAnalytics'))
         } finally {
             setLoading(false)
         }
@@ -65,23 +64,21 @@ export default function StudentDashboard() {
     return (
         <div className="min-h-screen p-4">
             <div className="max-w-7xl mx-auto">
-                {/* Header */}
                 <div className="flex flex-col md:flex-row items-center justify-between mb-8 gap-4">
                     <div>
                         <h1 className="text-3xl font-bold mb-2">
-                            Welcome back, {profile?.full_name?.split(' ')[0] || 'student'}!
+                            {t('welcome')}, {profile?.full_name?.split(' ')[0] || t('student')}!
                         </h1>
-                        <p className="text-muted-foreground">Ready to take your next exam?</p>
+                        <p className="text-muted-foreground">{t('dashboardDescription')}</p>
                     </div>
                     <Link href="/join">
                         <NeuButton className="bg-primary text-primary-foreground gap-2">
                             <Play className="w-4 h-4" />
-                            Join New Exam
+                            {t('joinNewExam')}
                         </NeuButton>
                     </Link>
                 </div>
 
-                {/* Stats Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                     <NeuCard className="p-6">
                         <div className="flex items-center gap-4">
@@ -89,7 +86,7 @@ export default function StudentDashboard() {
                                 <FileQuestion className="w-6 h-6" />
                             </div>
                             <div>
-                                <p className="text-sm font-medium text-muted-foreground">Exams Taken</p>
+                                <p className="text-sm font-medium text-muted-foreground">{t('totalExams')}</p>
                                 <p className="text-2xl font-bold">{sessions.length}</p>
                             </div>
                         </div>
@@ -101,7 +98,7 @@ export default function StudentDashboard() {
                                 <Trophy className="w-6 h-6" />
                             </div>
                             <div>
-                                <p className="text-sm font-medium text-muted-foreground">Avg. Score</p>
+                                <p className="text-sm font-medium text-muted-foreground">{t('averageScore')}</p>
                                 <p className="text-2xl font-bold">{avgScore}%</p>
                             </div>
                         </div>
@@ -113,29 +110,28 @@ export default function StudentDashboard() {
                                 <Clock className="w-6 h-6" />
                             </div>
                             <div>
-                                <p className="text-sm font-medium text-muted-foreground">Latest Activity</p>
+                                <p className="text-sm font-medium text-muted-foreground">{t('latestActivity')}</p>
                                 <p className="text-sm font-medium truncate">
-                                    {sessions[0] ? new Date(sessions[0].created_at!).toLocaleDateString() : 'No activity'}
+                                    {sessions[0] ? new Date(sessions[0].created_at!).toLocaleDateString() : t('noActivity')}
                                 </p>
                             </div>
                         </div>
                     </NeuCard>
                 </div>
 
-                {/* Exam History */}
-                <h2 className="text-xl font-bold mb-4">Exam History</h2>
+                <h2 className="text-xl font-bold mb-4">{t('examResults')}</h2>
 
                 {sessions.length === 0 ? (
                     <NeuCard className="p-12 text-center">
                         <div className="w-16 h-16 bg-secondary rounded-full flex items-center justify-center mx-auto mb-4">
                             <RotateCcw className="w-8 h-8 text-muted-foreground" />
                         </div>
-                        <h3 className="text-lg font-bold mb-2">No exams yet</h3>
+                        <h3 className="text-lg font-bold mb-2">{t('noExamData')}</h3>
                         <p className="text-muted-foreground mb-6">
-                            You haven't taken any exams yet. Join an exam to get started!
+                            {t('noExamsDescription')}
                         </p>
                         <Link href="/join">
-                            <NeuButton>Find an Exam</NeuButton>
+                            <NeuButton>{t('findAnExam')}</NeuButton>
                         </Link>
                     </NeuCard>
                 ) : (
@@ -152,15 +148,15 @@ export default function StudentDashboard() {
                                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                                         <div className="flex-1">
                                             <div className="flex items-center gap-2 mb-2">
-                                                <h3 className="text-lg font-bold">{exam?.title || 'Untitled Exam'}</h3>
+                                                <h3 className="text-lg font-bold">{exam?.title || t('untitledExam')}</h3>
                                                 {session.status === 'completed' ? (
                                                     <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase ${isPassed ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                                                         }`}>
-                                                        {isPassed ? 'Passed' : 'Failed'}
+                                                        {isPassed ? t('passed') : t('failed')}
                                                     </span>
                                                 ) : (
                                                     <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs font-bold uppercase">
-                                                        {session.status.replace('_', ' ')}
+                                                        {t(session.status)}
                                                     </span>
                                                 )}
                                             </div>
@@ -173,7 +169,7 @@ export default function StudentDashboard() {
                                                 {session.status === 'completed' && (
                                                     <div className="flex items-center gap-1">
                                                         <Trophy className="w-4 h-4" />
-                                                        {percentage}% Score
+                                                        {percentage}% {t('score')}
                                                     </div>
                                                 )}
                                             </div>
@@ -183,13 +179,13 @@ export default function StudentDashboard() {
                                             {session.status === 'in_progress' ? (
                                                 <Link href={`/exam/take?session=${session.id}`}>
                                                     <NeuButton className="bg-primary text-primary-foreground gap-2">
-                                                        Continue Exam <ArrowRight className="w-4 h-4" />
+                                                        {t('continueExam')} <ArrowRight className="w-4 h-4" />
                                                     </NeuButton>
                                                 </Link>
                                             ) : (
                                                 <Link href={`/dashboard/exams/${session.exam_id}/results/student/${session.id}`}>
                                                     <NeuButton variant="outline" className="gap-2">
-                                                        View Details <ArrowRight className="w-4 h-4" />
+                                                        {t('view')} <ArrowRight className="w-4 h-4" />
                                                     </NeuButton>
                                                 </Link>
                                             )}

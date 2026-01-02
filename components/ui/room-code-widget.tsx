@@ -56,7 +56,7 @@ export function RoomCodeWidget({ roomCode, qrCodeUrl, showQR = false, onToggleQR
       </div>
 
       {showQR && qrCodeUrl && (
-        <div className="flex justify-center p-4 bg-white rounded-xl neu-flat">
+        <div className="flex justify-center p-4 bg-card rounded-xl neu-flat">
           <img src={qrCodeUrl || "/placeholder.svg"} alt="QR code to join exam" className="w-40 h-40" />
         </div>
       )}

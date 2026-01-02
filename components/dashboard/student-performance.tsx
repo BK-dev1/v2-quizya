@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { NeuCard, NeuCardHeader, NeuCardTitle, NeuCardContent } from '@/components/ui/neu-card'
 import { NeuButton } from '@/components/ui/neu-button'
-import { 
+import {
   ArrowLeft,
   CheckCircle,
   XCircle,
@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import Link from 'next/link'
+import { useTranslation } from 'react-i18next'
 
 interface SessionData {
   session: {
@@ -41,6 +42,7 @@ export default function StudentPerformancePage() {
   const params = useParams()
   const examId = params.id as string
   const sessionId = params.sessionId as string
+  const { t } = useTranslation()
 
   const [data, setData] = useState<SessionData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -53,7 +55,7 @@ export default function StudentPerformancePage() {
     try {
       const res = await fetch(`/api/exams/${examId}/sessions/${sessionId}`)
       if (!res.ok) {
-        toast.error('Failed to load student details')
+        toast.error(t('failedToLoadDetails'))
         router.push(`/dashboard/exams/${examId}/results`)
         return
       }
@@ -62,7 +64,7 @@ export default function StudentPerformancePage() {
       setData(sessionData)
     } catch (error) {
       console.error('Error loading session details:', error)
-      toast.error('Failed to load student details')
+      toast.error(t('failedToLoadDetails'))
     } finally {
       setLoading(false)
     }
@@ -79,9 +81,9 @@ export default function StudentPerformancePage() {
   if (!data) {
     return (
       <div className="text-center py-12">
-        <h2 className="text-2xl font-bold mb-4">Student data not found</h2>
+        <h2 className="text-2xl font-bold mb-4">{t('studentDataNotFound')}</h2>
         <Link href={`/dashboard/exams/${examId}/results`}>
-          <NeuButton>Back to Results</NeuButton>
+          <NeuButton>{t('backToResults')}</NeuButton>
         </Link>
       </div>
     )
@@ -97,7 +99,6 @@ export default function StudentPerformancePage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center gap-4">
         <Link href={`/dashboard/exams/${examId}/results`}>
           <NeuButton variant="ghost" size="sm">
@@ -105,32 +106,31 @@ export default function StudentPerformancePage() {
           </NeuButton>
         </Link>
         <div className="flex-1">
-          <h1 className="text-3xl font-bold">Student Performance</h1>
+          <h1 className="text-3xl font-bold">{t('studentPerformance')}</h1>
           <p className="text-muted-foreground">{studentName}</p>
         </div>
       </div>
 
-      {/* Score Card */}
-      <NeuCard className="bg-linear-to-br from-blue-50 to-indigo-50">
+      <NeuCard>
         <NeuCardContent className="pt-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-muted-foreground mb-2">Overall Score</p>
+              <p className="text-sm text-muted-foreground mb-2">{t('overallScore')}</p>
               <p className="text-5xl font-bold">{session.percentage}%</p>
               <p className="text-muted-foreground mt-2">
-                {session.score} / {session.total_points} points
+                {session.score} / {session.total_points} {t('points')}
               </p>
             </div>
             <div className="text-right">
               {session.passed ? (
                 <div className="flex flex-col items-center gap-2">
                   <Trophy className="h-12 w-12 text-green-600" />
-                  <p className="text-lg font-bold text-green-600">PASSED</p>
+                  <p className="text-lg font-bold text-green-600">{t('passed')}</p>
                 </div>
               ) : (
                 <div className="flex flex-col items-center gap-2">
                   <XCircle className="h-12 w-12 text-red-600" />
-                  <p className="text-lg font-bold text-red-600">FAILED</p>
+                  <p className="text-lg font-bold text-red-600">{t('failed')}</p>
                 </div>
               )}
             </div>
@@ -138,64 +138,61 @@ export default function StudentPerformancePage() {
         </NeuCardContent>
       </NeuCard>
 
-      {/* Student Information */}
       <NeuCard>
         <NeuCardHeader>
-          <NeuCardTitle>Student Information</NeuCardTitle>
+          <NeuCardTitle>{t('studentInformation')}</NeuCardTitle>
         </NeuCardHeader>
         <NeuCardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="flex items-center gap-3">
               <User className="h-5 w-5 text-muted-foreground" />
               <div>
-                <p className="text-sm text-muted-foreground">Name</p>
+                <p className="text-sm text-muted-foreground">{t('name')}</p>
                 <p className="font-medium">{studentName}</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
               <Mail className="h-5 w-5 text-muted-foreground" />
               <div>
-                <p className="text-sm text-muted-foreground">Email</p>
+                <p className="text-sm text-muted-foreground">{t('email')}</p>
                 <p className="font-medium">{studentEmail}</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
               <Clock className="h-5 w-5 text-muted-foreground" />
               <div>
-                <p className="text-sm text-muted-foreground">Submitted</p>
+                <p className="text-sm text-muted-foreground">{t('submitted')}</p>
                 <p className="font-medium">
                   {session.submitted_at
                     ? new Date(session.submitted_at).toLocaleString()
-                    : 'Not submitted'}
+                    : t('notSubmitted')}
                 </p>
               </div>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Status</p>
+              <p className="text-sm text-muted-foreground">{t('status')}</p>
               <p className="font-medium capitalize">{session.status}</p>
             </div>
           </div>
         </NeuCardContent>
       </NeuCard>
 
-      {/* Answer Breakdown */}
       <NeuCard>
         <NeuCardHeader>
-          <NeuCardTitle>Answer Review</NeuCardTitle>
+          <NeuCardTitle>{t('answerReview')}</NeuCardTitle>
         </NeuCardHeader>
         <NeuCardContent>
           {answers.length === 0 ? (
-            <p className="text-muted-foreground">No answers submitted</p>
+            <p className="text-muted-foreground">{t('noAnswersSubmitted')}</p>
           ) : (
             <div className="space-y-4">
               {answers.map((answer, index) => (
                 <div
                   key={index}
-                  className={`p-4 rounded-lg border-l-4 ${
-                    answer.is_correct
-                      ? 'border-green-600 bg-green-50'
-                      : 'border-red-600 bg-red-50'
-                  }`}
+                  className={`p-4 rounded-lg border-l-4 bg-card ${answer.is_correct
+                    ? 'border-green-600'
+                    : 'border-red-600'
+                    }`}
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-2">
@@ -208,7 +205,7 @@ export default function StudentPerformancePage() {
                     </div>
                     <div className="text-right">
                       <p className="font-bold">
-                        {answer.points_earned || 0} / {answer.points || 0} pts
+                        {answer.points_earned || 0} / {answer.points || 0} {t('points')}
                       </p>
                     </div>
                   </div>
@@ -218,12 +215,12 @@ export default function StudentPerformancePage() {
                       <p className="font-medium text-sm">{answer.question_text}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Student's answer:</p>
-                      <p className="text-sm font-medium">{answer.answer || '(Not answered)'}</p>
+                      <p className="text-sm text-muted-foreground">{t('studentsAnswer')}:</p>
+                      <p className="text-sm font-medium">{answer.answer || `(${t('notAnswered')})`}</p>
                     </div>
                     {!answer.is_correct && (
                       <div>
-                        <p className="text-sm text-muted-foreground">Correct answer:</p>
+                        <p className="text-sm text-muted-foreground">{t('correctAnswer')}:</p>
                         <p className="text-sm font-medium text-green-700">
                           {answer.correct_answer}
                         </p>
@@ -237,12 +234,11 @@ export default function StudentPerformancePage() {
         </NeuCardContent>
       </NeuCard>
 
-      {/* Actions */}
       <div className="flex gap-2">
         <Link href={`/dashboard/exams/${examId}/results`} className="flex-1">
           <NeuButton className="w-full">
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Results
+            {t('backToResults')}
           </NeuButton>
         </Link>
       </div>
