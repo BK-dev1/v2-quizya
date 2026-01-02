@@ -152,7 +152,7 @@ export default function ExamsPage() {
 
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <NeuInput
                 placeholder={t('searchExamsPlaceholder')}
                 value={searchTerm}
@@ -165,7 +165,7 @@ export default function ExamsPage() {
               {(['all', 'active', 'inactive'] as const).map((filterType) => (
                 <NeuButton
                   key={filterType}
-                  variant={filter === filterType ? 'default' : 'outline'}
+                  variant={filter === filterType ? 'primary' : 'outline'}
                   onClick={() => setFilter(filterType)}
                   size="sm"
                   className="capitalize"
@@ -179,11 +179,11 @@ export default function ExamsPage() {
 
         {filteredExams.length === 0 ? (
           <NeuCard className="text-center p-12">
-            <FileQuestion className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+            <FileQuestion className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             {exams.length === 0 ? (
               <>
                 <h3 className="text-lg font-medium  mb-2">{t('noExamsYet')}</h3>
-                <p className="text-slate-500 mb-4">{t('createFirstExamPrompt')}</p>
+                <p className="text-muted-foreground mb-4">{t('createFirstExamPrompt')}</p>
                 <Link href="/dashboard/exams/new">
                   <NeuButton>
                     <Plus className="h-4 w-4 mr-2" />
@@ -194,7 +194,7 @@ export default function ExamsPage() {
             ) : (
               <>
                 <h3 className="text-lg font-medium  mb-2">{t('noMatchingExams')}</h3>
-                <p className="text-slate-500">{t('adjustSearchFilter')}</p>
+                <p className="text-muted-foreground">{t('adjustSearchFilter')}</p>
               </>
             )}
           </NeuCard>
@@ -211,16 +211,16 @@ export default function ExamsPage() {
                         <h3 className="text-lg font-semibold ">{exam.title}</h3>
 
                         {exam.is_public ? (
-                          <Globe className="h-4 w-4 text-green-600" title={t('publicExam')} />
+                          <Globe className="h-4 w-4 text-green-600" aria-label={t('publicExam')} />
                         ) : (
-                          <Lock className="h-4 w-4 text-slate-400" title={t('privateExam')} />
+                          <Lock className="h-4 w-4 text-muted-foreground" aria-label={t('privateExam')} />
                         )}
 
                         <button
                           onClick={() => toggleExamStatus(exam)}
                           className={`p-1 rounded ${exam.is_active
-                              ? 'text-green-600 hover:bg-green-50'
-                              : 'text-red-600 hover:bg-red-50'
+                            ? 'text-green-600 hover:bg-green-50'
+                            : 'text-red-600 hover:bg-red-50'
                             }`}
                           title={exam.is_active ? t('deactivateExam') : t('activateExam')}
                         >
@@ -228,8 +228,8 @@ export default function ExamsPage() {
                         </button>
 
                         <span className={`px-2 py-1 rounded text-xs font-medium ${exam.is_active
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-gray-100 text-gray-800'
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-muted text-muted-foreground'
                           }`}>
                           {exam.is_active ? t('active') : t('inactive')}
                         </span>
@@ -239,7 +239,7 @@ export default function ExamsPage() {
                         <p className=" mb-3 line-clamp-2">{exam.description}</p>
                       )}
 
-                      <div className="flex items-center gap-6 text-sm text-slate-500 mb-3">
+                      <div className="flex items-center gap-6 text-sm text-muted-foreground mb-3">
                         <div className="flex items-center gap-1">
                           <FileQuestion className="h-4 w-4" />
                           {exam.total_questions} {t('questions')}

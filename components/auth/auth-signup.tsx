@@ -15,7 +15,7 @@ export default function SignupPage() {
   const router = useRouter()
   const { signUp, loading } = useAuth()
   const { t } = useTranslation()
-  
+
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -34,45 +34,45 @@ export default function SignupPage() {
       toast.error(t('fullNameRequired'))
       return false
     }
-    
+
     if (!formData.email.trim()) {
       toast.error(t('emailRequired'))
       return false
     }
-    
+
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(formData.email)) {
       toast.error(t('validEmail'))
       return false
     }
-    
+
     if (formData.password.length < 6) {
       toast.error(t('passwordLength'))
       return false
     }
-    
+
     if (formData.password !== formData.confirmPassword) {
       toast.error(t('passwordsDontMatch'))
       return false
     }
-    
+
     return true
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!validateForm()) return
 
     setIsLoading(true)
     try {
       const { error } = await signUp(
-        formData.email, 
-        formData.password, 
+        formData.email,
+        formData.password,
         formData.fullName,
         formData.role
       )
-      
+
       if (error) {
         if (error.includes('already registered') || error.includes('duplicate')) {
           toast.error(t('emailAlreadyRegistered'))
@@ -123,14 +123,14 @@ export default function SignupPage() {
               </div>
             </div>
             <h2 className="text-2xl font-bold mb-2">{t('verifyEmail')}</h2>
-            <p className="text-slate-600 mb-4">
+            <p className="text-muted-foreground mb-4">
               {t('verificationSent')} <strong>{verificationEmail}</strong>
             </p>
-            <div className="bg-slate-50 rounded-lg p-4 mb-6 text-left">
-              <p className="text-sm text-slate-700 mb-2">
+            <div className="bg-muted rounded-lg p-4 mb-6 text-left">
+              <p className="text-sm text-foreground mb-2">
                 <strong>{t('nextSteps')}</strong>
               </p>
-              <ol className="text-sm text-slate-600 space-y-2 list-decimal list-inside">
+              <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
                 <li>{t('checkEmailInbox')}</li>
                 <li>{t('clickVerificationLink')}</li>
                 <li>{t('returnToSignIn')}</li>
@@ -142,7 +142,7 @@ export default function SignupPage() {
             >
               {t('goToLogin')}
             </NeuButton>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-muted-foreground">
               {t('didntReceiveEmail')}
             </p>
           </div>
@@ -196,7 +196,7 @@ export default function SignupPage() {
               name="role"
               value={formData.role}
               onChange={handleInputChange}
-              className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent "
+              className="w-full p-3 bg-input border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-foreground"
               required
             >
               <option value="student">{t('student')}</option>
@@ -221,7 +221,7 @@ export default function SignupPage() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:"
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
@@ -245,7 +245,7 @@ export default function SignupPage() {
               <button
                 type="button"
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:"
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
                 {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
@@ -271,8 +271,8 @@ export default function SignupPage() {
         <div className="mt-6 space-y-4">
           <div className="text-center ">
             <span className="text-sm">{t('alreadyHaveAccount')} </span>
-            <Link 
-              href="/auth/login" 
+            <Link
+              href="/auth/login"
               className="text-sm text-blue-600 hover:text-blue-500 font-medium"
             >
               {t('signIn')}
@@ -280,8 +280,8 @@ export default function SignupPage() {
           </div>
 
           <div className="text-center">
-            <Link 
-              href="/join" 
+            <Link
+              href="/join"
               className="text-sm text-green-600 hover:text-green-500 font-medium"
             >
               {t('joinExamAsGuest')}

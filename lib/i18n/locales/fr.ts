@@ -60,6 +60,7 @@ export const fr = {
         "dateFormat": "Format de date",
         "settings": "Paramètres",
         "logOut": "Se déconnecter",
+        "signingOut": "Se déconnecter ...",
         "managePreferences": "Gérez vos préférences de compte",
         "profile": "Profil",
         "notifications": "Notifications",

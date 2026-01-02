@@ -62,6 +62,7 @@ export const en = {
         // Settings Page Translations
         "settings": "Settings",
         "logOut": "Log Out",
+        "signingOut": "Signing out...",
         "managePreferences": "Manage your account preferences",
         "profile": "Profile",
         "notifications": "Notifications",

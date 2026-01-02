@@ -122,8 +122,8 @@ export default function ExamResultsPage() {
       const percentage = session.total_points > 0
         ? Math.round((session.score / session.total_points) * 100)
         : 0
-      const passed = percentage >= data.exam.passing_score 
-        ? (t('passed') || 'Passed') 
+      const passed = percentage >= data.exam.passing_score
+        ? (t('passed') || 'Passed')
         : (t('failed') || 'Failed')
 
       csv += `"${studentName}","${email}",${session.score},${session.total_points},${percentage}%,"${passed}"\n`
@@ -294,7 +294,7 @@ export default function ExamResultsPage() {
                       </p>
                     </div>
                   </div>
-                  <div className="w-full bg-slate-200 rounded-full h-2">
+                  <div className="w-full bg-muted rounded-full h-2">
                     <div
                       className="bg-blue-600 h-2 rounded-full transition-all"
                       style={{ width: `${correctPercentage}%` }}
@@ -404,7 +404,7 @@ export default function ExamResultsPage() {
                   <div key={session.id} className="border border-slate-200 rounded-lg">
                     <button
                       onClick={() => toggleStudentExpand(session.id)}
-                      className="w-full p-4 flex items-center justify-between hover:bg-slate-50"
+                      className="w-full p-4 flex items-center justify-between hover:bg-muted"
                     >
                       <div className="flex items-center gap-4 flex-1 text-left">
                         <div className="flex-1">
@@ -444,7 +444,7 @@ export default function ExamResultsPage() {
                     </button>
 
                     {isExpanded && (
-                      <div className="border-t border-slate-200 p-4 bg-slate-50 space-y-4">
+                      <div className="border-t border-border p-4 bg-muted space-y-4">
                         <div className="grid grid-cols-2 gap-4">
                           <div>
                             <p className="text-sm text-muted-foreground">{t('submittedAt') || 'Submitted At'}</p>
@@ -474,7 +474,7 @@ export default function ExamResultsPage() {
                               {(session.answers as any[]).map((answer, idx) => (
                                 <div
                                   key={idx}
-                                  className="p-3 bg-white rounded border border-slate-200 flex items-start gap-3"
+                                  className="p-3 bg-card rounded border border-border flex items-start gap-3"
                                 >
                                   <div className="flex-1">
                                     <p className="text-sm font-medium">{t('question') || 'Question'} {answer.question_id}</p>

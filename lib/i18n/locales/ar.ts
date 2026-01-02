@@ -60,6 +60,7 @@ export const ar = {
         "dateFormat": "تنسيق التاريخ",
         "settings": "الإعدادات",
         "logOut": "تسجيل الخروج",
+        "signingOut": "تسجيل الخروج...",
         "managePreferences": "إدارة تفضيلات حسابك",
         "profile": "الملف الشخصي",
         "notifications": "الإشعارات",

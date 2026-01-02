@@ -182,8 +182,8 @@ export default function DashboardPage() {
               <NeuCard key={i} className="p-6">
                 <div className="flex items-start justify-between">
                   <div className="space-y-3 w-full max-w-2xl">
-                    <div className="h-6 w-1/3 bg-slate-200 animate-pulse rounded" />
-                    <div className="h-4 w-2/3 bg-slate-200 animate-pulse rounded" />
+                    <div className="h-6 w-1/3 bg-muted animate-pulse rounded" />
+                    <div className="h-4 w-2/3 bg-muted animate-pulse rounded" />
                   </div>
                 </div>
               </NeuCard>
@@ -191,9 +191,9 @@ export default function DashboardPage() {
           </div>
         ) : exams.length === 0 ? (
           <NeuCard className="text-center p-12">
-            <FileEdit className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+            <FileEdit className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-medium  mb-2">{t('noExamsYet') || 'No exams yet'}</h3>
-            <p className="text-slate-500 mb-4">{t('createFirstExamPrompt') || 'Create your first exam to get started'}</p>
+            <p className="text-muted-foreground mb-4">{t('createFirstExamPrompt') || 'Create your first exam to get started'}</p>
             <Link href="/dashboard/exams/new">
               <NeuButton>
                 <Plus className="h-4 w-4 mr-2" />
@@ -212,11 +212,11 @@ export default function DashboardPage() {
                       {exam.is_public ? (
                         <Globe className="h-4 w-4 text-green-600" />
                       ) : (
-                        <Lock className="h-4 w-4 text-slate-400" />
+                        <Lock className="h-4 w-4 text-muted-foreground" />
                       )}
                       <span className={`px-2 py-1 rounded text-xs font-medium ${exam.is_active
                         ? 'bg-green-100 text-green-800'
-                        : 'bg-gray-100 text-gray-800'
+                        : 'bg-muted text-muted-foreground'
                         }`}>
                         {exam.is_active ? (t('active') || 'Active') : (t('inactive') || 'Inactive')}
                       </span>
@@ -226,7 +226,7 @@ export default function DashboardPage() {
                       <p className=" mb-3">{exam.description}</p>
                     )}
 
-                    <div className="flex items-center gap-4 text-sm text-slate-500">
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <span>{exam.total_questions} {t('questions') || 'questions'}</span>
                       <span>{exam.duration_minutes} {t('minutes') || 'minutes'}</span>
                       <span>{t('passing') || 'Passing'}: {exam.passing_score}%</span>

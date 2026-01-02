@@ -3,10 +3,10 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { NeuCard } from '@/components/ui/neu-card'
-import { 
-  TrendingUp, 
-  Users, 
-  FileText, 
+import {
+  TrendingUp,
+  Users,
+  FileText,
   Clock,
   Award,
   Target,
@@ -152,11 +152,11 @@ export default function AnalyticsPage() {
               <BarChart3 className="h-5 w-5 text-blue-600" />
               <h3 className="text-lg font-semibold ">{t('recentExamPerformance')}</h3>
             </div>
-            
+
             {analytics.recentExams.length > 0 ? (
               <div className="space-y-4">
                 {analytics.recentExams.map((exam, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-slate-50">
+                  <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-muted">
                     <div className="flex-1">
                       <p className="font-medium  truncate">{exam.title}</p>
                       <p className="text-sm ">
@@ -165,8 +165,8 @@ export default function AnalyticsPage() {
                     </div>
                     <div className="text-right">
                       <p className="text-lg font-bold ">{exam.avgScore}%</p>
-                      <div className="w-16 h-2 bg-slate-200 rounded-full overflow-hidden">
-                        <div 
+                      <div className="w-16 h-2 bg-muted rounded-full overflow-hidden">
+                        <div
                           className="h-full bg-linear-to-r from-blue-500 to-green-500 transition-all duration-500"
                           style={{ width: `${exam.avgScore}%` }}
                         />
@@ -176,7 +176,7 @@ export default function AnalyticsPage() {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8 text-slate-500">
+              <div className="text-center py-8 text-muted-foreground">
                 <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
                 <p>{t('noExamData')}</p>
               </div>
@@ -188,22 +188,22 @@ export default function AnalyticsPage() {
               <PieChart className="h-5 w-5 text-green-600" />
               <h3 className="text-lg font-semibold ">{t('scoreDistribution')}</h3>
             </div>
-            
+
             {analytics.scoreDistribution.some(d => d.count > 0) ? (
               <div className="space-y-3">
                 {analytics.scoreDistribution.map((dist, index) => (
                   <div key={index} className="flex items-center justify-between">
                     <span className="text-sm  min-w-[80px]">{dist.range}</span>
                     <div className="flex-1 mx-4">
-                      <div className="h-4 bg-slate-100 rounded-full overflow-hidden">
-                        <div 
+                      <div className="h-4 bg-muted rounded-full overflow-hidden">
+                        <div
                           className="h-full bg-linear-to-r from-red-400 via-yellow-400 to-green-500 transition-all duration-500"
-                          style={{ 
+                          style={{
                             width: `${dist.percentage}%`,
                             background: dist.range.includes('90-100') ? '#10b981' :
-                                       dist.range.includes('80-89') ? '#22c55e' :
-                                       dist.range.includes('70-79') ? '#eab308' :
-                                       dist.range.includes('60-69') ? '#f97316' : '#ef4444'
+                              dist.range.includes('80-89') ? '#22c55e' :
+                                dist.range.includes('70-79') ? '#eab308' :
+                                  dist.range.includes('60-69') ? '#f97316' : '#ef4444'
                           }}
                         />
                       </div>
@@ -215,7 +215,7 @@ export default function AnalyticsPage() {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8 text-slate-500">
+              <div className="text-center py-8 text-muted-foreground">
                 <PieChart className="h-8 w-8 mx-auto mb-2 opacity-50" />
                 <p>{t('noScoreData')}</p>
               </div>
@@ -227,15 +227,15 @@ export default function AnalyticsPage() {
               <TrendingUp className="h-5 w-5 text-purple-600" />
               <h3 className="text-lg font-semibold ">{t('monthlyActivity')}</h3>
             </div>
-            
+
             <div className="grid grid-cols-6 gap-4">
               {analytics.monthlyStats.map((month, index) => (
                 <div key={index} className="text-center p-4 rounded-lg ">
                   <p className="text-xs  mb-2">{month.month}</p>
                   <p className="text-lg font-bold text-blue-600">{month.exams}</p>
-                  <p className="text-xs text-slate-500">{t('exams')}</p>
-                  <p className="text-sm font-semibold text-green-600 mt-1">{month.students}</p>
-                  <p className="text-xs text-slate-500">{t('students')}</p>
+                  <p className="text-xs text-muted-foreground">{t('exams')}</p>
+                  <p className="text-2xl font-bold">{month.students}</p>
+                  <p className="text-xs text-muted-foreground">{t('students')}</p>
                 </div>
               ))}
             </div>

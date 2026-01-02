@@ -294,7 +294,7 @@ export default function ExamMonitor({ examId }: ExamMonitorProps) {
                                 <div className="flex items-center gap-4">
                                     <div className={`w-2 h-2 rounded-full ${session.status === 'completed' ? 'bg-green-500' :
                                         session.status === 'in_progress' ? 'bg-blue-500 animate-pulse' :
-                                            'bg-slate-300'
+                                            'bg-muted'
                                         }`} />
                                     <div>
                                         <p className="font-medium">{session.guest_name || session.guest_email || t('unknown') || 'Unknown'}</p>
