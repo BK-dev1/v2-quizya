@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { NeuCard, NeuCardHeader, NeuCardTitle, NeuCardContent } from '@/components/ui/neu-card'
 import { NeuButton } from '@/components/ui/neu-button'
-import { 
+import {
   ArrowLeft,
   CheckCircle,
   XCircle,
@@ -111,7 +111,7 @@ export default function StudentPerformancePage() {
         </div>
       </div>
 
-      <NeuCard className="bg-linear-to-br from-blue-50 to-indigo-50">
+      <NeuCard>
         <NeuCardContent className="pt-6">
           <div className="flex items-center justify-between">
             <div>
@@ -189,11 +189,10 @@ export default function StudentPerformancePage() {
               {answers.map((answer, index) => (
                 <div
                   key={index}
-                  className={`p-4 rounded-lg border-l-4 ${
-                    answer.is_correct
-                      ? 'border-green-600 bg-green-50'
-                      : 'border-red-600 bg-red-50'
-                  }`}
+                  className={`p-4 rounded-lg border-l-4 bg-card ${answer.is_correct
+                    ? 'border-green-600'
+                    : 'border-red-600'
+                    }`}
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-2">

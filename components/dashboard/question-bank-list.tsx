@@ -67,9 +67,9 @@ export default function QuestionBankPage() {
 
   const filteredExams = publicExams.filter(exam => {
     const matchesSearch = exam.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         exam.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         exam.profiles?.username?.toLowerCase().includes(searchTerm.toLowerCase())
-    
+      exam.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      exam.profiles?.username?.toLowerCase().includes(searchTerm.toLowerCase())
+
     if (!matchesSearch) return false
 
     if (categoryFilter === 'popular') {
@@ -80,7 +80,7 @@ export default function QuestionBankPage() {
       weekAgo.setDate(weekAgo.getDate() - 7)
       return createdAt >= weekAgo
     }
-    
+
     return true
   })
 
@@ -126,7 +126,7 @@ export default function QuestionBankPage() {
 
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <NeuInput
                 placeholder={t('searchPlaceholder')}
                 value={searchTerm}
@@ -134,12 +134,12 @@ export default function QuestionBankPage() {
                 className="pl-10"
               />
             </div>
-            
+
             <div className="flex gap-2">
               {(['all', 'popular', 'recent'] as const).map((filterType) => (
                 <NeuButton
                   key={filterType}
-                  variant={categoryFilter === filterType ? 'default' : 'outline'}
+                  variant={categoryFilter === filterType ? 'primary' : 'outline'}
                   onClick={() => setCategoryFilter(filterType)}
                   size="sm"
                   className="capitalize"
@@ -189,11 +189,11 @@ export default function QuestionBankPage() {
 
         {filteredExams.length === 0 ? (
           <NeuCard className="text-center p-12">
-            <BookOpen className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+            <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             {publicExams.length === 0 ? (
               <>
                 <h3 className="text-lg font-medium  mb-2">{t('noPublicExams')}</h3>
-                <p className="text-slate-500 mb-4">{t('createPublicExamPrompt') || 'Be the first to create and share a public exam!'}</p>
+                <p className="text-muted-foreground mb-4">{t('createPublicExamPrompt') || 'Be the first to create and share a public exam!'}</p>
                 {profile?.role === 'teacher' && (
                   <Link href="/dashboard/exams/new">
                     <NeuButton>
@@ -206,7 +206,7 @@ export default function QuestionBankPage() {
             ) : (
               <>
                 <h3 className="text-lg font-medium  mb-2">{t('noMatchingExams')}</h3>
-                <p className="text-slate-500">{t('adjustSearchFilter')}</p>
+                <p className="text-muted-foreground">{t('adjustSearchFilter')}</p>
               </>
             )}
           </NeuCard>
@@ -221,8 +221,8 @@ export default function QuestionBankPage() {
                       {t('public')}
                     </span>
                   </div>
-                  
-                  {exam.avgRating > 0 && (
+
+                  {exam.avgRating && exam.avgRating > 0 && (
                     <div className="flex items-center gap-1">
                       <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
                       <span className="text-xs ">
@@ -242,7 +242,7 @@ export default function QuestionBankPage() {
                   </p>
                 )}
 
-                <div className="flex items-center gap-4 text-sm text-slate-500 mb-3">
+                <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
                   <div className="flex items-center gap-1">
                     <FileQuestion className="h-4 w-4" />
                     {exam.total_questions}
@@ -259,7 +259,7 @@ export default function QuestionBankPage() {
 
                 <div className="flex items-center justify-between">
                   <div className="text-sm">
-                    <span className="text-slate-500">{t('by')} </span>
+                    <span className="text-muted-foreground">{t('by')} </span>
                     <span className="font-medium ">
                       {exam.profiles?.username || t('anonymous')}
                     </span>
@@ -272,7 +272,7 @@ export default function QuestionBankPage() {
                         {t('view')}
                       </NeuButton>
                     </Link>
-                    
+
                     <Link href={`/join?exam=${exam.id}`}>
                       <NeuButton size="sm">
                         {t('takeExam')}
@@ -282,7 +282,7 @@ export default function QuestionBankPage() {
                 </div>
 
                 <div className="mt-3 pt-3 border-t border-slate-100">
-                  <div className="text-xs text-slate-500">
+                  <div className="text-xs text-muted-foreground">
                     {t('created')} {new Date(exam.created_at).toLocaleDateString()}
                   </div>
                 </div>
