@@ -328,7 +328,7 @@ export default function TakeExamPage() {
   const toggleMultipleChoiceAnswer = (questionId: string, optionIndex: number) => {
     const currentAnswer = answers[questionId]
     let newAnswer: number[]
-    
+
     if (Array.isArray(currentAnswer)) {
       // If already an array, toggle the option
       if (currentAnswer.includes(optionIndex)) {
@@ -346,7 +346,7 @@ export default function TakeExamPage() {
       // No answer yet, start with this one
       newAnswer = [optionIndex]
     }
-    
+
     saveAnswer(questionId, newAnswer.length === 0 ? [] : newAnswer)
   }
 
@@ -400,12 +400,10 @@ export default function TakeExamPage() {
       recordInfraction('focus_lost')
     }
 
-    console.log('Setting up proctoring event listeners')
     document.addEventListener('visibilitychange', handleVisibilityChange)
     window.addEventListener('blur', handleBlur)
 
     return () => {
-      console.log('Cleaning up proctoring event listeners')
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       window.removeEventListener('blur', handleBlur)
     }
@@ -778,10 +776,10 @@ export default function TakeExamPage() {
                       {(currentQuestion.options as any).map((option: any, index: number) => {
                         const val = option.text || option
                         const currentAnswer = answers[currentQuestion.id]
-                        const isSelected = Array.isArray(currentAnswer) 
+                        const isSelected = Array.isArray(currentAnswer)
                           ? currentAnswer.includes(index)
                           : typeof currentAnswer === 'number' && currentAnswer === index
-                        
+
                         return (
                           <motion.div
                             key={index}
@@ -865,7 +863,7 @@ export default function TakeExamPage() {
                       <textarea
                         className="w-full p-6 text-xl font-medium border-4 border-border rounded-3xl focus:ring-8 focus:ring-primary/10 focus:border-primary transition-all outline-none bg-card resize-y min-h-[200px] shadow-sm group-hover:shadow-md"
                         rows={currentQuestion.question_type === 'essay' ? 10 : 5}
-                        placeholder={t('startTypingAnswer')}  
+                        placeholder={t('startTypingAnswer')}
                         value={typeof answers[currentQuestion.id] === 'string' ? answers[currentQuestion.id] as string : ''}
                         onChange={(e) => saveAnswer(currentQuestion.id, e.target.value)}
                       />
@@ -880,7 +878,7 @@ export default function TakeExamPage() {
                             return trimmed.split(/\s+/).length
                           }
                           return 0
-                        })()}</span> 
+                        })()}</span>
                         <span className="opacity-30">|</span>
                         <span>{t('chars')}: {(() => {
                           const answer = answers[currentQuestion.id]
@@ -888,7 +886,7 @@ export default function TakeExamPage() {
                             return answer.length
                           }
                           return 0
-                        })()}</span> 
+                        })()}</span>
                       </div>
                     </div>
                   )}

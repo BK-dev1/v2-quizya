@@ -33,7 +33,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const data = await res.json()
         setProfile(data)
       } else {
-        console.log('Profile not found')
         setProfile(null)
       }
     } catch (error) {
@@ -52,7 +51,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const getUser = async () => {
       try {
         const res = await fetch('/api/auth/me')
-        
+
         // Check if response is OK first
         if (!res.ok) {
           console.error('Failed to fetch user:', res.status, res.statusText)
@@ -70,7 +69,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         const data = await res.json()
         setUser(data.user)
-        
+
         if (data.user) {
           await fetchProfile(data.user.id)
         }
@@ -123,7 +122,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       const data = await res.json()
-      
+
       // Set user after successful signup (user will need to verify email)
       if (data.user) {
         setUser(data.user)
