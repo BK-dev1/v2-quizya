@@ -26,7 +26,6 @@ interface ExamMonitorProps {
 }
 
 export default function ExamMonitor({ examId }: ExamMonitorProps) {
-    const router = useRouter()
     const supabase = createClient()
     const { t } = useTranslation()
 
@@ -36,7 +35,6 @@ export default function ExamMonitor({ examId }: ExamMonitorProps) {
     const [filter, setFilter] = useState('')
 
     useEffect(() => {
-        console.log('Setting up real-time subscription for exam:', examId)
         fetchData()
 
         const channel = supabase
@@ -50,21 +48,12 @@ export default function ExamMonitor({ examId }: ExamMonitorProps) {
                     filter: `exam_id=eq.${examId}`,
                 },
                 (payload) => {
-                    console.log('🔔 Real-time event received:', payload.eventType, payload)
                     handleRealtimeUpdate(payload)
                 }
             )
-            .subscribe((status) => {
-                console.log('📡 Subscription status:', status)
-                if (status === 'SUBSCRIBED') {
-                    console.log('✅ Successfully subscribed to exam_sessions updates for exam:', examId)
-                } else if (status === 'CHANNEL_ERROR') {
-                    console.error('❌ Subscription error for exam:', examId)
-                }
-            })
+            .subscribe()
 
         return () => {
-            console.log('Cleaning up real-time subscription for exam:', examId)
             supabase.removeChannel(channel)
         }
     }, [examId])

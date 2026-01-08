@@ -11,23 +11,20 @@ export function SupabaseConnectionTest() {
     const testConnection = async () => {
       try {
         const supabase = createClient()
-        
+
         // Test basic connection
         const { data, error } = await supabase
           .from('profiles')
           .select('count')
           .limit(1)
-          
+
         if (error) {
-          console.error('Supabase connection error:', error)
           setError(error.message)
           setConnectionStatus('error')
         } else {
-          console.log('Supabase connected successfully')
           setConnectionStatus('connected')
         }
       } catch (err) {
-        console.error('Connection test failed:', err)
         setError(err instanceof Error ? err.message : 'Unknown error')
         setConnectionStatus('error')
       }
