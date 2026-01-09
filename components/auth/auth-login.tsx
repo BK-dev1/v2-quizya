@@ -84,26 +84,9 @@ export default function LoginPage() {
     }))
   }
 
-  const handleGoogleSignIn = async () => {
-    setIsGoogleLoading(true)
-    try {
-      const supabase = createClient()
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/api/auth/callback`
-        }
-      })
-
-      if (error) {
-        toast.error(error.message)
-        setIsGoogleLoading(false)
-      }
-    } catch (err) {
-      toast.error(t('errorGoogleSignIn'))
-      setIsGoogleLoading(false)
-    }
-  }
+  const handleGoogleSignIn = () => {
+  toast.info('Google sign-in is currently disabled')
+}
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center">
