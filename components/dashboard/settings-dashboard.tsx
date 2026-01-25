@@ -467,9 +467,9 @@ export default function SettingsPage() {
                   <h3 className="font-medium text-foreground mb-4">{t('pushNotifications') || 'Push Notifications'}</h3>
                   <div className="space-y-4">
                     {[
-                      { key: "push_exam_start", label: t('examActivity') || "Exam activity", desc: t('examActivityDesc') || "Real-time exam start alerts" },
+                      { key: "push_exam_start", label: t('studentActivity') || "Student activity", desc: t('studentActivityDesc') || "When students join your exam or start taking it" },
                       { key: "push_infractions", label: t('proctoringAlerts') || "Proctoring alerts", desc: t('proctoringAlertsDesc') || "When infractions are detected" },
-                      { key: "push_submissions", label: t('instantSubmissions') || "Instant submissions", desc: t('instantSubmissionsDesc') || "Immediate submission alerts" },
+                      { key: "push_submissions", label: t('instantSubmissions') || "Instant submissions", desc: t('instantSubmissionsDesc') || "When students submit their exam" },
                     ].map((item) => (
                       <label
                         key={item.key}

@@ -368,6 +368,57 @@ export type Database = {
           }
         ]
       }
+      notifications: {
+        Row: {
+          id: string
+          user_id: string
+          type: 'exam_join' | 'proctoring_infraction' | 'exam_submission' | 'exam_started' | 'exam_ended'
+          title: string
+          message: string | null
+          data: Json | null
+          exam_id: string | null
+          read: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          type: 'exam_join' | 'proctoring_infraction' | 'exam_submission' | 'exam_started' | 'exam_ended'
+          title: string
+          message?: string | null
+          data?: Json | null
+          exam_id?: string | null
+          read?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          type?: 'exam_join' | 'proctoring_infraction' | 'exam_submission' | 'exam_started' | 'exam_ended'
+          title?: string
+          message?: string | null
+          data?: Json | null
+          exam_id?: string | null
+          read?: boolean
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_exam_id_fkey"
+            columns: ["exam_id"]
+            isOneToOne: false
+            referencedRelation: "exams"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
     }
     Views: {
       [_ in never]: never

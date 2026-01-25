@@ -32,6 +32,7 @@ export async function GET(
 
 // Import submitExamSession
 import { submitExamSession } from '@/lib/services/exam-sessions'
+import { createNotificationIfEnabled } from '@/lib/services/notifications'
 
 export async function PUT(
   request: NextRequest,
@@ -54,6 +55,42 @@ export async function PUT(
 
         if (!result) {
           return NextResponse.json({ error: 'Failed to submit exam' }, { status: 500 })
+        }
+
+        // Get session and exam details for notification
+        const { data: sessionDetails } = await supabase
+          .from('exam_sessions')
+          .select(`
+            *,
+            exam:exams (
+              id,
+              title,
+              created_by
+            )
+          `)
+          .eq('id', id)
+          .single()
+
+        if (sessionDetails && sessionDetails.exam && sessionDetails.exam.created_by) {
+          const studentName = sessionDetails.guest_name || 'A student'
+          const scoreDisplay = result.score !== null ? `Score: ${result.score}/${result.total_points}` : ''
+
+          // Send notification to exam creator
+          await createNotificationIfEnabled(
+            sessionDetails.exam.created_by,
+            'exam_submission',
+            `${studentName} submitted the exam`,
+            `${studentName} has completed "${sessionDetails.exam.title}". ${scoreDisplay}`,
+            {
+              student_name: studentName,
+              student_email: sessionDetails.guest_email,
+              exam_title: sessionDetails.exam.title,
+              session_id: id,
+              score: result.score,
+              total_points: result.total_points
+            },
+            sessionDetails.exam.id
+          )
         }
 
         return NextResponse.json(result)

@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
+import { createNotificationIfEnabled } from '@/lib/services/notifications'
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,7 +18,7 @@ export async function POST(request: NextRequest) {
     // Find exam by room code
     const { data: exam, error: examError } = await supabase
       .from('exams')
-      .select('*')
+      .select('*, created_by')
       .eq('room_code', roomCode)
       .eq('is_active', true)
       .single()
@@ -40,7 +41,7 @@ export async function POST(request: NextRequest) {
 
     const adminClient = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SERVICE_ROLE_KEY!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
       {
         cookies: {
           getAll() { return cookieStore.getAll() },
@@ -99,6 +100,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Failed to create exam session' },
         { status: 500 }
+      )
+    }
+
+    if (exam.created_by) {
+      await createNotificationIfEnabled(
+        exam.created_by,
+        'exam_join',
+        `${guestName} joined your exam`,
+        `A guest student has joined "${exam.title}"`,
+        {
+          student_name: guestName,
+          student_email: guestEmail,
+          exam_title: exam.title,
+          session_id: newSession.id
+        },
+        exam.id
       )
     }
 

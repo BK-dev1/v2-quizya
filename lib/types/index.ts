@@ -17,6 +17,7 @@ export type Question = Tables<'questions'>
 export type ExamSession = Tables<'exam_sessions'>
 export type QuestionBank = Tables<'question_bank'>
 export type UserSettings = Tables<'user_settings'>
+export type Notification = Tables<'notifications'>
 
 // Insert types
 export type ProfileInsert = TablesInsert<'profiles'>
@@ -25,6 +26,7 @@ export type QuestionInsert = TablesInsert<'questions'>
 export type ExamSessionInsert = TablesInsert<'exam_sessions'>
 export type QuestionBankInsert = TablesInsert<'question_bank'>
 export type UserSettingsInsert = TablesInsert<'user_settings'>
+export type NotificationInsert = TablesInsert<'notifications'>
 
 // Update types
 export type ProfileUpdate = TablesUpdate<'profiles'>
@@ -33,6 +35,18 @@ export type QuestionUpdate = TablesUpdate<'questions'>
 export type ExamSessionUpdate = TablesUpdate<'exam_sessions'>
 export type QuestionBankUpdate = TablesUpdate<'question_bank'>
 export type UserSettingsUpdate = TablesUpdate<'user_settings'>
+export type NotificationUpdate = TablesUpdate<'notifications'>
+export type NotificationType = 'exam_join' | 'proctoring_infraction' | 'exam_submission' | 'exam_started' | 'exam_ended'
+
+export type NotificationData = {
+  student_name?: string
+  student_email?: string
+  exam_title?: string
+  infraction_type?: string
+  session_id?: string
+  score?: number
+  [key: string]: any
+}
 
 // Custom types for frontend use
 export type ExamWithQuestions = Exam & {

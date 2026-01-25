@@ -15,11 +15,11 @@ import {
   LogOut,
   Menu,
   X,
-  Bell,
   ChevronDown,
   Loader2,
 } from "lucide-react"
 import { toast } from "sonner"
+import { NotificationCenter } from "@/components/notifications/notification-center"
 
 import { useTranslation } from "react-i18next"
 
@@ -105,10 +105,7 @@ export default function DashboardLayout({
             <span className="font-bold text-xl">Quizya</span>
           </Link>
 
-          <button className="p-2 rounded-lg hover:bg-muted relative" aria-label="Notifications">
-            <Bell className="w-6 h-6" />
-            <span className="absolute top-1 right-1 w-2 h-2 bg-destructive rounded-full" />
-          </button>
+          <NotificationCenter />
         </div>
       </header>
 
@@ -257,10 +254,7 @@ export default function DashboardLayout({
         <header className="hidden lg:flex items-center justify-between px-8 h-16 border-b border-border">
           <div>{/* Breadcrumb or page title could go here */}</div>
           <div className="flex items-center gap-4">
-            <button className="p-2 rounded-lg hover:bg-muted relative" aria-label="Notifications">
-              <Bell className="w-5 h-5" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-destructive rounded-full" />
-            </button>
+            <NotificationCenter />
           </div>
         </header>
 
