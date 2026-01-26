@@ -23,7 +23,7 @@ export function Header() {
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center gap-8">
           <Link
-            href="/features"
+            href="/#features"
             className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
           >
             {t('features')}
@@ -53,7 +53,7 @@ export function Header() {
           </Link>
         </div>
 
-        
+
       </nav>
 
       {/* Mobile Menu */}
@@ -61,7 +61,7 @@ export function Header() {
         <div className="md:hidden border-t border-border bg-background">
           <div className="px-4 py-4 space-y-4">
             <Link
-              href="/features"
+              href="/#features"
               className="block py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
               onClick={() => setIsMenuOpen(false)}
             >

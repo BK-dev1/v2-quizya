@@ -37,7 +37,7 @@ export function HeroSection() {
           </Link>
         </div>
 
-        <div className="pt-8 flex flex-wrap items-center justify-center gap-8 text-sm text-muted-foreground">
+        {/* <div className="pt-8 flex flex-wrap items-center justify-center gap-8 text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
             <span className="font-semibold text-foreground text-2xl">10K+</span>
             <span>{t('examsCreated')}</span>
@@ -52,7 +52,7 @@ export function HeroSection() {
             <span className="font-semibold text-foreground text-2xl">99%</span>
             <span>{t('uptime')}</span>
           </div>
-        </div>
+        </div> */}
       </div>
     </section>
   )

@@ -50,7 +50,7 @@ export function FeaturesSection() {
   ]
 
   return (
-    <section className="py-20 px-4" aria-labelledby="features-heading">
+    <section id="features" className="py-20 px-4" aria-labelledby="features-heading">
       <div className="max-w-6xl mx-auto space-y-12">
         <div className="text-center space-y-4">
           <h2 id="features-heading" className="text-3xl md:text-4xl font-bold">
