@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
         .from('attendance_sessions')
         .select('*')
         .eq('session_code', sessionCode)
-        .single()
+        .single() as any
 
       if (sessionError || !dbSession) {
         return NextResponse.json(
@@ -181,7 +181,7 @@ export async function POST(request: NextRequest) {
         validation_reason: geofenceResult.isValid 
           ? 'Within geofence radius' 
           : `Outside geofence radius (${geofenceResult.distance}m > ${sessionData.radius}m)`
-      })
+      } as any)
 
     return NextResponse.json({
       success: true,

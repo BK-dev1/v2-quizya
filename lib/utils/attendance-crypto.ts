@@ -12,21 +12,15 @@
  * 3. Device fingerprints are hashed using SHA-256 for privacy
  */
 
-import { authenticator } from 'otplib'
+import * as OTPAuth from 'otplib'
 import { createHmac, createHash } from 'crypto'
-
-// Configure TOTP settings
-authenticator.options = {
-  step: 15, // 15-second window for OTP rotation
-  window: 1, // Allow 1 step before/after for clock drift tolerance
-}
 
 /**
  * Generate a new TOTP secret for an attendance session
  * @returns Base32 encoded secret string
  */
 export function generateTOTPSecret(): string {
-  return authenticator.generateSecret()
+  return OTPAuth.generateSecret()
 }
 
 /**
@@ -35,7 +29,7 @@ export function generateTOTPSecret(): string {
  * @returns 6-digit TOTP code
  */
 export function generateTOTPCode(secret: string): string {
-  return authenticator.generate(secret)
+  return OTPAuth.generate(secret, { step: 15 })
 }
 
 /**
@@ -46,7 +40,7 @@ export function generateTOTPCode(secret: string): string {
  */
 export function verifyTOTPCode(code: string, secret: string): boolean {
   try {
-    return authenticator.verify({ token: code, secret })
+    return OTPAuth.verify({ token: code, secret, step: 15, window: 1 })
   } catch (error) {
     console.error('TOTP verification error:', error)
     return false

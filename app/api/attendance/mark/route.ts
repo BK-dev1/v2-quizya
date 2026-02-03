@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
       .select('id')
       .eq('student_id', user.id)
       .eq('session_id', sessionCode)
-      .single()
+      .single() as any
 
     if (existingAttendance) {
       return NextResponse.json(
@@ -146,7 +146,7 @@ export async function POST(request: NextRequest) {
         .from('attendance_sessions')
         .select('*')
         .eq('session_code', sessionCode)
-        .single()
+        .single() as any
 
       if (sessionError || !dbSession) {
         return NextResponse.json(
@@ -233,9 +233,9 @@ export async function POST(request: NextRequest) {
         distance_meters: geofenceResult.distance,
         totp_code: totpCode,
         marked_at: new Date().toISOString()
-      })
+      } as any)
       .select()
-      .single()
+      .single() as any
 
     if (insertError) {
       console.error('Database insert error:', insertError)
@@ -253,7 +253,7 @@ export async function POST(request: NextRequest) {
         user_id: user.id,
         user_agent: userAgent || request.headers.get('user-agent'),
         last_seen_at: new Date().toISOString()
-      }, {
+      } as any, {
         onConflict: 'device_fingerprint',
         ignoreDuplicates: false
       })
@@ -272,7 +272,7 @@ export async function POST(request: NextRequest) {
         distance_meters: geofenceResult.distance,
         validation_reason: 'Attendance marked successfully within geofence',
         validated_at: new Date().toISOString()
-      })
+      } as any)
 
     return NextResponse.json({
       success: true,

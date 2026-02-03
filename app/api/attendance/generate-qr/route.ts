@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
         is_active: true
       })
       .select()
-      .single()
+      .single() as any
 
     if (insertError) {
       console.error('Database insert error:', insertError)

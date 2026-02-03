@@ -337,7 +337,6 @@ export default function AttendanceScanner() {
               onClick={handleMarkAttendance}
               disabled={isMarking}
               className="w-full"
-              variant="default"
             >
               {isMarking ? (
                 <>
