@@ -17,6 +17,10 @@ interface AuthContextType {
   signUp: (email: string, password: string, fullName: string, role?: string) => Promise<{ error?: string }>
   signOut: () => Promise<void>
   refreshProfile: () => Promise<void>
+  // Attendance functions
+  generateAttendanceQR: (sessionName: string, latitude: number, longitude: number, radius?: number, durationMinutes?: number) => Promise<{ error?: string; data?: any }>
+  verifyAttendanceQR: (qrPayload: string, latitude: number, longitude: number) => Promise<{ error?: string; data?: any }>
+  markAttendance: (sessionCode: string, qrPayload: string, latitude: number, longitude: number, deviceFingerprint: string) => Promise<{ error?: string; data?: any }>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -144,6 +148,92 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  // Attendance functions
+  const generateAttendanceQR = async (
+    sessionName: string,
+    latitude: number,
+    longitude: number,
+    radius: number = 50,
+    durationMinutes: number = 60
+  ) => {
+    try {
+      const res = await fetch('/api/attendance/generate-qr', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionName, latitude, longitude, radius, durationMinutes })
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        return { error: data.error || 'Failed to generate QR code' }
+      }
+
+      const data = await res.json()
+      return { data }
+    } catch (error) {
+      return { error: String(error) }
+    }
+  }
+
+  const verifyAttendanceQR = async (
+    qrPayload: string,
+    latitude: number,
+    longitude: number
+  ) => {
+    try {
+      const res = await fetch('/api/attendance/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ qrPayload, studentLatitude: latitude, studentLongitude: longitude })
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        return { error: data.error || 'Verification failed' }
+      }
+
+      const data = await res.json()
+      return { data }
+    } catch (error) {
+      return { error: String(error) }
+    }
+  }
+
+  const markAttendance = async (
+    sessionCode: string,
+    qrPayload: string,
+    latitude: number,
+    longitude: number,
+    deviceFingerprint: string
+  ) => {
+    try {
+      const res = await fetch('/api/attendance/mark', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionCode,
+          qrPayload,
+          studentLatitude: latitude,
+          studentLongitude: longitude,
+          deviceFingerprint,
+          userAgent: navigator.userAgent,
+          screenResolution: `${screen.width}x${screen.height}`,
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+        })
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        return { error: data.error || 'Failed to mark attendance' }
+      }
+
+      const data = await res.json()
+      return { data }
+    } catch (error) {
+      return { error: String(error) }
+    }
+  }
+
   return (
     <AuthContext.Provider value={{
       user,
@@ -152,7 +242,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signIn,
       signUp,
       signOut,
-      refreshProfile
+      refreshProfile,
+      generateAttendanceQR,
+      verifyAttendanceQR,
+      markAttendance
     }}>
       {children}
     </AuthContext.Provider>
