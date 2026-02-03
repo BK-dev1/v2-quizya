@@ -122,21 +122,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if student has already marked attendance for this session
-    const { data: existingAttendance } = await supabase
-      .from('attendance_logs')
-      .select('id')
-      .eq('student_id', user.id)
-      .eq('session_id', sessionCode)
-      .single() as any
-
-    if (existingAttendance) {
-      return NextResponse.json(
-        { error: 'You have already marked attendance for this session' },
-        { status: 409 }
-      )
-    }
-
     // Try to get session from cache first
     let sessionData = await getCachedAttendanceSession(sessionCode)
     
@@ -172,6 +157,21 @@ export async function POST(request: NextRequest) {
         totpSecret: dbSession.totp_secret,
         expiresAt: dbSession.expires_at
       }
+    }
+
+    // Check if student has already marked attendance for this session (using session ID now)
+    const { data: existingAttendance } = await supabase
+      .from('attendance_logs')
+      .select('id')
+      .eq('student_id', user.id)
+      .eq('session_id', sessionData.sessionId)
+      .single() as any
+
+    if (existingAttendance) {
+      return NextResponse.json(
+        { error: 'You have already marked attendance for this session' },
+        { status: 409 }
+      )
     }
 
     // Get TOTP secret

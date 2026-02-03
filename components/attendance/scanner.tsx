@@ -271,7 +271,8 @@ export default function AttendanceScanner() {
             disabled={isVerifying || isMarking}
           />
           <p className="text-xs text-muted-foreground mt-1">
-            Note: Real QR scanning requires camera integration (not implemented in this demo)
+            Note: Camera-based QR scanning can be added using libraries like html5-qrcode or react-qr-reader.
+            For this demo, paste the QR JSON payload directly.
           </p>
         </div>
 

@@ -12,7 +12,7 @@
  * 3. Device fingerprints are hashed using SHA-256 for privacy
  */
 
-import * as OTPAuth from 'otplib'
+import { generate, verify, generateSecret } from 'otplib'
 import { createHmac, createHash } from 'crypto'
 
 /**
@@ -20,7 +20,7 @@ import { createHmac, createHash } from 'crypto'
  * @returns Base32 encoded secret string
  */
 export function generateTOTPSecret(): string {
-  return OTPAuth.generateSecret()
+  return generateSecret()
 }
 
 /**
@@ -29,7 +29,7 @@ export function generateTOTPSecret(): string {
  * @returns 6-digit TOTP code
  */
 export function generateTOTPCode(secret: string): string {
-  return OTPAuth.generate(secret, { step: 15 })
+  return generate(secret, { step: 15 })
 }
 
 /**
@@ -40,7 +40,7 @@ export function generateTOTPCode(secret: string): string {
  */
 export function verifyTOTPCode(code: string, secret: string): boolean {
   try {
-    return OTPAuth.verify({ token: code, secret, step: 15, window: 1 })
+    return verify({ token: code, secret, step: 15, window: 1 })
   } catch (error) {
     console.error('TOTP verification error:', error)
     return false

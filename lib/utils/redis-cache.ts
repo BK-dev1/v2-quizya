@@ -226,7 +226,17 @@ export async function invalidateSessionCache(sessionCode: string): Promise<void>
 
   try {
     const pattern = `attendance:*:${sessionCode}*`
-    const keys = await client.keys(pattern)
+    
+    // Use SCAN instead of KEYS for better performance in production
+    const keys: string[] = []
+    let cursor = '0'
+    
+    do {
+      const result = await client.scan(cursor, 'MATCH', pattern, 'COUNT', 100)
+      cursor = result[0]
+      keys.push(...result[1])
+    } while (cursor !== '0')
+    
     if (keys.length > 0) {
       await client.del(...keys)
     }
