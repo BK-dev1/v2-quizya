@@ -8,7 +8,11 @@ export async function GET(request: NextRequest) {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/auth/callback`
+        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/auth/callback`,
+        queryParams: {
+          hd: 'ensia.edu.dz', // Restrict to @ensia.edu.dz domain
+          prompt: 'select_account' // Force account selection
+        }
       }
     })
 
