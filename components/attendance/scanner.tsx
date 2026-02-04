@@ -29,6 +29,7 @@ export default function AttendanceScanner() {
   const [verificationResult, setVerificationResult] = useState<any>(null)
   const [attendanceResult, setAttendanceResult] = useState<any>(null)
   const [deviceFingerprint, setDeviceFingerprint] = useState<string>('')
+  const [activePayload, setActivePayload] = useState<string | null>(null)
 
   // Get user's current location
   useEffect(() => {
@@ -69,8 +70,23 @@ export default function AttendanceScanner() {
   }, [])
 
   const handleVerify = async () => {
-    if (!qrInput.trim()) {
-      toast.error('Please enter or scan a QR code')
+    let finalPayload = qrInput.trim()
+
+    // If input is a URL, extract the 'p' parameter
+    if (finalPayload.startsWith('http')) {
+      try {
+        const url = new URL(finalPayload)
+        const p = url.searchParams.get('p')
+        if (p) {
+          finalPayload = atob(p)
+        }
+      } catch (e) {
+        console.error('Failed to parse QR URL:', e)
+      }
+    }
+
+    if (!finalPayload) {
+      toast.error('Please enter or scan a valid QR code')
       return
     }
 
@@ -84,15 +100,16 @@ export default function AttendanceScanner() {
     setAttendanceResult(null)
 
     try {
-      const result = await verifyAttendanceQR(qrInput, location.latitude, location.longitude)
+      const result = await verifyAttendanceQR(finalPayload, location.latitude, location.longitude)
 
       if (result.error) {
         toast.error(result.error)
         setVerificationResult({ success: false, error: result.error })
       } else if (result.data) {
         setVerificationResult(result.data)
-        
+
         if (result.data.withinGeofence) {
+          setActivePayload(finalPayload)
           toast.success('QR code and location verified! Ready to mark attendance.')
         } else {
           toast.warning(result.data.message || 'You are outside the geofence radius')
@@ -122,7 +139,7 @@ export default function AttendanceScanner() {
     try {
       const result = await markAttendance(
         verificationResult.sessionCode,
-        qrInput,
+        activePayload || qrInput,
         location!.latitude,
         location!.longitude,
         deviceFingerprint

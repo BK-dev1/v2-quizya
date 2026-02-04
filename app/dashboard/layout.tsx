@@ -18,6 +18,7 @@ import {
   Bell,
   ChevronDown,
   Loader2,
+  UserCheck,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -28,6 +29,7 @@ const navItems = [
   { href: "/dashboard/exams", label: "myExams", icon: FileEdit },
   { href: "/dashboard/question-bank", label: "questionBank", icon: Database },
   { href: "/dashboard/analytics", label: "analytics", icon: BarChart3 },
+  { href: "/dashboard/attendance", label: "attendance", icon: UserCheck },
   { href: "/dashboard/settings", label: "settings", icon: Settings },
 ]
 

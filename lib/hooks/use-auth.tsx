@@ -18,7 +18,7 @@ interface AuthContextType {
   signOut: () => Promise<void>
   refreshProfile: () => Promise<void>
   // Attendance functions
-  generateAttendanceQR: (sessionName: string, latitude: number, longitude: number, radius?: number, durationMinutes?: number) => Promise<{ error?: string; data?: any }>
+  generateAttendanceQR: (sessionName: string, latitude: number | null, longitude: number | null, radius?: number, durationMinutes?: number, geofencingEnabled?: boolean, moduleName?: string, sectionName?: string) => Promise<{ error?: string; data?: any }>
   verifyAttendanceQR: (qrPayload: string, latitude: number, longitude: number) => Promise<{ error?: string; data?: any }>
   markAttendance: (sessionCode: string, qrPayload: string, latitude: number, longitude: number, deviceFingerprint: string) => Promise<{ error?: string; data?: any }>
 }
@@ -151,16 +151,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Attendance functions
   const generateAttendanceQR = async (
     sessionName: string,
-    latitude: number,
-    longitude: number,
+    latitude: number | null,
+    longitude: number | null,
     radius: number = 50,
-    durationMinutes: number = 60
+    durationMinutes: number = 60,
+    geofencingEnabled: boolean = true,
+    moduleName?: string,
+    sectionName?: string
   ) => {
     try {
       const res = await fetch('/api/attendance/generate-qr', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionName, latitude, longitude, radius, durationMinutes })
+        body: JSON.stringify({
+          sessionName,
+          latitude,
+          longitude,
+          radius,
+          durationMinutes,
+          geofencingEnabled,
+          moduleName,
+          sectionName
+        })
       })
 
       if (!res.ok) {

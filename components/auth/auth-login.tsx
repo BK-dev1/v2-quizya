@@ -68,7 +68,13 @@ export default function LoginPage() {
         toast.error(error)
       } else {
         toast.success(t('welcomeBackMessage'))
-        router.push('/dashboard')
+        const params = new URLSearchParams(window.location.search)
+        const redirect = params.get('redirect')
+        if (redirect) {
+          router.push(decodeURIComponent(redirect))
+        } else {
+          router.push('/dashboard')
+        }
       }
     } catch (err) {
       toast.error(t('errorOccurred'))
@@ -87,9 +93,30 @@ export default function LoginPage() {
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true)
     try {
-      // Redirect to Google OAuth endpoint
-      window.location.href = '/api/auth/google'
+      const supabase = createClient()
+      const origin = window.location.origin
+      const params = new URLSearchParams(window.location.search)
+      const next = params.get('redirect') || '/dashboard'
+
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${origin}/api/auth/callback?next=${encodeURIComponent(next)}`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'select_account',
+            // hd: 'ensia.edu.dz' // Optional: Restrict to specific domain
+          }
+        }
+      })
+
+      if (error) {
+        throw error
+      }
+
+      // Note: No need to set loading false here as we redirect
     } catch (error) {
+      console.error('Google Auth Error:', error)
       toast.error(t('errorOccurred'))
       setIsGoogleLoading(false)
     }

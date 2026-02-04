@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
     
     // If not in cache, fetch from database
     if (!sessionData) {
-      const { data: dbSession, error: sessionError } = await supabase
+      const { data: dbSession, error: sessionError } = await (supabase as any)
         .from('attendance_sessions')
         .select('*')
         .eq('session_code', sessionCode)
@@ -130,11 +130,12 @@ export async function POST(request: NextRequest) {
       sessionData = {
         sessionId: dbSession.id,
         teacherId: dbSession.teacher_id,
-        teacherLat: parseFloat(dbSession.teacher_latitude),
-        teacherLon: parseFloat(dbSession.teacher_longitude),
+        teacherLat: dbSession.teacher_latitude ? parseFloat(dbSession.teacher_latitude) : null,
+        teacherLon: dbSession.teacher_longitude ? parseFloat(dbSession.teacher_longitude) : null,
         radius: dbSession.geofence_radius_meters,
         totpSecret: dbSession.totp_secret,
-        expiresAt: dbSession.expires_at
+        expiresAt: dbSession.expires_at,
+        geofencingEnabled: dbSession.geofencing_enabled ?? true
       }
     }
 
@@ -161,38 +162,46 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Validate geofencing
-    const geofenceResult = validateGeofence(
-      sessionData.teacherLat,
-      sessionData.teacherLon,
-      studentLatitude,
-      studentLongitude,
-      sessionData.radius
-    )
+    // Validate geofencing if enabled
+    let distance = null
+    let isValid = true
+    if (sessionData.geofencingEnabled) {
+      const geofenceResult = validateGeofence(
+        sessionData.teacherLat!,
+        sessionData.teacherLon!,
+        studentLatitude,
+        studentLongitude,
+        sessionData.radius
+      )
+      distance = geofenceResult.distance
+      isValid = geofenceResult.isValid
+    }
 
     // Log geofence validation
-    await supabase
+    await (supabase as any)
       .from('geofence_validations')
       .insert({
         session_id: sessionData.sessionId,
         student_id: user.id,
-        is_valid: geofenceResult.isValid,
-        distance_meters: geofenceResult.distance,
-        validation_reason: geofenceResult.isValid 
-          ? 'Within geofence radius' 
-          : `Outside geofence radius (${geofenceResult.distance}m > ${sessionData.radius}m)`
+        is_valid: isValid,
+        distance_meters: distance,
+        validation_reason: !sessionData.geofencingEnabled
+          ? 'Geofencing disabled for this session'
+          : isValid 
+            ? 'Within geofence radius' 
+            : `Outside geofence radius (${distance}m > ${sessionData.radius}m)`
       } as any)
 
     return NextResponse.json({
       success: true,
       sessionCode,
       sessionId: sessionData.sessionId,
-      distance: geofenceResult.distance,
-      withinGeofence: geofenceResult.isValid,
+      distance: distance,
+      withinGeofence: isValid,
       maxDistance: sessionData.radius,
-      message: geofenceResult.isValid 
+      message: isValid 
         ? 'QR code and location verified successfully' 
-        : `You are ${geofenceResult.distance}m away. Must be within ${sessionData.radius}m to mark attendance.`
+        : `You are ${distance}m away. Must be within ${sessionData.radius}m to mark attendance.`
     })
 
   } catch (error) {

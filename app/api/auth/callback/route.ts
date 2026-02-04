@@ -14,7 +14,16 @@ export async function GET(request: NextRequest) {
 
   const { data, error } = await supabase.auth.exchangeCodeForSession(code)
 
+  console.log('[Auth] Callback Received', { 
+    code: code ? 'PRESENT' : 'MISSING', 
+    next, 
+    error: error?.message,
+    userEmail: data?.user?.email,
+    provider: data?.user?.app_metadata?.provider
+  })
+
   if (error) {
+    console.error('[Auth] Exchange Error:', error)
     return NextResponse.redirect(new URL(`/auth/login?error=${error.message}`, request.url))
   }
 

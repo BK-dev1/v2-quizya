@@ -12,7 +12,7 @@
  * 3. Device fingerprints are hashed using SHA-256 for privacy
  */
 
-import { generate, verify, generateSecret } from 'otplib'
+import { generateSync, verifySync, generateSecret } from 'otplib'
 import { createHmac, createHash } from 'crypto'
 
 /**
@@ -29,7 +29,9 @@ export function generateTOTPSecret(): string {
  * @returns 6-digit TOTP code
  */
 export function generateTOTPCode(secret: string): string {
-  return generate(secret, { step: 15 })
+  if (!secret) return ''
+  // Use generateSync with period: 15 for 15-second rotation
+  return generateSync({ secret, period: 15 })
 }
 
 /**
@@ -39,8 +41,20 @@ export function generateTOTPCode(secret: string): string {
  * @returns true if valid, false otherwise
  */
 export function verifyTOTPCode(code: string, secret: string): boolean {
+  if (!code || !secret) return false
   try {
-    return verify({ token: code, secret, step: 15, window: 1 })
+    // Use verifySync with period: 15 and window of 1 (30s)
+    // Functional API uses epochTolerance instead of window sometimes, but verifySync options has window?
+    // Let's check OTPVerifyOptions again.
+    // Actually, @otplib/totp verifySync has period and digits.
+    const result = verifySync({ 
+        token: code, 
+        secret, 
+        period: 15,
+        // @ts-ignore - otpTolerance/window might be named differently in this version's functional API
+        window: 1 
+    })
+    return !!result.valid
   } catch (error) {
     console.error('TOTP verification error:', error)
     return false

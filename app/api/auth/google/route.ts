@@ -5,10 +5,25 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient()
 
+    const searchParams = request.nextUrl.searchParams
+    const redirectParam = searchParams.get('redirect')
+    
+    // Build callback URL with redirect parameter if present
+    const callbackUrl = new URL(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/auth/callback`)
+    if (redirectParam) {
+      callbackUrl.searchParams.set('next', redirectParam)
+    }
+
+    console.log('[Auth] Google Login Initiated', {
+      redirectParam,
+      callbackUrl: callbackUrl.toString(),
+      appUrl: process.env.NEXT_PUBLIC_APP_URL
+    })
+
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/auth/callback`,
+        redirectTo: callbackUrl.toString(),
         queryParams: {
           hd: 'ensia.edu.dz', // Restrict to @ensia.edu.dz domain
           prompt: 'select_account' // Force account selection

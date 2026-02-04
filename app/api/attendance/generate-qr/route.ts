@@ -71,13 +71,23 @@ export async function POST(request: NextRequest) {
       latitude,
       longitude,
       radius = 50,
-      durationMinutes = 60
+      durationMinutes = 60,
+      geofencingEnabled = true,
+      moduleName,
+      sectionName
     } = body
 
     // Validate required fields
-    if (!sessionName || typeof latitude !== 'number' || typeof longitude !== 'number') {
+    if (!sessionName) {
       return NextResponse.json(
-        { error: 'Missing required fields: sessionName, latitude, longitude' },
+        { error: 'Missing session name' },
+        { status: 400 }
+      )
+    }
+
+    if (geofencingEnabled && (typeof latitude !== 'number' || typeof longitude !== 'number')) {
+      return NextResponse.json(
+        { error: 'Position required when geofencing is enabled' },
         { status: 400 }
       )
     }
@@ -100,18 +110,21 @@ export async function POST(request: NextRequest) {
     const expiresAt = new Date(Date.now() + durationMinutes * 60 * 1000)
 
     // Insert attendance session into database
-    const { data: session, error: insertError } = await supabase
+    const { data: session, error: insertError } = await (supabase as any)
       .from('attendance_sessions')
       .insert({
         teacher_id: user.id,
         session_name: sessionName,
         session_code: sessionCode,
         totp_secret: totpSecret,
-        teacher_latitude: latitude,
-        teacher_longitude: longitude,
+        teacher_latitude: geofencingEnabled ? latitude : null,
+        teacher_longitude: geofencingEnabled ? longitude : null,
         geofence_radius_meters: radius,
         expires_at: expiresAt.toISOString(),
-        is_active: true
+        is_active: true,
+        geofencing_enabled: geofencingEnabled,
+        module_name: moduleName,
+        section_name: sectionName
       })
       .select()
       .single() as any
@@ -141,8 +154,12 @@ export async function POST(request: NextRequest) {
     // Generate QR code payload
     const qrPayload = generateQRPayload(sessionCode, user.id, totpSecret)
     
+    // Create direct attendance link
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || (request.headers.get('host') ? `${request.nextUrl.protocol}//${request.headers.get('host')}` : '')
+    const attendanceLink = `${baseUrl}/attendance/mark?p=${Buffer.from(qrPayload).toString('base64')}`
+
     // Generate QR code as base64 data URL
-    const qrDataUrl = await QRCode.toDataURL(qrPayload, {
+    const qrDataUrl = await QRCode.toDataURL(attendanceLink, {
       errorCorrectionLevel: 'H',
       width: 400,
       margin: 2
@@ -154,8 +171,8 @@ export async function POST(request: NextRequest) {
       sessionId: session.id,
       qrDataUrl,
       expiresAt: expiresAt.toISOString(),
-      // Include TOTP secret for debugging (remove in production)
-      ...(process.env.NODE_ENV === 'development' && { totpSecret })
+      totpSecret,
+      geofencingEnabled: session.geofencing_enabled
     })
 
   } catch (error) {
