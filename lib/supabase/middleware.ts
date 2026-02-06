@@ -37,7 +37,20 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
-  // 3. LOGIC: If logged out, don't allow access to Protected Routes
+  // 3. LOGIC: If teacher is on home page, redirect to dashboard
+  if (user && path === '/') {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    if (profile?.role === 'teacher') {
+      return NextResponse.redirect(new URL('/dashboard', request.url))
+    }
+  }
+
+  // 4. LOGIC: If logged out, don't allow access to Protected Routes
   if (!user && !isAuthRoute && !isPublicRoute) {
     const url = new URL('/auth/login', request.url)
     url.searchParams.set('next', path)
