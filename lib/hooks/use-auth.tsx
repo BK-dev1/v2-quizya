@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from 'react'
 import { Profile } from '@/lib/types'
+import { createClient } from '@/lib/supabase/client'
 
 interface User {
   id: string
@@ -16,6 +17,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error?: string }>
   signUp: (email: string, password: string, fullName: string, role?: string) => Promise<{ error?: string }>
   signOut: () => Promise<void>
+  signInWithGoogle: () => Promise<{ error?: string }>
   refreshProfile: () => Promise<void>
 }
 
@@ -144,6 +146,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const signInWithGoogle = async () => {
+    try {
+      const supabase = createClient()
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/api/auth/callback`
+        }
+      })
+
+      if (error) return { error: error.message }
+      return {}
+    } catch (error) {
+      return { error: String(error) }
+    }
+  }
+
   return (
     <AuthContext.Provider value={{
       user,
@@ -152,6 +171,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signIn,
       signUp,
       signOut,
+      signInWithGoogle,
       refreshProfile
     }}>
       {children}
