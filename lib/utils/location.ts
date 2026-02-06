@@ -1,6 +1,12 @@
 /**
  * Calculate distance between two coordinates using Haversine formula
  * Returns distance in meters
+ * 
+ * @param lat1 - Latitude of first point in decimal degrees
+ * @param lng1 - Longitude of first point in decimal degrees
+ * @param lat2 - Latitude of second point in decimal degrees
+ * @param lng2 - Longitude of second point in decimal degrees
+ * @returns Distance in meters
  */
 export function calculateDistance(
   lat1: number,

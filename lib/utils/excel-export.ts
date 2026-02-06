@@ -1,6 +1,12 @@
 import * as XLSX from 'xlsx'
 import { AttendanceRecord } from '@/lib/types'
 
+// SECURITY NOTE: The xlsx package (v0.18.5) has known vulnerabilities (ReDoS and Prototype Pollution)
+// No patched version is available yet. The vulnerabilities are in the parsing logic.
+// Our usage is limited to generating Excel files (not parsing untrusted input), which is safer.
+// Monitor for updates: https://github.com/advisories?query=xlsx
+// Consider switching to an alternative library if needed in production.
+
 export interface AttendanceExportData {
   sessionTitle: string
   moduleName?: string

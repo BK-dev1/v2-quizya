@@ -4,7 +4,11 @@ import { getAttendanceSession, createAttendanceRecord, checkDuplicateAttendance 
 import { verifyToken } from '@/lib/utils/qr-generator'
 import { verifyLocation } from '@/lib/utils/location'
 
-// Rate limiting map (in-memory, use Redis in production)
+// Rate limiting map (in-memory)
+// PRODUCTION NOTE: This in-memory storage will NOT work correctly in:
+// - Multi-instance deployments (load-balanced servers)
+// - Serverless environments (Vercel, AWS Lambda, etc.)
+// For production, use Redis or a similar distributed storage solution
 const rateLimitMap = new Map<string, number[]>()
 const RATE_LIMIT_WINDOW = 60000 // 1 minute
 const MAX_REQUESTS = 5 // 5 requests per minute
@@ -26,11 +30,25 @@ function checkRateLimit(ip: string): boolean {
   return true
 }
 
+/**
+ * Extract the real client IP from forwarded headers
+ * Handles x-forwarded-for which may contain multiple IPs
+ */
+function getClientIP(request: NextRequest): string {
+  const forwarded = request.headers.get('x-forwarded-for')
+  if (forwarded) {
+    // x-forwarded-for can contain multiple IPs (client, proxy1, proxy2, ...)
+    // The first IP is the original client
+    return forwarded.split(',')[0].trim()
+  }
+  return request.headers.get('x-real-ip') || 'unknown'
+}
+
 // POST /api/attendance/check-in - Student check-in
 export async function POST(request: NextRequest) {
   try {
     // Rate limiting
-    const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
+    const ip = getClientIP(request)
     
     if (!checkRateLimit(ip)) {
       return NextResponse.json(

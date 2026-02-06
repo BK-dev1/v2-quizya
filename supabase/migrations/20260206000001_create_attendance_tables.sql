@@ -98,7 +98,11 @@ CREATE POLICY "Teachers can view attendance records for their sessions"
   );
 
 -- Allow anyone to insert attendance records (for non-authenticated students)
--- We'll handle security via API validation
+-- SECURITY NOTE: This open policy is necessary for guest check-ins but relies on:
+-- 1. Token validation in the API layer (QR codes expire after 20s)
+-- 2. Rate limiting to prevent spam
+-- 3. Duplicate check constraint in the database
+-- 4. Optional location verification
 CREATE POLICY "Anyone can create attendance records"
   ON public.attendance_records
   FOR INSERT

@@ -66,7 +66,10 @@ export function createCheckInURL(baseUrl: string, sessionId: string, token: stri
 }
 
 // In-memory token store (for server-side validation)
-// In production, you might want to use Redis or a database for this
+// PRODUCTION NOTE: This in-memory storage will NOT work correctly in:
+// - Multi-instance deployments (load-balanced servers)
+// - Serverless environments (Vercel, AWS Lambda, etc.)
+// For production, use Redis, a database, or another shared storage solution
 const tokenStore = new Map<string, Set<string>>()
 
 /**
