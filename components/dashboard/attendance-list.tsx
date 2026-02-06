@@ -43,7 +43,7 @@ export default function AttendanceList() {
     location_lat: null as number | null,
     location_lng: null as number | null,
     max_distance_meters: 50,
-    qr_refresh_interval: 20
+    qr_refresh_interval: 60
   })
   const { t } = useTranslation()
 
@@ -189,7 +189,7 @@ export default function AttendanceList() {
   }
 
   // Memoize filtered sessions to avoid recalculation on every render
-  const filteredSessions = useMemo(() => 
+  const filteredSessions = useMemo(() =>
     sessions.filter(session =>
       session.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       session.module_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||

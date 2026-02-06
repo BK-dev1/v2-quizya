@@ -19,14 +19,10 @@ import {
 } from 'lucide-react'
 import { AttendanceSession, AttendanceRecord, AttendanceQRData } from '@/lib/types'
 import { toast } from 'sonner'
-import dynamic from 'next/dynamic'
 import Image from 'next/image'
 
-// Dynamically import QRCode library to reduce initial bundle size and improve page load
-// QRCode generation is only needed when viewing an active session
-const QRCodeModule = dynamic(() => import('qrcode'), {
-  ssr: false
-})
+// QR code generation is only needed when viewing an active session
+// We use dynamic import inside the component to avoid SSR issues and reduce bundle size
 
 export default function AttendanceSessionComponent() {
   const { id } = useParams()
@@ -55,7 +51,7 @@ export default function AttendanceSessionComponent() {
           setQrData(data.qrData)
 
           // Generate QR code on client side using dynamically imported module
-          const QRCode = await QRCodeModule
+          const QRCode = await import('qrcode')
           const qrCodeUrl = await QRCode.toDataURL(data.scanUrl, {
             errorCorrectionLevel: 'H',
             width: 400,
@@ -174,7 +170,7 @@ export default function AttendanceSessionComponent() {
   }
 
   // Memoize formatted dates to avoid recalculations
-  const formattedStartTime = useMemo(() => 
+  const formattedStartTime = useMemo(() =>
     session ? new Date(session.started_at).toLocaleString() : '',
     [session?.started_at]
   )

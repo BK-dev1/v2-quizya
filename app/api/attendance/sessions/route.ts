@@ -9,10 +9,10 @@ import {
 export async function GET() {
   try {
     const supabase = await createClient()
-    
+
     // Get current user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
-    
+
     if (authError || !user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -37,10 +37,10 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient()
-    
+
     // Get current user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
-    
+
     if (authError || !user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
       location_lat,
       location_lng,
       max_distance_meters: max_distance_meters || 50,
-      qr_refresh_interval: qr_refresh_interval || 20,
+      qr_refresh_interval: qr_refresh_interval || 60,
       is_active: true
     })
 

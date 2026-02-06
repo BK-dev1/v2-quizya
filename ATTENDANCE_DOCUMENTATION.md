@@ -110,7 +110,7 @@ Create a new attendance session.
   "location_lat": 40.7128,
   "location_lng": -74.0060,
   "max_distance_meters": 50,
-  "qr_refresh_interval": 20
+  "qr_refresh_interval": 60
 }
 ```
 
