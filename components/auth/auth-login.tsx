@@ -27,7 +27,9 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (user) {
-      router.push('/dashboard')
+      const params = new URLSearchParams(window.location.search)
+      const next = params.get('next') || '/dashboard'
+      router.push(next)
     }
   }, [user, router])
 
@@ -68,7 +70,11 @@ export default function LoginPage() {
         toast.error(error)
       } else {
         toast.success(t('welcomeBackMessage'))
-        router.push('/dashboard')
+
+        // Handle post-login redirection
+        const params = new URLSearchParams(window.location.search)
+        const next = params.get('next') || '/dashboard'
+        router.push(next)
       }
     } catch (err) {
       toast.error(t('errorOccurred'))
@@ -87,7 +93,9 @@ export default function LoginPage() {
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true)
     try {
-      const { error } = await signInWithGoogle()
+      const params = new URLSearchParams(window.location.search)
+      const next = params.get('next') || '/dashboard'
+      const { error } = await signInWithGoogle(next)
       if (error) {
         toast.error(error)
       }
