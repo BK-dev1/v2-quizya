@@ -35,25 +35,48 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL(`/auth/login?error=${error.message}`, origin))
   }
 
+  // Ensure profile exists for OAuth users
+  const { data: { user } } = await supabase.auth.getUser()
+  if (user) {
+    // Check if profile exists
+    const { data: existingProfile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', user.id)
+      .single()
+
+    // Create profile if it doesn't exist (for OAuth users)
+    if (!existingProfile) {
+      const fullName = user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'User'
+      const role = user.user_metadata?.role || 'student'
+      
+      await supabase
+        .from('profiles')
+        .insert({
+          id: user.id,
+          email: user.email!,
+          full_name: fullName,
+          role: role
+        })
+    }
+  }
+
   // 3. Logic for role-based redirect
   let redirectPath = next
 
   // If next is home, we check role to ensure teachers land on dashboard
   // Students also now land on dashboard instead of root if no specific path was requested
-  if (next === '/') {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (user) {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single()
+  if (next === '/' && user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
 
-      if (profile?.role === 'teacher' || profile?.role === 'student') {
-        redirectPath = '/dashboard'
-      } else {
-        redirectPath = '/'
-      }
+    if (profile?.role === 'teacher' || profile?.role === 'student') {
+      redirectPath = '/dashboard'
+    } else {
+      redirectPath = '/'
     }
   }
 
