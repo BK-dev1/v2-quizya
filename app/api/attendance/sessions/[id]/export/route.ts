@@ -45,7 +45,7 @@ export async function GET(
     }
 
     // Generate Excel file
-    const excelBuffer = generateAttendanceExcel({
+    const excelBuffer = await generateAttendanceExcel({
       sessionTitle: session.title,
       moduleName: session.module_name || undefined,
       sectionGroup: session.section_group || undefined,

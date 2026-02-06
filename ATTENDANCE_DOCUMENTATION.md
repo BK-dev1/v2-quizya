@@ -314,11 +314,10 @@ This will **NOT** work correctly in:
 
 ### Known Vulnerabilities
 
-**xlsx package (v0.18.5)**:
-- Known vulnerabilities: ReDoS and Prototype Pollution
-- No patched version available yet
-- Current usage is safe (generation only, no parsing of untrusted input)
-- Monitor for updates or consider alternatives
+**Previous Issue (Resolved):**
+- The xlsx package (v0.18.5) had known vulnerabilities (ReDoS and Prototype Pollution)
+- **✅ Fixed**: Replaced with `exceljs` (v4.4.0) which has no known vulnerabilities
+- `exceljs` is actively maintained and provides better features, styling, and security
 
 ### Security Best Practices
 

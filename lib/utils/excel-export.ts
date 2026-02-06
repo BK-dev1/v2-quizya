@@ -1,11 +1,5 @@
-import * as XLSX from 'xlsx'
+import { Workbook } from 'exceljs'
 import { AttendanceRecord } from '@/lib/types'
-
-// SECURITY NOTE: The xlsx package (v0.18.5) has known vulnerabilities (ReDoS and Prototype Pollution)
-// No patched version is available yet. The vulnerabilities are in the parsing logic.
-// Our usage is limited to generating Excel files (not parsing untrusted input), which is safer.
-// Monitor for updates: https://github.com/advisories?query=xlsx
-// Consider switching to an alternative library if needed in production.
 
 export interface AttendanceExportData {
   sessionTitle: string
@@ -17,74 +11,85 @@ export interface AttendanceExportData {
 }
 
 /**
- * Generate Excel file from attendance records
+ * Generate Excel file from attendance records using ExcelJS
+ * This replaces the vulnerable xlsx package with a secure alternative
  */
-export function generateAttendanceExcel(data: AttendanceExportData): Buffer {
+export async function generateAttendanceExcel(data: AttendanceExportData): Promise<Buffer> {
   // Create workbook
-  const workbook = XLSX.utils.book_new()
+  const workbook = new Workbook()
+  workbook.creator = 'Quizya Attendance System'
+  workbook.created = new Date()
+  
+  // Add worksheet
+  const worksheet = workbook.addWorksheet('Attendance', {
+    properties: { tabColor: { argb: 'FF00FF00' } }
+  })
 
-  // Prepare session info sheet
-  const sessionInfo = [
-    ['Attendance Report'],
-    [],
-    ['Session Title:', data.sessionTitle],
-    ['Module:', data.moduleName || 'N/A'],
-    ['Section/Group:', data.sectionGroup || 'N/A'],
-    ['Started At:', new Date(data.startedAt).toLocaleString()],
-    ['Ended At:', data.endedAt ? new Date(data.endedAt).toLocaleString() : 'Ongoing'],
-    ['Total Attendees:', data.records.length],
-    []
-  ]
+  // Add title row
+  worksheet.addRow(['Attendance Report'])
+  worksheet.getRow(1).font = { size: 16, bold: true }
+  worksheet.addRow([]) // Empty row
 
-  // Prepare attendance records sheet
-  const recordHeaders = [
+  // Add session information
+  worksheet.addRow(['Session Title:', data.sessionTitle])
+  worksheet.addRow(['Module:', data.moduleName || 'N/A'])
+  worksheet.addRow(['Section/Group:', data.sectionGroup || 'N/A'])
+  worksheet.addRow(['Started At:', new Date(data.startedAt).toLocaleString()])
+  worksheet.addRow(['Ended At:', data.endedAt ? new Date(data.endedAt).toLocaleString() : 'Ongoing'])
+  worksheet.addRow(['Total Attendees:', data.records.length])
+  worksheet.addRow([]) // Empty row
+
+  // Make info labels bold
+  for (let i = 3; i <= 8; i++) {
+    worksheet.getRow(i).getCell(1).font = { bold: true }
+  }
+
+  // Add attendance records header
+  const headerRow = worksheet.addRow([
     'No.',
     'Student Name',
     'Email',
     'Check-In Time',
-    'Distance (m)',
+    'Location Status',
     'IP Address'
-  ]
-
-  const recordRows = data.records.map((record, index) => [
-    index + 1,
-    record.student_name,
-    record.student_email || 'N/A',
-    new Date(record.check_in_time).toLocaleString(),
-    record.location_lat && record.location_lng ? 'Verified' : 'Not Verified',
-    record.ip_address || 'N/A'
   ])
+  
+  // Style header row
+  headerRow.font = { bold: true }
+  headerRow.fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FFE0E0E0' }
+  }
+  headerRow.border = {
+    bottom: { style: 'thin' }
+  }
 
-  // Combine session info and records
-  const worksheetData = [
-    ...sessionInfo,
-    recordHeaders,
-    ...recordRows
-  ]
-
-  // Create worksheet
-  const worksheet = XLSX.utils.aoa_to_sheet(worksheetData)
-
-  // Set column widths
-  worksheet['!cols'] = [
-    { wch: 5 },   // No.
-    { wch: 25 },  // Student Name
-    { wch: 30 },  // Email
-    { wch: 20 },  // Check-In Time
-    { wch: 15 },  // Distance
-    { wch: 15 }   // IP Address
-  ]
-
-  // Add worksheet to workbook
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'Attendance')
-
-  // Generate buffer
-  const excelBuffer = XLSX.write(workbook, {
-    type: 'buffer',
-    bookType: 'xlsx'
+  // Add attendance records
+  data.records.forEach((record, index) => {
+    worksheet.addRow([
+      index + 1,
+      record.student_name,
+      record.student_email || 'N/A',
+      new Date(record.check_in_time).toLocaleString(),
+      record.location_lat && record.location_lng ? 'Verified' : 'Not Verified',
+      record.ip_address || 'N/A'
+    ])
   })
 
-  return excelBuffer
+  // Set column widths
+  worksheet.columns = [
+    { width: 5 },   // No.
+    { width: 25 },  // Student Name
+    { width: 30 },  // Email
+    { width: 20 },  // Check-In Time
+    { width: 15 },  // Location Status
+    { width: 15 }   // IP Address
+  ]
+
+  // Generate buffer
+  const buffer = await workbook.xlsx.writeBuffer()
+  return Buffer.from(buffer)
 }
 
 /**
@@ -103,7 +108,7 @@ export function generateAttendanceFilename(sessionTitle: string, date: Date = ne
  * Create download response for Excel file
  */
 export function createExcelResponse(buffer: Buffer, filename: string) {
-  return new Response(buffer, {
+  return new Response(buffer as any, {
     headers: {
       'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'Content-Disposition': `attachment; filename="${filename}"`

@@ -48,6 +48,7 @@
     "cmdk": "1.0.4",
     "date-fns": "4.1.0",
     "embla-carousel-react": "8.5.1",
+    "exceljs": "^4.4.0",
     "framer-motion": "^12.23.26",
     "i18next": "^25.7.3",
     "i18next-browser-languagedetector": "^8.2.0",
@@ -69,7 +70,6 @@
     "tailwind-merge": "^3.3.1",
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^1.1.2",
-    "xlsx": "^0.18.5",
     "zod": "3.25.76"
   },
   "devDependencies": {
