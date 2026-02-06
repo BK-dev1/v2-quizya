@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { NeuCard } from '@/components/ui/neu-card'
@@ -19,8 +19,17 @@ import {
 } from 'lucide-react'
 import { AttendanceSession, AttendanceRecord, AttendanceQRData } from '@/lib/types'
 import { toast } from 'sonner'
-import Image from 'next/image'
-import QRCode from 'qrcode'
+import dynamic from 'next/dynamic'
+
+// Dynamically import Image to reduce initial bundle
+const Image = dynamic(() => import('next/image'), {
+  ssr: false
+})
+
+// Dynamically import QRCode library to reduce bundle size
+const QRCode = dynamic(() => import('qrcode'), {
+  ssr: false
+})
 
 export default function AttendanceSessionComponent() {
   const { id } = useParams()
@@ -49,7 +58,8 @@ export default function AttendanceSessionComponent() {
           setQrData(data.qrData)
 
           // Generate QR code on client side
-          const qrCodeUrl = await QRCode.toDataURL(data.scanUrl, {
+          const QRCodeModule = await import('qrcode')
+          const qrCodeUrl = await QRCodeModule.default.toDataURL(data.scanUrl, {
             errorCorrectionLevel: 'H',
             width: 400,
             margin: 2,
@@ -103,13 +113,13 @@ export default function AttendanceSessionComponent() {
     return () => clearInterval(interval)
   }, [session, qrData, loadSessionData])
 
-  // Auto-refresh attendance records
+  // Auto-refresh attendance records - increased to 10 seconds to reduce load
   useEffect(() => {
     if (!session?.is_active) return
 
     const interval = setInterval(() => {
       loadSessionData()
-    }, 5000) // Refresh every 5 seconds
+    }, 10000) // Refresh every 10 seconds instead of 5
 
     return () => clearInterval(interval)
   }, [session, loadSessionData])
@@ -165,6 +175,17 @@ export default function AttendanceSessionComponent() {
       toast.error('Error exporting attendance')
     }
   }
+
+  // Memoize formatted dates to avoid recalculations
+  const formattedStartTime = useMemo(() => 
+    session ? new Date(session.started_at).toLocaleString() : '',
+    [session?.started_at]
+  )
+
+  const formattedEndTime = useMemo(() =>
+    session?.ended_at ? new Date(session.ended_at).toLocaleString() : null,
+    [session?.ended_at]
+  )
 
   if (loading) {
     return (
@@ -244,12 +265,12 @@ export default function AttendanceSessionComponent() {
             )}
             <div>
               <span className="text-muted-foreground">Started:</span>
-              <p className="font-medium">{new Date(session.started_at).toLocaleString()}</p>
+              <p className="font-medium">{formattedStartTime}</p>
             </div>
-            {session.ended_at && (
+            {formattedEndTime && (
               <div>
                 <span className="text-muted-foreground">Ended:</span>
-                <p className="font-medium">{new Date(session.ended_at).toLocaleString()}</p>
+                <p className="font-medium">{formattedEndTime}</p>
               </div>
             )}
             {session.location_lat && session.location_lng && (
@@ -277,14 +298,15 @@ export default function AttendanceSessionComponent() {
                 </div>
               </div>
               <div className="bg-white p-4 rounded-lg">
-                <Image
-                  src={qrCode}
-                  alt="Attendance QR Code"
-                  width={300}
-                  height={300}
-                  className="w-full h-auto"
-                  unoptimized
-                />
+                {qrCode && (
+                  <img
+                    src={qrCode}
+                    alt="Attendance QR Code"
+                    width={300}
+                    height={300}
+                    className="w-full h-auto"
+                  />
+                )}
               </div>
               <p className="text-xs text-center text-muted-foreground">
                 Students scan this code to check in

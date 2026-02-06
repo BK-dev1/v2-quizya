@@ -8,9 +8,24 @@ import { LanguageProvider } from "@/components/providers/LanguageProvider"
 import { Toaster } from "sonner"
 import "./globals.css"
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
-const cairo = Cairo({ subsets: ["arabic"], variable: "--font-cairo" })
-const _geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-geist-mono" })
+const inter = Inter({ 
+  subsets: ["latin"], 
+  variable: "--font-inter",
+  display: "swap",
+  fallback: ["system-ui", "arial"]
+})
+const cairo = Cairo({ 
+  subsets: ["arabic"], 
+  variable: "--font-cairo",
+  display: "swap",
+  fallback: ["system-ui", "arial"]
+})
+const _geistMono = Geist_Mono({ 
+  subsets: ["latin"], 
+  variable: "--font-geist-mono",
+  display: "swap",
+  fallback: ["monospace"]
+})
 
 export const metadata: Metadata = {
   title: "Quizya - Online Exam Platform",

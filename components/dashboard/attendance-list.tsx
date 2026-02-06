@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/hooks/use-auth'
@@ -47,13 +47,7 @@ export default function AttendanceList() {
   })
   const { t } = useTranslation()
 
-  useEffect(() => {
-    if (user && profile?.role === 'teacher') {
-      loadSessions()
-    }
-  }, [user, profile])
-
-  const loadSessions = async () => {
+  const loadSessions = useCallback(async () => {
     try {
       const res = await fetch('/api/attendance/sessions')
       if (res.ok) {
@@ -68,9 +62,15 @@ export default function AttendanceList() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
-  const handleGetLocation = () => {
+  useEffect(() => {
+    if (user && profile?.role === 'teacher') {
+      loadSessions()
+    }
+  }, [user, profile, loadSessions])
+
+  const handleGetLocation = useCallback(() => {
     if (!navigator.geolocation) {
       toast.error('Geolocation is not supported by your browser')
       return
@@ -79,12 +79,12 @@ export default function AttendanceList() {
     toast.info('Getting your location...')
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        setNewSession({
-          ...newSession,
+        setNewSession(prev => ({
+          ...prev,
           useLocation: true,
           location_lat: position.coords.latitude,
           location_lng: position.coords.longitude
-        })
+        }))
         toast.success('Location captured successfully')
       },
       (error) => {
@@ -97,7 +97,7 @@ export default function AttendanceList() {
         maximumAge: 0
       }
     )
-  }
+  }, [])
 
   const handleCreateSession = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -188,10 +188,14 @@ export default function AttendanceList() {
     }
   }
 
-  const filteredSessions = sessions.filter(session =>
-    session.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    session.module_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    session.section_group?.toLowerCase().includes(searchTerm.toLowerCase())
+  // Memoize filtered sessions to avoid recalculation on every render
+  const filteredSessions = useMemo(() => 
+    sessions.filter(session =>
+      session.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      session.module_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      session.section_group?.toLowerCase().includes(searchTerm.toLowerCase())
+    ),
+    [sessions, searchTerm]
   )
 
   if (loading) {
@@ -229,7 +233,7 @@ export default function AttendanceList() {
             <NeuInput
               id="title"
               value={newSession.title}
-              onChange={(e) => setNewSession({ ...newSession, title: e.target.value })}
+              onChange={(e) => setNewSession(prev => ({ ...prev, title: e.target.value }))}
               placeholder="e.g., Morning Lecture - Week 1"
               required
             />
@@ -240,7 +244,7 @@ export default function AttendanceList() {
             <NeuInput
               id="description"
               value={newSession.description}
-              onChange={(e) => setNewSession({ ...newSession, description: e.target.value })}
+              onChange={(e) => setNewSession(prev => ({ ...prev, description: e.target.value }))}
               placeholder="Optional session description"
             />
           </div>
@@ -251,7 +255,7 @@ export default function AttendanceList() {
               <NeuInput
                 id="module"
                 value={newSession.module_name}
-                onChange={(e) => setNewSession({ ...newSession, module_name: e.target.value })}
+                onChange={(e) => setNewSession(prev => ({ ...prev, module_name: e.target.value }))}
                 placeholder="e.g., Computer Science"
               />
             </div>
@@ -261,7 +265,7 @@ export default function AttendanceList() {
               <NeuInput
                 id="section"
                 value={newSession.section_group}
-                onChange={(e) => setNewSession({ ...newSession, section_group: e.target.value })}
+                onChange={(e) => setNewSession(prev => ({ ...prev, section_group: e.target.value }))}
                 placeholder="e.g., Group A"
               />
             </div>
