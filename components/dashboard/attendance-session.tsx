@@ -1,0 +1,369 @@
+'use client'
+
+import { useEffect, useState, useCallback } from 'react'
+import { useParams, useRouter } from 'next/navigation'
+import { useAuth } from '@/lib/hooks/use-auth'
+import { NeuCard } from '@/components/ui/neu-card'
+import { NeuButton } from '@/components/ui/neu-button'
+import {
+  QrCode,
+  Users,
+  Clock,
+  Loader2,
+  RefreshCw,
+  StopCircle,
+  ArrowLeft,
+  MapPin,
+  CheckCircle2,
+  Download
+} from 'lucide-react'
+import { AttendanceSession, AttendanceRecord, AttendanceQRData } from '@/lib/types'
+import { toast } from 'sonner'
+import Image from 'next/image'
+
+export default function AttendanceSessionComponent() {
+  const { id } = useParams()
+  const router = useRouter()
+  const { user } = useAuth()
+  const [session, setSession] = useState<AttendanceSession | null>(null)
+  const [records, setRecords] = useState<AttendanceRecord[]>([])
+  const [qrCode, setQrCode] = useState<string | null>(null)
+  const [qrData, setQrData] = useState<AttendanceQRData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [timeLeft, setTimeLeft] = useState(0)
+  const [isEnding, setIsEnding] = useState(false)
+
+  const loadSessionData = useCallback(async () => {
+    if (!id) return
+
+    try {
+      const res = await fetch(`/api/attendance/sessions/${id}`)
+      
+      if (res.ok) {
+        const data = await res.json()
+        setSession(data.session)
+        setRecords(data.session.attendance_records || [])
+        
+        if (data.qrCode && data.qrData) {
+          setQrCode(data.qrCode)
+          setQrData(data.qrData)
+          
+          // Calculate time left
+          const expiresAt = data.qrData.expiresAt
+          const now = Date.now()
+          const secondsLeft = Math.max(0, Math.floor((expiresAt - now) / 1000))
+          setTimeLeft(secondsLeft)
+        }
+      } else if (res.status === 403) {
+        toast.error('You do not have access to this session')
+        router.push('/dashboard/attendance')
+      } else {
+        toast.error('Failed to load session')
+      }
+    } catch (error) {
+      console.error('Error loading session:', error)
+      toast.error('Error loading session')
+    } finally {
+      setLoading(false)
+    }
+  }, [id, router])
+
+  useEffect(() => {
+    if (user) {
+      loadSessionData()
+    }
+  }, [user, loadSessionData])
+
+  // QR code refresh timer
+  useEffect(() => {
+    if (!session?.is_active || !qrData) return
+
+    const interval = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          loadSessionData() // Refresh QR code
+          return session.qr_refresh_interval
+        }
+        return prev - 1
+      })
+    }, 1000)
+
+    return () => clearInterval(interval)
+  }, [session, qrData, loadSessionData])
+
+  // Auto-refresh attendance records
+  useEffect(() => {
+    if (!session?.is_active) return
+
+    const interval = setInterval(() => {
+      loadSessionData()
+    }, 5000) // Refresh every 5 seconds
+
+    return () => clearInterval(interval)
+  }, [session, loadSessionData])
+
+  const handleEndSession = async () => {
+    if (!confirm('Are you sure you want to end this attendance session?')) {
+      return
+    }
+
+    setIsEnding(true)
+
+    try {
+      const res = await fetch(`/api/attendance/sessions/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_active: false, ended_at: new Date().toISOString() })
+      })
+
+      if (res.ok) {
+        toast.success('Session ended successfully')
+        loadSessionData()
+      } else {
+        toast.error('Failed to end session')
+      }
+    } catch (error) {
+      console.error('Error ending session:', error)
+      toast.error('Error ending session')
+    } finally {
+      setIsEnding(false)
+    }
+  }
+
+  const handleExport = async () => {
+    try {
+      const res = await fetch(`/api/attendance/sessions/${id}/export`)
+      
+      if (res.ok) {
+        const blob = await res.blob()
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `attendance_${session?.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_${new Date().toISOString().split('T')[0]}.xlsx`
+        document.body.appendChild(a)
+        a.click()
+        window.URL.revokeObjectURL(url)
+        document.body.removeChild(a)
+        toast.success('Attendance exported successfully')
+      } else {
+        toast.error('Failed to export attendance')
+      }
+    } catch (error) {
+      console.error('Error exporting:', error)
+      toast.error('Error exporting attendance')
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    )
+  }
+
+  if (!session) {
+    return (
+      <div className="container mx-auto p-6">
+        <NeuCard className="p-12 text-center">
+          <p className="text-muted-foreground">Session not found</p>
+          <NeuButton onClick={() => router.push('/dashboard/attendance')} className="mt-4">
+            Back to Attendance
+          </NeuButton>
+        </NeuCard>
+      </div>
+    )
+  }
+
+  return (
+    <div className="container mx-auto p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <NeuButton variant="outline" onClick={() => router.push('/dashboard/attendance')}>
+            <ArrowLeft className="h-4 w-4" />
+          </NeuButton>
+          <div>
+            <h1 className="text-3xl font-bold">{session.title}</h1>
+            {session.description && (
+              <p className="text-muted-foreground mt-1">{session.description}</p>
+            )}
+          </div>
+        </div>
+
+        <div className="flex gap-2">
+          <NeuButton variant="outline" onClick={handleExport}>
+            <Download className="mr-2 h-4 w-4" />
+            Export
+          </NeuButton>
+          {session.is_active && (
+            <NeuButton variant="destructive" onClick={handleEndSession} disabled={isEnding}>
+              {isEnding ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Ending...
+                </>
+              ) : (
+                <>
+                  <StopCircle className="mr-2 h-4 w-4" />
+                  End Session
+                </>
+              )}
+            </NeuButton>
+          )}
+        </div>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-3">
+        {/* Session Info */}
+        <NeuCard className="p-6">
+          <h3 className="font-semibold mb-4">Session Info</h3>
+          <div className="space-y-3 text-sm">
+            {session.module_name && (
+              <div>
+                <span className="text-muted-foreground">Module:</span>
+                <p className="font-medium">{session.module_name}</p>
+              </div>
+            )}
+            {session.section_group && (
+              <div>
+                <span className="text-muted-foreground">Section:</span>
+                <p className="font-medium">{session.section_group}</p>
+              </div>
+            )}
+            <div>
+              <span className="text-muted-foreground">Started:</span>
+              <p className="font-medium">{new Date(session.started_at).toLocaleString()}</p>
+            </div>
+            {session.ended_at && (
+              <div>
+                <span className="text-muted-foreground">Ended:</span>
+                <p className="font-medium">{new Date(session.ended_at).toLocaleString()}</p>
+              </div>
+            )}
+            {session.location_lat && session.location_lng && (
+              <div>
+                <span className="text-muted-foreground flex items-center gap-1">
+                  <MapPin className="h-3 w-3" />
+                  Location:
+                </span>
+                <p className="font-medium">Within {session.max_distance_meters}m</p>
+              </div>
+            )}
+          </div>
+        </NeuCard>
+
+        {/* Attendance Stats */}
+        <NeuCard className="p-6">
+          <h3 className="font-semibold mb-4">Statistics</h3>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Users className="h-5 w-5 text-blue-500" />
+                <span className="text-sm text-muted-foreground">Total Attendance</span>
+              </div>
+              <span className="text-2xl font-bold">{records.length}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Clock className="h-5 w-5 text-green-500" />
+                <span className="text-sm text-muted-foreground">QR Refresh</span>
+              </div>
+              <span className="text-lg font-semibold">{session.qr_refresh_interval}s</span>
+            </div>
+            {session.is_active && (
+              <div className="pt-2 border-t">
+                <div className="flex items-center gap-2 text-green-600">
+                  <CheckCircle2 className="h-5 w-5" />
+                  <span className="font-medium">Session Active</span>
+                </div>
+              </div>
+            )}
+          </div>
+        </NeuCard>
+
+        {/* QR Code */}
+        <NeuCard className="p-6">
+          {session.is_active && qrCode ? (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold">QR Code</h3>
+                <div className="flex items-center gap-2 text-sm">
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  <span>{timeLeft}s</span>
+                </div>
+              </div>
+              <div className="bg-white p-4 rounded-lg">
+                <Image
+                  src={qrCode}
+                  alt="Attendance QR Code"
+                  width={300}
+                  height={300}
+                  className="w-full h-auto"
+                  unoptimized
+                />
+              </div>
+              <p className="text-xs text-center text-muted-foreground">
+                Students scan this code to check in
+              </p>
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <QrCode className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <p className="text-muted-foreground">Session has ended</p>
+            </div>
+          )}
+        </NeuCard>
+      </div>
+
+      {/* Attendance Records */}
+      <NeuCard className="p-6">
+        <h3 className="font-semibold mb-4">Attendance Records ({records.length})</h3>
+        
+        {records.length === 0 ? (
+          <div className="text-center py-12">
+            <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <p className="text-muted-foreground">No students have checked in yet</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left py-3 px-4">#</th>
+                  <th className="text-left py-3 px-4">Name</th>
+                  <th className="text-left py-3 px-4">Email</th>
+                  <th className="text-left py-3 px-4">Check-in Time</th>
+                  <th className="text-left py-3 px-4">Location</th>
+                </tr>
+              </thead>
+              <tbody>
+                {records.map((record, index) => (
+                  <tr key={record.id} className="border-b hover:bg-muted/50">
+                    <td className="py-3 px-4">{index + 1}</td>
+                    <td className="py-3 px-4 font-medium">{record.student_name}</td>
+                    <td className="py-3 px-4 text-muted-foreground">
+                      {record.student_email || 'N/A'}
+                    </td>
+                    <td className="py-3 px-4 text-sm">
+                      {new Date(record.check_in_time).toLocaleTimeString()}
+                    </td>
+                    <td className="py-3 px-4">
+                      {record.location_lat && record.location_lng ? (
+                        <span className="flex items-center gap-1 text-green-600">
+                          <CheckCircle2 className="h-4 w-4" />
+                          Verified
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">No location</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </NeuCard>
+    </div>
+  )
+}
