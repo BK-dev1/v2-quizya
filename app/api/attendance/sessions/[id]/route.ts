@@ -11,15 +11,15 @@ import { generateQRCode, createQRData, storeToken } from '@/lib/utils/qr-generat
 // GET /api/attendance/sessions/[id] - Get session details with QR code
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient()
-    const sessionId = params.id
-    
+    const { id: sessionId } = await params
+
     // Get current user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
-    
+
     if (authError || !user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -48,11 +48,11 @@ export async function GET(
     // Generate QR code if session is active
     let qrCode = null
     let qrData = null
-    
+
     if (session.is_active) {
       qrData = createQRData(sessionId, session.qr_refresh_interval)
       qrCode = await generateQRCode(qrData)
-      
+
       // Store token for validation
       storeToken(sessionId, qrData.token, session.qr_refresh_interval * 1000)
     }
@@ -74,15 +74,15 @@ export async function GET(
 // PUT /api/attendance/sessions/[id] - Update session
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient()
-    const sessionId = params.id
-    
+    const { id: sessionId } = await params
+
     // Get current user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
-    
+
     if (authError || !user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -92,7 +92,7 @@ export async function PUT(
 
     // Verify ownership
     const existingSession = await getAttendanceSession(sessionId)
-    
+
     if (!existingSession) {
       return NextResponse.json(
         { error: 'Session not found' },
@@ -130,15 +130,15 @@ export async function PUT(
 // DELETE /api/attendance/sessions/[id] - Delete session
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient()
-    const sessionId = params.id
-    
+    const { id: sessionId } = await params
+
     // Get current user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
-    
+
     if (authError || !user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -148,7 +148,7 @@ export async function DELETE(
 
     // Verify ownership
     const existingSession = await getAttendanceSession(sessionId)
-    
+
     if (!existingSession) {
       return NextResponse.json(
         { error: 'Session not found' },
