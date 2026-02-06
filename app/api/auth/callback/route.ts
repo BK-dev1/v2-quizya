@@ -18,5 +18,20 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL(`/auth/login?error=${error.message}`, request.url))
   }
 
-  return NextResponse.redirect(new URL(next, request.url))
+  // Fetch user profile to determine redirection
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    if (profile?.role === 'teacher') {
+      return NextResponse.redirect(new URL('/dashboard', request.url))
+    }
+  }
+
+  return NextResponse.redirect(new URL('/', request.url))
 }
