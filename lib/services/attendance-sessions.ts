@@ -3,7 +3,7 @@ import { AttendanceSession, AttendanceSessionInsert, AttendanceSessionUpdate, At
 
 export async function createAttendanceSession(session: AttendanceSessionInsert): Promise<AttendanceSession | null> {
   const supabase = await createClient()
-  
+
   const { data, error } = await supabase
     .from('attendance_sessions')
     .insert(session)
@@ -20,7 +20,7 @@ export async function createAttendanceSession(session: AttendanceSessionInsert):
 
 export async function getAttendanceSession(sessionId: string): Promise<AttendanceSession | null> {
   const supabase = await createClient()
-  
+
   const { data, error } = await supabase
     .from('attendance_sessions')
     .select('*')
@@ -37,7 +37,7 @@ export async function getAttendanceSession(sessionId: string): Promise<Attendanc
 
 export async function getAttendanceSessionWithRecords(sessionId: string) {
   const supabase = await createClient()
-  
+
   const { data, error } = await supabase
     .from('attendance_sessions')
     .select(`
@@ -58,7 +58,7 @@ export async function getAttendanceSessionWithRecords(sessionId: string) {
 
 export async function getTeacherAttendanceSessions(teacherId: string): Promise<AttendanceSession[]> {
   const supabase = await createClient()
-  
+
   const { data, error } = await supabase
     .from('attendance_sessions')
     .select('*')
@@ -78,7 +78,7 @@ export async function updateAttendanceSession(
   updates: AttendanceSessionUpdate
 ): Promise<AttendanceSession | null> {
   const supabase = await createClient()
-  
+
   const { data, error } = await supabase
     .from('attendance_sessions')
     .update(updates)
@@ -103,7 +103,7 @@ export async function endAttendanceSession(sessionId: string): Promise<Attendanc
 
 export async function deleteAttendanceSession(sessionId: string): Promise<boolean> {
   const supabase = await createClient()
-  
+
   const { error } = await supabase
     .from('attendance_sessions')
     .delete()
@@ -119,7 +119,7 @@ export async function deleteAttendanceSession(sessionId: string): Promise<boolea
 
 export async function createAttendanceRecord(record: AttendanceRecordInsert): Promise<AttendanceRecord | null> {
   const supabase = await createClient()
-  
+
   const { data, error } = await supabase
     .from('attendance_records')
     .insert(record)
@@ -136,7 +136,7 @@ export async function createAttendanceRecord(record: AttendanceRecordInsert): Pr
 
 export async function getAttendanceRecords(sessionId: string): Promise<AttendanceRecord[]> {
   const supabase = await createClient()
-  
+
   const { data, error } = await supabase
     .from('attendance_records')
     .select('*')
@@ -157,30 +157,88 @@ export async function checkDuplicateAttendance(
   studentEmail?: string | null
 ): Promise<boolean> {
   const supabase = await createClient()
-  
+
   let query = supabase
     .from('attendance_records')
-    .select('id')
+    .select('id', { count: 'exact', head: true })
     .eq('session_id', sessionId)
     .eq('student_name', studentName)
-  
+
   if (studentEmail) {
     query = query.eq('student_email', studentEmail)
   }
-  
-  const { data, error } = await query
+
+  const { count, error } = await query
 
   if (error) {
     console.error('Error checking duplicate attendance:', error)
     return false
   }
 
-  return data && data.length > 0
+  return (count || 0) > 0
+}
+
+export async function storeAttendanceToken(
+  sessionId: string,
+  token: string,
+  expiresAt: string
+): Promise<boolean> {
+  const supabase = await createClient()
+
+  const { error } = await (supabase.from('attendance_tokens' as any) as any)
+    .insert({
+      session_id: sessionId,
+      token,
+      expires_at: expiresAt
+    })
+
+  if (error) {
+    console.error('Error storing attendance token:', error)
+    return false
+  }
+
+  return true
+}
+
+export async function verifyAttendanceToken(
+  sessionId: string,
+  token: string
+): Promise<boolean> {
+  const supabase = await createClient()
+
+  const { count, error } = await (supabase.from('attendance_tokens' as any) as any)
+    .select('id', { count: 'exact', head: true })
+    .eq('session_id', sessionId)
+    .eq('token', token)
+    .gt('expires_at', new Date().toISOString())
+
+
+  if (error) {
+    console.error('Error verifying attendance token:', error)
+    return false
+  }
+
+  return (count || 0) > 0
+}
+
+export async function clearAttendanceTokens(sessionId: string): Promise<boolean> {
+  const supabase = await createClient()
+
+  const { error } = await (supabase.from('attendance_tokens' as any) as any)
+    .delete()
+    .eq('session_id', sessionId)
+
+  if (error) {
+    console.error('Error clearing attendance tokens:', error)
+    return false
+  }
+
+  return true
 }
 
 export async function deleteAttendanceRecord(recordId: string): Promise<boolean> {
   const supabase = await createClient()
-  
+
   const { error } = await supabase
     .from('attendance_records')
     .delete()

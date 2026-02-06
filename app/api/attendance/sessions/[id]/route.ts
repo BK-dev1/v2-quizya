@@ -4,9 +4,10 @@ import {
   getAttendanceSession,
   getAttendanceSessionWithRecords,
   updateAttendanceSession,
-  deleteAttendanceSession
+  deleteAttendanceSession,
+  storeAttendanceToken
 } from '@/lib/services/attendance-sessions'
-import { generateQRCode, createQRData, storeToken } from '@/lib/utils/qr-generator'
+import { createQRData, createCheckInURL } from '@/lib/utils/qr-generator'
 
 // GET /api/attendance/sessions/[id] - Get session details with QR code
 export async function GET(
@@ -48,19 +49,29 @@ export async function GET(
     // Generate QR code if session is active
     let qrCode = null
     let qrData = null
+    let scanUrl = null
 
     if (session.is_active) {
-      qrData = createQRData(sessionId, session.qr_refresh_interval)
-      qrCode = await generateQRCode(qrData)
+      // Use environment variable for base URL, fallback to request URL if not set
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin
 
-      // Store token for validation
-      storeToken(sessionId, qrData.token, session.qr_refresh_interval * 1000)
+      qrData = createQRData(sessionId, session.qr_refresh_interval)
+      scanUrl = createCheckInURL(baseUrl, sessionId, qrData.token)
+      // Note: qrCode generation moved to client-side for performance
+
+      // Store token in database for validation
+      await storeAttendanceToken(
+        sessionId,
+        qrData.token,
+        new Date(qrData.expiresAt).toISOString()
+      )
     }
 
     return NextResponse.json({
       session,
       qrCode,
-      qrData
+      qrData,
+      scanUrl
     })
   } catch (error) {
     console.error('Error fetching attendance session:', error)

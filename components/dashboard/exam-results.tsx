@@ -207,7 +207,6 @@ export default function ExamResultsPage() {
         </NeuButton>
       </div>
 
-      {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <NeuCard>
           <NeuCardContent className="pt-6">

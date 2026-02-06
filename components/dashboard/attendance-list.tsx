@@ -101,7 +101,7 @@ export default function AttendanceList() {
 
   const handleCreateSession = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!newSession.title.trim()) {
       toast.error('Please enter a session title')
       return
@@ -167,7 +167,7 @@ export default function AttendanceList() {
   const handleExport = async (sessionId: string, title: string) => {
     try {
       const res = await fetch(`/api/attendance/sessions/${sessionId}/export`)
-      
+
       if (res.ok) {
         const blob = await res.blob()
         const url = window.URL.createObjectURL(blob)
@@ -211,7 +211,7 @@ export default function AttendanceList() {
             Manage attendance sessions with QR codes
           </p>
         </div>
-        
+
         <NeuButton onClick={() => setShowCreateModal(true)}>
           <Plus className="mr-2 h-4 w-4" />
           New Session
@@ -234,7 +234,7 @@ export default function AttendanceList() {
               required
             />
           </div>
-          
+
           <div>
             <Label htmlFor="description">Description</Label>
             <NeuInput
@@ -255,7 +255,7 @@ export default function AttendanceList() {
                 placeholder="e.g., Computer Science"
               />
             </div>
-            
+
             <div>
               <Label htmlFor="section">Section/Group</Label>
               <NeuInput
@@ -289,7 +289,7 @@ export default function AttendanceList() {
           </div>
 
           <div className="flex justify-end gap-2 pt-4">
-            <NeuButton 
+            <NeuButton
               type="button"
               variant="outline"
               onClick={() => setShowCreateModal(false)}
@@ -342,9 +342,8 @@ export default function AttendanceList() {
                       <p className="text-sm text-muted-foreground mb-2">{session.description}</p>
                     )}
                   </div>
-                  <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs ${
-                    session.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
-                  }`}>
+                  <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs ${session.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+                    }`}>
                     {session.is_active ? (
                       <>
                         <CheckCircle2 className="h-3 w-3" />
@@ -391,7 +390,7 @@ export default function AttendanceList() {
 
                 <div className="flex gap-2 pt-2">
                   <Link href={`/dashboard/attendance/${session.id}`} className="flex-1">
-                    <NeuButton variant="outline" className="w-full">
+                    <NeuButton variant="outline" className="w-full cursor-pointer">
                       <QrCode className="mr-2 h-4 w-4" />
                       View QR
                     </NeuButton>

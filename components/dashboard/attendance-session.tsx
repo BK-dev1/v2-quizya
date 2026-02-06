@@ -20,6 +20,7 @@ import {
 import { AttendanceSession, AttendanceRecord, AttendanceQRData } from '@/lib/types'
 import { toast } from 'sonner'
 import Image from 'next/image'
+import QRCode from 'qrcode'
 
 export default function AttendanceSessionComponent() {
   const { id } = useParams()
@@ -38,16 +39,27 @@ export default function AttendanceSessionComponent() {
 
     try {
       const res = await fetch(`/api/attendance/sessions/${id}`)
-      
+
       if (res.ok) {
         const data = await res.json()
         setSession(data.session)
         setRecords(data.session.attendance_records || [])
-        
-        if (data.qrCode && data.qrData) {
-          setQrCode(data.qrCode)
+
+        if (data.scanUrl && data.qrData) {
           setQrData(data.qrData)
-          
+
+          // Generate QR code on client side
+          const qrCodeUrl = await QRCode.toDataURL(data.scanUrl, {
+            errorCorrectionLevel: 'H',
+            width: 400,
+            margin: 2,
+            color: {
+              dark: '#000000',
+              light: '#FFFFFF'
+            }
+          })
+          setQrCode(qrCodeUrl)
+
           // Calculate time left
           const expiresAt = data.qrData.expiresAt
           const now = Date.now()
@@ -133,7 +145,7 @@ export default function AttendanceSessionComponent() {
   const handleExport = async () => {
     try {
       const res = await fetch(`/api/attendance/sessions/${id}/export`)
-      
+
       if (res.ok) {
         const blob = await res.blob()
         const url = window.URL.createObjectURL(blob)
@@ -252,34 +264,6 @@ export default function AttendanceSessionComponent() {
           </div>
         </NeuCard>
 
-        {/* Attendance Stats */}
-        <NeuCard className="p-6">
-          <h3 className="font-semibold mb-4">Statistics</h3>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Users className="h-5 w-5 text-blue-500" />
-                <span className="text-sm text-muted-foreground">Total Attendance</span>
-              </div>
-              <span className="text-2xl font-bold">{records.length}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Clock className="h-5 w-5 text-green-500" />
-                <span className="text-sm text-muted-foreground">QR Refresh</span>
-              </div>
-              <span className="text-lg font-semibold">{session.qr_refresh_interval}s</span>
-            </div>
-            {session.is_active && (
-              <div className="pt-2 border-t">
-                <div className="flex items-center gap-2 text-green-600">
-                  <CheckCircle2 className="h-5 w-5" />
-                  <span className="font-medium">Session Active</span>
-                </div>
-              </div>
-            )}
-          </div>
-        </NeuCard>
 
         {/* QR Code */}
         <NeuCard className="p-6">
@@ -318,7 +302,7 @@ export default function AttendanceSessionComponent() {
       {/* Attendance Records */}
       <NeuCard className="p-6">
         <h3 className="font-semibold mb-4">Attendance Records ({records.length})</h3>
-        
+
         {records.length === 0 ? (
           <div className="text-center py-12">
             <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />

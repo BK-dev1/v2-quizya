@@ -71,10 +71,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         const data = await res.json()
         setUser(data.user)
-
-        if (data.user) {
-          await fetchProfile(data.user.id)
-        }
+        setProfile(data.profile)
       } catch (error) {
         console.error('Error getting user:', error)
       } finally {

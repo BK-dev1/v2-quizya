@@ -38,8 +38,9 @@ export async function GET(request: NextRequest) {
   // 3. Logic for role-based redirect
   let redirectPath = next
 
-  // If next is home or dashboard, we check role to ensure teachers land on dashboard
-  if (next === '/' || next === '/dashboard') {
+  // If next is home, we check role to ensure teachers land on dashboard
+  // Students also now land on dashboard instead of root if no specific path was requested
+  if (next === '/') {
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
       const { data: profile } = await supabase
@@ -48,7 +49,7 @@ export async function GET(request: NextRequest) {
         .eq('id', user.id)
         .single()
 
-      if (profile?.role === 'teacher') {
+      if (profile?.role === 'teacher' || profile?.role === 'student') {
         redirectPath = '/dashboard'
       } else {
         redirectPath = '/'

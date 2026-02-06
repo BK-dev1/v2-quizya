@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { getAttendanceSession, createAttendanceRecord, checkDuplicateAttendance } from '@/lib/services/attendance-sessions'
-import { verifyToken } from '@/lib/utils/qr-generator'
+import {
+  getAttendanceSession,
+  createAttendanceRecord,
+  checkDuplicateAttendance,
+  verifyAttendanceToken
+} from '@/lib/services/attendance-sessions'
 import { verifyLocation } from '@/lib/utils/location'
 
 // Rate limiting map (in-memory)
@@ -16,17 +20,17 @@ const MAX_REQUESTS = 5 // 5 requests per minute
 function checkRateLimit(ip: string): boolean {
   const now = Date.now()
   const timestamps = rateLimitMap.get(ip) || []
-  
+
   // Filter out old timestamps
   const recentTimestamps = timestamps.filter(t => now - t < RATE_LIMIT_WINDOW)
-  
+
   if (recentTimestamps.length >= MAX_REQUESTS) {
     return false
   }
-  
+
   recentTimestamps.push(now)
   rateLimitMap.set(ip, recentTimestamps)
-  
+
   return true
 }
 
@@ -49,7 +53,7 @@ export async function POST(request: NextRequest) {
   try {
     // Rate limiting
     const ip = getClientIP(request)
-    
+
     if (!checkRateLimit(ip)) {
       return NextResponse.json(
         { error: 'Too many requests. Please try again later.' },
@@ -75,8 +79,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verify token is valid
-    if (!verifyToken(sessionId, token)) {
+    // Verify token is valid (database check)
+    if (!(await verifyAttendanceToken(sessionId, token))) {
       return NextResponse.json(
         { error: 'Invalid or expired QR code. Please scan again.' },
         { status: 400 }
@@ -127,7 +131,7 @@ export async function POST(request: NextRequest) {
 
       if (!locationCheck.isValid) {
         return NextResponse.json(
-          { 
+          {
             error: locationCheck.message || 'You are too far from the attendance location',
             distance: locationCheck.distance
           },

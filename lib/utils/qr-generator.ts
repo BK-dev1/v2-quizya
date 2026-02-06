@@ -20,7 +20,7 @@ export function generateToken(): string {
 export function createQRData(sessionId: string, refreshInterval: number = 20): QRTokenData {
   const token = generateToken()
   const expiresAt = Date.now() + (refreshInterval * 1000) // Convert seconds to milliseconds
-  
+
   return {
     sessionId,
     token,
@@ -29,12 +29,11 @@ export function createQRData(sessionId: string, refreshInterval: number = 20): Q
 }
 
 /**
- * Generate QR code as data URL
+ * Generate QR code as data URL from string data
  */
-export async function generateQRCode(data: QRTokenData): Promise<string> {
+export async function generateQRCode(data: string): Promise<string> {
   try {
-    const qrData = JSON.stringify(data)
-    const qrCodeDataUrl = await QRCode.toDataURL(qrData, {
+    const qrCodeDataUrl = await QRCode.toDataURL(data, {
       errorCorrectionLevel: 'H',
       width: 400,
       margin: 2,
@@ -43,7 +42,7 @@ export async function generateQRCode(data: QRTokenData): Promise<string> {
         light: '#FFFFFF'
       }
     })
-    
+
     return qrCodeDataUrl
   } catch (error) {
     console.error('Error generating QR code:', error)
@@ -65,44 +64,3 @@ export function createCheckInURL(baseUrl: string, sessionId: string, token: stri
   return `${baseUrl}/attendance/check-in?session=${sessionId}&token=${token}`
 }
 
-// In-memory token store (for server-side validation)
-// PRODUCTION NOTE: This in-memory storage will NOT work correctly in:
-// - Multi-instance deployments (load-balanced servers)
-// - Serverless environments (Vercel, AWS Lambda, etc.)
-// For production, use Redis, a database, or another shared storage solution
-const tokenStore = new Map<string, Set<string>>()
-
-/**
- * Store a valid token for a session
- */
-export function storeToken(sessionId: string, token: string, ttl: number = 20000): void {
-  if (!tokenStore.has(sessionId)) {
-    tokenStore.set(sessionId, new Set())
-  }
-  
-  const tokens = tokenStore.get(sessionId)!
-  tokens.add(token)
-  
-  // Auto-cleanup after TTL
-  setTimeout(() => {
-    tokens.delete(token)
-    if (tokens.size === 0) {
-      tokenStore.delete(sessionId)
-    }
-  }, ttl)
-}
-
-/**
- * Verify if a token is valid for a session
- */
-export function verifyToken(sessionId: string, token: string): boolean {
-  const tokens = tokenStore.get(sessionId)
-  return tokens ? tokens.has(token) : false
-}
-
-/**
- * Clear all tokens for a session
- */
-export function clearSessionTokens(sessionId: string): void {
-  tokenStore.delete(sessionId)
-}
