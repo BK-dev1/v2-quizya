@@ -368,6 +368,115 @@ export type Database = {
           }
         ]
       }
+      attendance_sessions: {
+        Row: {
+          id: string
+          title: string
+          description: string | null
+          teacher_id: string
+          module_name: string | null
+          section_group: string | null
+          location_lat: number | null
+          location_lng: number | null
+          max_distance_meters: number
+          qr_refresh_interval: number
+          is_active: boolean
+          started_at: string
+          ended_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          title: string
+          description?: string | null
+          teacher_id: string
+          module_name?: string | null
+          section_group?: string | null
+          location_lat?: number | null
+          location_lng?: number | null
+          max_distance_meters?: number
+          qr_refresh_interval?: number
+          is_active?: boolean
+          started_at?: string
+          ended_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          title?: string
+          description?: string | null
+          teacher_id?: string
+          module_name?: string | null
+          section_group?: string | null
+          location_lat?: number | null
+          location_lng?: number | null
+          max_distance_meters?: number
+          qr_refresh_interval?: number
+          is_active?: boolean
+          started_at?: string
+          ended_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_sessions_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      attendance_records: {
+        Row: {
+          id: string
+          session_id: string
+          student_name: string
+          student_email: string | null
+          check_in_time: string
+          location_lat: number | null
+          location_lng: number | null
+          ip_address: string | null
+          user_agent: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          session_id: string
+          student_name: string
+          student_email?: string | null
+          check_in_time?: string
+          location_lat?: number | null
+          location_lng?: number | null
+          ip_address?: string | null
+          user_agent?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          session_id?: string
+          student_name?: string
+          student_email?: string | null
+          check_in_time?: string
+          location_lat?: number | null
+          location_lng?: number | null
+          ip_address?: string | null
+          user_agent?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_records_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "attendance_sessions"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
     }
     Views: {
       [_ in never]: never

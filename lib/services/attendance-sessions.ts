@@ -1,0 +1,195 @@
+import { createClient } from '@/lib/supabase/server'
+import { AttendanceSession, AttendanceSessionInsert, AttendanceSessionUpdate, AttendanceRecord, AttendanceRecordInsert } from '@/lib/types'
+
+export async function createAttendanceSession(session: AttendanceSessionInsert): Promise<AttendanceSession | null> {
+  const supabase = await createClient()
+  
+  const { data, error } = await supabase
+    .from('attendance_sessions')
+    .insert(session)
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Error creating attendance session:', error)
+    return null
+  }
+
+  return data
+}
+
+export async function getAttendanceSession(sessionId: string): Promise<AttendanceSession | null> {
+  const supabase = await createClient()
+  
+  const { data, error } = await supabase
+    .from('attendance_sessions')
+    .select('*')
+    .eq('id', sessionId)
+    .single()
+
+  if (error) {
+    console.error('Error fetching attendance session:', error)
+    return null
+  }
+
+  return data
+}
+
+export async function getAttendanceSessionWithRecords(sessionId: string) {
+  const supabase = await createClient()
+  
+  const { data, error } = await supabase
+    .from('attendance_sessions')
+    .select(`
+      *,
+      attendance_records (*)
+    `)
+    .eq('id', sessionId)
+    .order('check_in_time', { foreignTable: 'attendance_records', ascending: false })
+    .single()
+
+  if (error) {
+    console.error('Error fetching attendance session with records:', error)
+    return null
+  }
+
+  return data
+}
+
+export async function getTeacherAttendanceSessions(teacherId: string): Promise<AttendanceSession[]> {
+  const supabase = await createClient()
+  
+  const { data, error } = await supabase
+    .from('attendance_sessions')
+    .select('*')
+    .eq('teacher_id', teacherId)
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    console.error('Error fetching teacher attendance sessions:', error)
+    return []
+  }
+
+  return data
+}
+
+export async function updateAttendanceSession(
+  sessionId: string,
+  updates: AttendanceSessionUpdate
+): Promise<AttendanceSession | null> {
+  const supabase = await createClient()
+  
+  const { data, error } = await supabase
+    .from('attendance_sessions')
+    .update(updates)
+    .eq('id', sessionId)
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Error updating attendance session:', error)
+    return null
+  }
+
+  return data
+}
+
+export async function endAttendanceSession(sessionId: string): Promise<AttendanceSession | null> {
+  return updateAttendanceSession(sessionId, {
+    is_active: false,
+    ended_at: new Date().toISOString()
+  })
+}
+
+export async function deleteAttendanceSession(sessionId: string): Promise<boolean> {
+  const supabase = await createClient()
+  
+  const { error } = await supabase
+    .from('attendance_sessions')
+    .delete()
+    .eq('id', sessionId)
+
+  if (error) {
+    console.error('Error deleting attendance session:', error)
+    return false
+  }
+
+  return true
+}
+
+export async function createAttendanceRecord(record: AttendanceRecordInsert): Promise<AttendanceRecord | null> {
+  const supabase = await createClient()
+  
+  const { data, error } = await supabase
+    .from('attendance_records')
+    .insert(record)
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Error creating attendance record:', error)
+    return null
+  }
+
+  return data
+}
+
+export async function getAttendanceRecords(sessionId: string): Promise<AttendanceRecord[]> {
+  const supabase = await createClient()
+  
+  const { data, error } = await supabase
+    .from('attendance_records')
+    .select('*')
+    .eq('session_id', sessionId)
+    .order('check_in_time', { ascending: false })
+
+  if (error) {
+    console.error('Error fetching attendance records:', error)
+    return []
+  }
+
+  return data
+}
+
+export async function checkDuplicateAttendance(
+  sessionId: string,
+  studentName: string,
+  studentEmail?: string | null
+): Promise<boolean> {
+  const supabase = await createClient()
+  
+  let query = supabase
+    .from('attendance_records')
+    .select('id')
+    .eq('session_id', sessionId)
+    .eq('student_name', studentName)
+  
+  if (studentEmail) {
+    query = query.eq('student_email', studentEmail)
+  }
+  
+  const { data, error } = await query
+
+  if (error) {
+    console.error('Error checking duplicate attendance:', error)
+    return false
+  }
+
+  return data && data.length > 0
+}
+
+export async function deleteAttendanceRecord(recordId: string): Promise<boolean> {
+  const supabase = await createClient()
+  
+  const { error } = await supabase
+    .from('attendance_records')
+    .delete()
+    .eq('id', recordId)
+
+  if (error) {
+    console.error('Error deleting attendance record:', error)
+    return false
+  }
+
+  return true
+}
