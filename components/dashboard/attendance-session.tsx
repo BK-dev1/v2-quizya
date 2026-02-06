@@ -20,14 +20,11 @@ import {
 import { AttendanceSession, AttendanceRecord, AttendanceQRData } from '@/lib/types'
 import { toast } from 'sonner'
 import dynamic from 'next/dynamic'
+import Image from 'next/image'
 
-// Dynamically import Image to reduce initial bundle
-const Image = dynamic(() => import('next/image'), {
-  ssr: false
-})
-
-// Dynamically import QRCode library to reduce bundle size
-const QRCode = dynamic(() => import('qrcode'), {
+// Dynamically import QRCode library to reduce initial bundle size and improve page load
+// QRCode generation is only needed when viewing an active session
+const QRCodeModule = dynamic(() => import('qrcode'), {
   ssr: false
 })
 
@@ -57,9 +54,9 @@ export default function AttendanceSessionComponent() {
         if (data.scanUrl && data.qrData) {
           setQrData(data.qrData)
 
-          // Generate QR code on client side
-          const QRCodeModule = await import('qrcode')
-          const qrCodeUrl = await QRCodeModule.default.toDataURL(data.scanUrl, {
+          // Generate QR code on client side using dynamically imported module
+          const QRCode = await QRCodeModule
+          const qrCodeUrl = await QRCode.toDataURL(data.scanUrl, {
             errorCorrectionLevel: 'H',
             width: 400,
             margin: 2,
@@ -298,15 +295,15 @@ export default function AttendanceSessionComponent() {
                 </div>
               </div>
               <div className="bg-white p-4 rounded-lg">
-                {qrCode && (
-                  <img
-                    src={qrCode}
-                    alt="Attendance QR Code"
-                    width={300}
-                    height={300}
-                    className="w-full h-auto"
-                  />
-                )}
+                <Image
+                  src={qrCode}
+                  alt="Attendance QR Code"
+                  width={300}
+                  height={300}
+                  className="w-full h-auto"
+                  unoptimized
+                  priority
+                />
               </div>
               <p className="text-xs text-center text-muted-foreground">
                 Students scan this code to check in

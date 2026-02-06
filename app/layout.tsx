@@ -1,6 +1,8 @@
 import type React from "react"
 import type { Metadata, Viewport } from "next"
-// Temporarily commenting out Google Fonts due to build network restrictions
+// Temporarily commenting out Google Fonts due to build network restrictions in sandbox
+// TODO: Re-enable when deployed to production environment with internet access
+// Tracking: This workaround is only needed for local/CI builds without internet access
 // import { Inter, Geist_Mono, Cairo } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { ThemeProvider } from "@/components/theme-provider"
