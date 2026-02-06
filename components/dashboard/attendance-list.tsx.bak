@@ -222,93 +222,121 @@ export default function AttendanceList() {
         open={showCreateModal}
         onClose={() => setShowCreateModal(false)}
         title="Create Attendance Session"
+        className="max-w-2xl"
       >
         <form onSubmit={handleCreateSession} className="space-y-4">
-          <div>
-            <Label htmlFor="title">Session Title *</Label>
-            <NeuInput
-              id="title"
-              value={newSession.title}
-              onChange={(e) => setNewSession({ ...newSession, title: e.target.value })}
-              placeholder="e.g., Morning Lecture - Week 1"
-              required
-            />
-          </div>
-          
-          <div>
-            <Label htmlFor="description">Description</Label>
-            <NeuInput
-              id="description"
-              value={newSession.description}
-              onChange={(e) => setNewSession({ ...newSession, description: e.target.value })}
-              placeholder="Optional session description"
-            />
-          </div>
+              <div>
+                <Label htmlFor="title">Session Title *</Label>
+                <NeuInput
+                  id="title"
+                  value={newSession.title}
+                  onChange={(e) => setNewSession({ ...newSession, title: e.target.value })}
+                  placeholder="e.g., Morning Lecture - Week 1"
+                  required
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="description">Description</Label>
+                <NeuInput
+                  id="description"
+                  value={newSession.description}
+                  onChange={(e) => setNewSession({ ...newSession, description: e.target.value })}
+                  placeholder="Optional session description"
+                />
+              </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="module">Module/Course</Label>
-              <NeuInput
-                id="module"
-                value={newSession.module_name}
-                onChange={(e) => setNewSession({ ...newSession, module_name: e.target.value })}
-                placeholder="e.g., Computer Science"
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="section">Section/Group</Label>
-              <NeuInput
-                id="section"
-                value={newSession.section_group}
-                onChange={(e) => setNewSession({ ...newSession, section_group: e.target.value })}
-                placeholder="e.g., Group A"
-              />
-            </div>
-          </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="module">Module/Course</Label>
+                  <NeuInput
+                    id="module"
+                    value={newSession.module_name}
+                    onChange={(e) => setNewSession({ ...newSession, module_name: e.target.value })}
+                    placeholder="e.g., Computer Science"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="section">Section/Group</Label>
+                  <NeuInput
+                    id="section"
+                    value={newSession.section_group}
+                    onChange={(e) => setNewSession({ ...newSession, section_group: e.target.value })}
+                    placeholder="e.g., Group A"
+                  />
+                </div>
+              </div>
 
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label>Location Verification</Label>
-              <NeuButton
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleGetLocation}
-                disabled={newSession.useLocation}
-              >
-                <MapPin className="mr-2 h-4 w-4" />
-                {newSession.useLocation ? 'Location Set' : 'Get My Location'}
-              </NeuButton>
-            </div>
-            {newSession.useLocation && (
-              <p className="text-sm text-muted-foreground">
-                Students must be within {newSession.max_distance_meters}m to check in
-              </p>
-            )}
-          </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>Location Verification</Label>
+                  <NeuButton
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleGetLocation}
+                    disabled={newSession.useLocation}
+                  >
+                    <MapPin className="mr-2 h-4 w-4" />
+                    {newSession.useLocation ? 'Location Set' : 'Get My Location'}
+                  </NeuButton>
+                </div>
+                {newSession.useLocation && (
+                  <p className="text-sm text-muted-foreground">
+                    Students must be within {newSession.max_distance_meters}m to check in
+                  </p>
+                )}
+              </div>
 
-          <div className="flex justify-end gap-2 pt-4">
-            <NeuButton 
-              type="button"
-              variant="outline"
-              onClick={() => setShowCreateModal(false)}
-            >
-              Cancel
-            </NeuButton>
-            <NeuButton type="submit" disabled={isCreating}>
-              {isCreating ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creating...
-                </>
-              ) : (
-                'Create Session'
-              )}
-            </NeuButton>
-          </div>
-        </form>
-      </NeuModal>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="distance">Max Distance (meters)</Label>
+                  <NeuInput
+                    id="distance"
+                    type="number"
+                    value={newSession.max_distance_meters}
+                    onChange={(e) => setNewSession({ ...newSession, max_distance_meters: parseInt(e.target.value) })}
+                    min="10"
+                    max="500"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="refresh">QR Refresh (seconds)</Label>
+                  <NeuInput
+                    id="refresh"
+                    type="number"
+                    value={newSession.qr_refresh_interval}
+                    onChange={(e) => setNewSession({ ...newSession, qr_refresh_interval: parseInt(e.target.value) })}
+                    min="10"
+                    max="60"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-4">
+                <NeuButton 
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowCreateModal(false)}
+                >
+                  Cancel
+                </NeuButton>
+                <NeuButton type="submit" disabled={isCreating}>
+                  {isCreating ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    'Create Session'
+                  )}
+                </NeuButton>
+              </div>
+            </form>
+          </NeuModal>
+      </div>
 
       <div className="flex gap-4">
         <div className="relative flex-1">
