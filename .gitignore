@@ -29,3 +29,4 @@ next-env.d.ts
 #temp supabase files
 supabase/.temp
 */certificates/*
+*.pem

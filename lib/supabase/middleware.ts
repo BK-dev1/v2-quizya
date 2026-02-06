@@ -2,23 +2,17 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function updateSession(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({
-    request,
-  })
+  let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll() {
-          return request.cookies.getAll()
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
-          supabaseResponse = NextResponse.next({
-            request,
-          })
+        getAll: () => request.cookies.getAll(),
+        setAll: (cookiesToSet) => {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+          supabaseResponse = NextResponse.next({ request })
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options)
           )
@@ -27,42 +21,41 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  // IMPORTANT: Avoid writing any logic between createServerClient and
-  // supabase.auth.getUser(). A simple mistake could make it very hard to debug
-  // issues with users being randomly logged out.
+  const { data: { user } } = await supabase.auth.getUser()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const path = request.nextUrl.pathname
 
-  if (
-    !user &&
-    !request.nextUrl.pathname.startsWith('/auth') &&
-    !request.nextUrl.pathname.startsWith('/api') &&
-    !request.nextUrl.pathname.startsWith('/public-exams') &&
-    !request.nextUrl.pathname.startsWith('/join') &&
-    !request.nextUrl.pathname.startsWith('/about') &&
-    !request.nextUrl.pathname.startsWith('/pricing') &&
-    !request.nextUrl.pathname.startsWith('/privacy') &&
-    !request.nextUrl.pathname.startsWith('/terms') &&
-    !request.nextUrl.pathname.startsWith('/accessibility') &&
-    !request.nextUrl.pathname.startsWith('/blog') &&
-    !request.nextUrl.pathname.startsWith('/exam/take') &&
-    request.nextUrl.pathname !== '/'
-  ) {
-    // no user, potentially respond by redirecting the user to the login page
-    const url = request.nextUrl.clone()
-    url.pathname = '/auth/login'
-    return NextResponse.redirect(url)
+  // 1. Define Route Groups
+  const isAuthRoute = path.startsWith('/auth')
+  const isPublicRoute = [
+    '/', '/api', '/public-exams', '/join', '/about',
+    '/pricing', '/privacy', '/terms', '/blog'
+  ].some(route => path === route || path.startsWith(`${route}/`))
+
+  // 2. LOGIC: If logged in, don't allow access to Login/Register
+  if (user && isAuthRoute) {
+    return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
-  // IMPORTANT: You *must* return the supabaseResponse object as it is. If you're
-  // creating a new response object with NextResponse.next() make sure to:
-  // 1. Pass the request in it, like so:
-  //    const myNewResponse = NextResponse.next({ request })
-  // 2. Copy over the cookies, like so:
-  //    myNewResponse.cookies.setAll(supabaseResponse.cookies.getAll())
-  // 3. Change the myNewResponse object instead of the supabaseResponse object
+  // 3. LOGIC: If teacher is on home page, redirect to dashboard
+  if (user && path === '/') {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    if (profile?.role === 'teacher') {
+      return NextResponse.redirect(new URL('/dashboard', request.url))
+    }
+  }
+
+  // 4. LOGIC: If logged out, don't allow access to Protected Routes
+  if (!user && !isAuthRoute && !isPublicRoute) {
+    const url = new URL('/auth/login', request.url)
+    url.searchParams.set('next', path)
+    return NextResponse.redirect(url)
+  }
 
   return supabaseResponse
 }

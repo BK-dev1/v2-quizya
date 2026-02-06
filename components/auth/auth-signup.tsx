@@ -105,7 +105,9 @@ export default function SignupPage() {
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true)
     try {
-      const { error } = await signInWithGoogle()
+      const params = new URLSearchParams(window.location.search)
+      const next = params.get('next') || '/dashboard'
+      const { error } = await signInWithGoogle(next)
       if (error) {
         toast.error(error)
       }

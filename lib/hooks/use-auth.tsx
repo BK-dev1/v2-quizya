@@ -17,7 +17,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error?: string }>
   signUp: (email: string, password: string, fullName: string, role?: string) => Promise<{ error?: string }>
   signOut: () => Promise<void>
-  signInWithGoogle: () => Promise<{ error?: string }>
+  signInWithGoogle: (next?: string) => Promise<{ error?: string }>
   refreshProfile: () => Promise<void>
 }
 
@@ -146,13 +146,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const signInWithGoogle = async () => {
+  const signInWithGoogle = async (next?: string) => {
     try {
       const supabase = createClient()
+      const callbackUrl = new URL(`${window.location.origin}/api/auth/callback`)
+      if (next) callbackUrl.searchParams.set('next', next)
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/api/auth/callback`
+          redirectTo: callbackUrl.toString()
         }
       })
 
