@@ -11,7 +11,7 @@ export interface NeuButtonProps extends React.ButtonHTMLAttributes<HTMLButtonEle
 const NeuButton = React.forwardRef<HTMLButtonElement, NeuButtonProps>(
   ({ className, variant = "primary", size = "md", children, ...props }, ref) => {
     const baseStyles =
-      "inline-flex items-center justify-center font-medium transition-all duration-150 ease-out rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+      "inline-flex items-center justify-center font-medium transition-all duration-150 ease-out rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 cursor-pointer"
 
     const variants = {
       primary:

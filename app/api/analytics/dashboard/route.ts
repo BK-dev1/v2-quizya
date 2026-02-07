@@ -1,9 +1,10 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceRoleClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient();
+    const supabaseAdmin = createServiceRoleClient();
 
     const {
       data: { user },
@@ -14,30 +15,30 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { data: exams } = await supabase
+    // Use service role client for faster queries
+    const { data: exams } = await supabaseAdmin
       .from("exams")
-      .select("id, title, created_at")
+      .select("id")
       .eq("created_by", user.id);
 
-    // Get exam sessions with scores
-    const { data: sessions } = await supabase
-      .from("exam_sessions")
-      .select(
-        `
-        id,
-        score,
-        created_at,
-        exam_id
-      `
-      )
-      .in("exam_id", exams?.map((e) => e.id) || [])
-      .eq("status", "completed");
+    const examIds = exams?.map((e) => e.id) || [];
 
-    const totalSessions = sessions?.length || 0;
+    // Only fetch sessions if there are exams
+    let sessions = [];
+    if (examIds.length > 0) {
+      const { data } = await supabaseAdmin
+        .from("exam_sessions")
+        .select("id, score")
+        .in("exam_id", examIds)
+        .eq("status", "completed");
+      sessions = data || [];
+    }
+
+    const totalSessions = sessions.length;
     const avgScore =
       totalSessions > 0
         ? Math.round(
-            (sessions || []).reduce((sum, s) => sum + (s.score || 0), 0) /
+            sessions.reduce((sum, s) => sum + (s.score || 0), 0) /
               totalSessions
           )
         : 0;

@@ -6,9 +6,24 @@ import { NeuButton } from "@/components/ui/neu-button"
 import { Menu, X } from "lucide-react"
 import { useTranslation } from 'react-i18next'
 
+import { useRouter } from "next/navigation"
+import { useAuth } from "@/lib/hooks/use-auth"
+
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = React.useState(false)
   const { t } = useTranslation()
+  const { user, profile, loading } = useAuth()
+  const router = useRouter()
+
+  // Client-side redirect for teachers (optimization over middleware)
+  React.useEffect(() => {
+    if (!loading && user) {
+      const role = profile?.role || user.user_metadata?.role || user.app_metadata?.role
+      if (role === 'teacher') {
+        router.push('/dashboard')
+      }
+    }
+  }, [user, profile, loading, router])
 
   return (
     <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">

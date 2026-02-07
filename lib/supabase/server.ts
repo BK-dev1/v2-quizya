@@ -1,4 +1,5 @@
 import { createServerClient } from '@supabase/ssr'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 
 import { Database } from '@/lib/types/database'
@@ -28,4 +29,27 @@ export async function createClient() {
       },
     }
   )
+}
+
+/**
+ * Create a Supabase client with service role privileges (bypasses RLS)
+ * WARNING: Only use this for server-side operations where you've validated the request
+ * This should NEVER be exposed to the client
+ */
+let serviceRoleClientCache: ReturnType<typeof createSupabaseClient<Database>> | null = null
+
+export function createServiceRoleClient() {
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error('SUPABASE_SERVICE_ROLE_KEY is not set')
+  }
+
+  // Reuse cached client to avoid re-creating on every request
+  if (!serviceRoleClientCache) {
+    serviceRoleClientCache = createSupabaseClient<Database>(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    )
+  }
+
+  return serviceRoleClientCache
 }

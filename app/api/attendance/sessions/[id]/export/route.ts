@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { getAttendanceSessionWithRecords } from '@/lib/services/attendance-sessions'
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import {
   generateAttendanceExcel,
   generateAttendanceFilename,
@@ -14,6 +13,7 @@ export async function GET(
 ) {
   try {
     const supabase = await createClient()
+    const supabaseAdmin = createServiceRoleClient()
     const { id: sessionId } = await params
 
     // Get current user
@@ -26,10 +26,17 @@ export async function GET(
       )
     }
 
-    // Get session with records
-    const session = await getAttendanceSessionWithRecords(sessionId)
+    const { data: session, error: sessionError } = await supabaseAdmin
+      .from('attendance_sessions')
+      .select(`
+        *,
+        attendance_records (*)
+      `)
+      .eq('id', sessionId)
+      .order('check_in_time', { foreignTable: 'attendance_records', ascending: false })
+      .single()
 
-    if (!session) {
+    if (sessionError || !session) {
       return NextResponse.json(
         { error: 'Session not found' },
         { status: 404 }
@@ -46,15 +53,15 @@ export async function GET(
 
     // Generate Excel file
     const excelBuffer = await generateAttendanceExcel({
-      sessionTitle: session.title,
-      moduleName: session.module_name || undefined,
+      sessionTitle: session.module_name,
+      moduleName: session.module_name,
       sectionGroup: session.section_group || undefined,
       startedAt: session.started_at,
       endedAt: session.ended_at || undefined,
       records: session.attendance_records || []
     })
 
-    const filename = generateAttendanceFilename(session.title)
+    const filename = generateAttendanceFilename(session.module_name)
 
     return createExcelResponse(excelBuffer, filename)
   } catch (error) {

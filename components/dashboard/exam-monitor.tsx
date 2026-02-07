@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Exam, ExamSession } from '@/lib/types'
@@ -135,20 +135,25 @@ export default function ExamMonitor({ examId }: ExamMonitorProps) {
         }
     }
 
-    const filteredSessions = sessions.filter(s =>
-        (s.guest_email || 'Student').toLowerCase().includes(filter.toLowerCase()) ||
-        (s.guest_name || 'Guest').toLowerCase().includes(filter.toLowerCase())
+    const filteredSessions = useMemo(() =>
+        sessions.filter(s =>
+            (s.guest_email || 'Student').toLowerCase().includes(filter.toLowerCase()) ||
+            (s.guest_name || 'Guest').toLowerCase().includes(filter.toLowerCase())
+        ),
+        [sessions, filter]
     )
+
+    const stats = useMemo(() => ({
+        activeCount: sessions.filter(s => s.status === 'in_progress').length,
+        completedCount: sessions.filter(s => s.status === 'completed').length,
+        infractionCount: sessions.reduce((acc, s) => {
+            const data = s.proctoring_data as any
+            return acc + (data?.infractions?.length || 0)
+        }, 0)
+    }), [sessions])
 
     if (loading) return <div className="p-8 text-center text-muted-foreground">{t('loadingMonitor') || 'Loading monitor...'}</div>
     if (!exam) return <div className="p-8 text-center text-destructive">{t('examNotFound') || 'Exam not found'}</div>
-
-    const activeCount = sessions.filter(s => s.status === 'in_progress').length
-    const completedCount = sessions.filter(s => s.status === 'completed').length
-    const infractionCount = sessions.reduce((acc, s) => {
-        const data = s.proctoring_data as any
-        return acc + (data?.infractions?.length || 0)
-    }, 0)
 
     return (
         <div className="space-y-6">
@@ -231,7 +236,7 @@ export default function ExamMonitor({ examId }: ExamMonitorProps) {
                         <Clock className="w-5 h-5" />
                     </div>
                     <div>
-                        <p className="text-2xl font-bold">{activeCount}</p>
+                        <p className="text-2xl font-bold">{stats.activeCount}</p>
                         <p className="text-xs text-muted-foreground">{t('active') || 'Active'}</p>
                     </div>
                 </NeuCard>
@@ -240,7 +245,7 @@ export default function ExamMonitor({ examId }: ExamMonitorProps) {
                         <CheckCircle className="w-5 h-5" />
                     </div>
                     <div>
-                        <p className="text-2xl font-bold">{completedCount}</p>
+                        <p className="text-2xl font-bold">{stats.completedCount}</p>
                         <p className="text-xs text-muted-foreground">{t('finished') || 'Finished'}</p>
                     </div>
                 </NeuCard>
@@ -249,7 +254,7 @@ export default function ExamMonitor({ examId }: ExamMonitorProps) {
                         <EyeOff className="w-5 h-5" />
                     </div>
                     <div>
-                        <p className="text-2xl font-bold">{infractionCount}</p>
+                        <p className="text-2xl font-bold">{stats.infractionCount}</p>
                         <p className="text-xs text-muted-foreground">{t('infractions') || 'Infractions'}</p>
                     </div>
                 </NeuCard>
