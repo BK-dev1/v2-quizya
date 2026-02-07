@@ -56,11 +56,6 @@ export default function SignupPage() {
       console.error('Error reading guest quiz info:', e)
     }
   }, [])
-  const [showPassword, setShowPassword] = useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const [verificationSent, setVerificationSent] = useState(false)
-  const [verificationEmail, setVerificationEmail] = useState('')
 
   const validateForm = () => {
     if (!formData.fullName.trim()) {
