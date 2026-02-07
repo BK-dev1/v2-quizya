@@ -19,6 +19,8 @@ interface AuthContextType {
   signOut: () => Promise<void>
   signInWithGoogle: (next?: string) => Promise<{ error?: string }>
   refreshProfile: () => Promise<void>
+  forgotPassword: (email: string) => Promise<{ error?: string }>
+  resetPassword: (password: string) => Promise<{ error?: string }>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -163,6 +165,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const resetPassword = async (password: string) => {
+    try {
+      const res = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password })
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        return { error: data.error || 'Password reset failed' }
+      }
+
+      return {}
+    } catch (error) {
+      return { error: String(error) }
+    }
+  }
+
+  const forgotPassword = async (email: string) => {
+    try {
+      const res = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        return { error: data.error || 'Failed to send reset link' }
+      }
+
+      return {}
+    } catch (error) {
+      return { error: String(error) }
+    }
+  }
+
   return (
     <AuthContext.Provider value={{
       user,
@@ -172,7 +212,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signUp,
       signOut,
       signInWithGoogle,
-      refreshProfile
+      refreshProfile,
+      forgotPassword,
+      resetPassword
     }}>
       {children}
     </AuthContext.Provider>
