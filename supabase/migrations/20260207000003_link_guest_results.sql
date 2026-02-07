@@ -102,7 +102,8 @@ $$;
 GRANT EXECUTE ON FUNCTION public.get_student_quiz_results(UUID) TO authenticated;
 
 -- Ensure RLS allows viewing own participations by email too (for linking)
-CREATE POLICY IF NOT EXISTS "Users can view participations by their email" ON public.live_quiz_participants
+DROP POLICY IF EXISTS "Users can view participations by their email" ON public.live_quiz_participants;
+CREATE POLICY "Users can view participations by their email" ON public.live_quiz_participants
   FOR SELECT TO authenticated
   USING (
     participant_email = (SELECT LOWER(email) FROM profiles WHERE id = auth.uid())

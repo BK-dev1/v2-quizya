@@ -155,17 +155,24 @@ CREATE POLICY "Teachers can view device records for their sessions"
     )
   );
 
--- 2d. Fix geofence_validations INSERT policy
+-- 2d. Fix geofence_validations INSERT policy (only if table exists)
 -- Old: WITH CHECK (true)
 -- New: require the referenced session to exist and be active
-DROP POLICY IF EXISTS "System can insert geofence validations" ON public.geofence_validations;
-CREATE POLICY "System can insert geofence validations"
-  ON public.geofence_validations
-  FOR INSERT
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.attendance_sessions
-      WHERE id = geofence_validations.session_id
-      AND is_active = true
-    )
-  );
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'geofence_validations') THEN
+    EXECUTE 'DROP POLICY IF EXISTS "System can insert geofence validations" ON public.geofence_validations';
+    EXECUTE '
+      CREATE POLICY "System can insert geofence validations"
+        ON public.geofence_validations
+        FOR INSERT
+        WITH CHECK (
+          EXISTS (
+            SELECT 1 FROM public.attendance_sessions
+            WHERE id = geofence_validations.session_id
+            AND is_active = true
+          )
+        )
+    ';
+  END IF;
+END $$;
