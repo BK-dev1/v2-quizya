@@ -21,7 +21,8 @@ import {
   Clock,
   Loader2,
   MoreVertical,
-  FileQuestion
+  FileQuestion,
+  Zap
 } from 'lucide-react'
 import { Exam } from '@/lib/types'
 import { toast } from 'sonner'
@@ -144,12 +145,20 @@ export default function ExamsPage() {
               <h1 className="text-3xl font-bold ">{t('yourExams')}</h1>
               <p className="">{t('manageExamsDescription')}</p>
             </div>
-            <Link href="/dashboard/exams/new">
-              <NeuButton>
-                <Plus className="h-4 w-4 mr-2" />
-                {t('createExam')}
-              </NeuButton>
-            </Link>
+            <div className="flex gap-2">
+              <Link href="/dashboard/live-quiz/new">
+                <NeuButton variant="secondary">
+                  <Zap className="h-4 w-4 mr-2" />
+                  {t('createLiveQuiz') || 'Live Quiz'}
+                </NeuButton>
+              </Link>
+              <Link href="/dashboard/exams/new">
+                <NeuButton>
+                  <Plus className="h-4 w-4 mr-2" />
+                  {t('createExam')}
+                </NeuButton>
+              </Link>
+            </div>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-4">

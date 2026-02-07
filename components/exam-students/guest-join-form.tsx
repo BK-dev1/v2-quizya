@@ -127,6 +127,15 @@ export function GuestJoinForm() {
               {t('signInInstead')}
             </a>
           </p>
+          <p className="text-sm  mt-2">
+            {t('lookingForLiveQuiz') || 'Looking for a live quiz?'}{' '}
+            <a 
+              href="/join-quiz" 
+              className="text-blue-600 hover:text-blue-500 font-medium"
+            >
+              {t('joinLiveQuiz') || 'Join Live Quiz'}
+            </a>
+          </p>
         </div>
       </NeuCard>
     </div>

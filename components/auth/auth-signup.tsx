@@ -1,15 +1,21 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { NeuCard } from '@/components/ui/neu-card'
 import { NeuInput } from '@/components/ui/neu-input'
 import { NeuButton } from '@/components/ui/neu-button'
-import { Eye, EyeOff, Loader2, Check } from 'lucide-react'
+import { Eye, EyeOff, Loader2, Check, Trophy } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
+
+interface GuestQuizInfo {
+  email: string
+  name: string
+  quizTitle: string
+}
 
 export default function SignupPage() {
   const router = useRouter()
@@ -27,6 +33,32 @@ export default function SignupPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
+  const [verificationSent, setVerificationSent] = useState(false)
+  const [verificationEmail, setVerificationEmail] = useState('')
+  const [guestQuizInfo, setGuestQuizInfo] = useState<GuestQuizInfo | null>(null)
+
+  // Pre-fill form with guest quiz info if available
+  useEffect(() => {
+    try {
+      const stored = sessionStorage.getItem('guestQuizEmail')
+      if (stored) {
+        const info = JSON.parse(stored) as GuestQuizInfo
+        setGuestQuizInfo(info)
+        setFormData(prev => ({
+          ...prev,
+          email: info.email || '',
+          fullName: info.name || ''
+        }))
+        // Clear the session storage after reading
+        sessionStorage.removeItem('guestQuizEmail')
+      }
+    } catch (e) {
+      console.error('Error reading guest quiz info:', e)
+    }
+  }, [])
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
   const [verificationSent, setVerificationSent] = useState(false)
   const [verificationEmail, setVerificationEmail] = useState('')
 
@@ -175,6 +207,23 @@ export default function SignupPage() {
           <h1 className="text-2xl font-bold  mb-2">{t('createAccount')}</h1>
           <p className="">{t('joinQuizya')}</p>
         </div>
+
+        {/* Show message if user came from a quiz */}
+        {guestQuizInfo && (
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6">
+            <div className="flex items-start gap-3">
+              <Trophy className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="text-sm text-blue-700 dark:text-blue-300 font-medium">
+                  {t('quizResultsWillBeLinked') || 'Your quiz results will be linked to your account!'}
+                </p>
+                <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                  {t('signUpToViewResults') || `Sign up with the same email to view your results from "${guestQuizInfo.quizTitle}" and future quizzes.`}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
