@@ -16,7 +16,8 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 
-export default function CheckInForm() {
+
+export default  function CheckInForm() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const [sessionId, setSessionId] = useState<string | null>(null)
@@ -78,9 +79,9 @@ export default function CheckInForm() {
         toast.error(message)
       },
       {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0
+        enableHighAccuracy: false, // Use faster, less accurate location
+        timeout: 5000, // Reduced from 10s to 5s
+        maximumAge: 30000 // Allow cached location up to 30s old
       }
     )
   }
@@ -156,7 +157,7 @@ export default function CheckInForm() {
           <p className="text-muted-foreground mb-6">
             Your attendance has been recorded
           </p>
-          <NeuButton onClick={() => router.push('/')} className="w-full">
+          <NeuButton onClick={() => router.replace('/')} className="w-full">
             Done
           </NeuButton>
         </NeuCard>
@@ -230,7 +231,7 @@ export default function CheckInForm() {
               )}
             </NeuButton>
             <p className="text-xs text-muted-foreground text-center">
-              Location may be required by your teacher
+              Location may be required by your teacher. Provides verification of attendance.
             </p>
           </div>
 

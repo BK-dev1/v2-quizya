@@ -440,6 +440,7 @@ export const ar = {
         "confirmYourPassword": "أكد كلمة المرور",
         "createAccountButton": "إنشاء حساب",
         "creatingAccount": "جاري إنشاء الحساب...",
+        "signUpWithGoogle": "إنشاء حساب باستخدام Google",
         "alreadyHaveAccount": "هل لديك حساب بالفعل؟",
         "joinExamAsGuest": "انضم إلى اختبار كضيف",
         "fullNameRequired": "الاسم الكامل مطلوب",

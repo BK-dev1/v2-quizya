@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { NeuCard } from '@/components/ui/neu-card'
@@ -35,6 +35,7 @@ export default function AttendanceSessionComponent() {
   const [loading, setLoading] = useState(true)
   const [timeLeft, setTimeLeft] = useState(0)
   const [isEnding, setIsEnding] = useState(false)
+  const lastScanUrlRef = useRef<string | null>(null)
 
   const loadSessionData = useCallback(async () => {
     if (!id) return
@@ -50,18 +51,21 @@ export default function AttendanceSessionComponent() {
         if (data.scanUrl && data.qrData) {
           setQrData(data.qrData)
 
-          // Generate QR code on client side using dynamically imported module
-          const QRCode = await import('qrcode')
-          const qrCodeUrl = await QRCode.toDataURL(data.scanUrl, {
-            errorCorrectionLevel: 'H',
-            width: 400,
-            margin: 2,
-            color: {
-              dark: '#000000',
-              light: '#FFFFFF'
-            }
-          })
-          setQrCode(qrCodeUrl)
+          if (data.scanUrl !== lastScanUrlRef.current) {
+            // Generate QR code on client side using dynamically imported module
+            const QRCode = await import('qrcode')
+            const qrCodeUrl = await QRCode.toDataURL(data.scanUrl, {
+              errorCorrectionLevel: 'H',
+              width: 400,
+              margin: 2,
+              color: {
+                dark: '#000000',
+                light: '#FFFFFF'
+              }
+            })
+            setQrCode(qrCodeUrl)
+            lastScanUrlRef.current = data.scanUrl
+          }
 
           // Calculate time left
           const expiresAt = data.qrData.expiresAt
@@ -83,41 +87,50 @@ export default function AttendanceSessionComponent() {
     }
   }, [id, router])
 
+  // Memoize whether we should refresh based on time left
+  const shouldRefresh = useMemo(() => {
+    return timeLeft <= 1
+  }, [timeLeft])
+
   useEffect(() => {
     if (user) {
       loadSessionData()
     }
   }, [user, loadSessionData])
 
-  // QR code refresh timer
+  // Combined timer: countdown + auto-refresh when needed
   useEffect(() => {
     if (!session?.is_active || !qrData) return
 
     const interval = setInterval(() => {
       setTimeLeft((prev) => {
-        if (prev <= 1) {
-          loadSessionData() // Refresh QR code
+        const newTimeLeft = prev - 1
+
+        // Refresh data when time expires
+        if (newTimeLeft <= 0) {
+          loadSessionData()
           return session.qr_refresh_interval
         }
-        return prev - 1
+
+        return newTimeLeft
       })
     }, 1000)
 
     return () => clearInterval(interval)
-  }, [session, qrData, loadSessionData])
+  }, [session?.is_active, session?.qr_refresh_interval, qrData, loadSessionData])
 
-  // Auto-refresh attendance records - increased to 10 seconds to reduce load
+  // Real-time attendance updates - poll every 15 seconds when session is active
   useEffect(() => {
     if (!session?.is_active) return
 
-    const interval = setInterval(() => {
+    const pollInterval = setInterval(() => {
       loadSessionData()
-    }, 10000) // Refresh every 10 seconds instead of 5
+    }, 15000) // Poll every 15 seconds
 
-    return () => clearInterval(interval)
-  }, [session, loadSessionData])
+    return () => clearInterval(pollInterval)
+  }, [session?.is_active, loadSessionData])
 
-  const handleEndSession = async () => {
+  const handleEndSession = useCallback(async () => {
     if (!confirm('Are you sure you want to end this attendance session?')) {
       return
     }
@@ -143,9 +156,9 @@ export default function AttendanceSessionComponent() {
     } finally {
       setIsEnding(false)
     }
-  }
+  }, [id, loadSessionData])
 
-  const handleExport = async () => {
+  const handleExport = useCallback(async () => {
     try {
       const res = await fetch(`/api/attendance/sessions/${id}/export`)
 
@@ -154,7 +167,8 @@ export default function AttendanceSessionComponent() {
         const url = window.URL.createObjectURL(blob)
         const a = document.createElement('a')
         a.href = url
-        a.download = `attendance_${session?.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_${new Date().toISOString().split('T')[0]}.xlsx`
+        const fileName = session?.module_name.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'attendance'
+        a.download = `attendance_${fileName}_${new Date().toISOString().split('T')[0]}.xlsx`
         document.body.appendChild(a)
         a.click()
         window.URL.revokeObjectURL(url)
@@ -167,9 +181,9 @@ export default function AttendanceSessionComponent() {
       console.error('Error exporting:', error)
       toast.error('Error exporting attendance')
     }
-  }
+  }, [id, session?.module_name])
 
-  // Memoize formatted dates to avoid recalculations
+  // Memoize formatted dates and computed values
   const formattedStartTime = useMemo(() =>
     session ? new Date(session.started_at).toLocaleString() : '',
     [session?.started_at]
@@ -178,6 +192,57 @@ export default function AttendanceSessionComponent() {
   const formattedEndTime = useMemo(() =>
     session?.ended_at ? new Date(session.ended_at).toLocaleString() : null,
     [session?.ended_at]
+  )
+
+  const recordCount = useMemo(() => records.length, [records.length])
+
+  const hasLocationVerification = useMemo(() =>
+    Boolean(session?.location_lat && session?.location_lng),
+    [session?.location_lat, session?.location_lng]
+  )
+
+  // Memoize auto-close countdown
+  const autoCloseCountdown = useMemo(() => {
+    if (!session?.auto_close_duration_minutes || !session.started_at || !session.is_active) {
+      return null
+    }
+    const startTime = new Date(session.started_at).getTime()
+    const autoCloseTime = startTime + session.auto_close_duration_minutes * 60 * 1000
+    const now = Date.now()
+    const minutesRemaining = Math.max(0, Math.ceil((autoCloseTime - now) / 60000))
+
+    if (minutesRemaining <= 0) {
+      return 'Auto-closing soon'
+    }
+    const autoCloseDate = new Date(autoCloseTime).toLocaleTimeString()
+    return `Auto-closes in ${minutesRemaining}m (${autoCloseDate})`
+  }, [session?.auto_close_duration_minutes, session?.started_at, session?.is_active, timeLeft])
+
+  // Memoize rendered records to prevent re-rendering table on every state change
+  const renderedRecords = useMemo(() =>
+    records.map((record, index) => (
+      <tr key={record.id} className="border-b hover:bg-muted/50">
+        <td className="py-3 px-4">{index + 1}</td>
+        <td className="py-3 px-4 font-medium">{record.student_name}</td>
+        <td className="py-3 px-4 text-muted-foreground">
+          {record.student_email || 'N/A'}
+        </td>
+        <td className="py-3 px-4 text-sm">
+          {new Date(record.check_in_time).toLocaleTimeString()}
+        </td>
+        <td className="py-3 px-4">
+          {record.location_lat && record.location_lng ? (
+            <span className="flex items-center gap-1 text-green-600">
+              <CheckCircle2 className="h-4 w-4" />
+              Verified
+            </span>
+          ) : (
+            <span className="text-muted-foreground text-sm">No location</span>
+          )}
+        </td>
+      </tr>
+    )),
+    [records]
   )
 
   if (loading) {
@@ -209,9 +274,9 @@ export default function AttendanceSessionComponent() {
             <ArrowLeft className="h-4 w-4" />
           </NeuButton>
           <div>
-            <h1 className="text-3xl font-bold">{session.title}</h1>
-            {session.description && (
-              <p className="text-muted-foreground mt-1">{session.description}</p>
+            <h1 className="text-3xl font-bold">{session.module_name}</h1>
+            {session.section_group && (
+              <p className="text-muted-foreground mt-1">{session.section_group}</p>
             )}
           </div>
         </div>
@@ -256,6 +321,18 @@ export default function AttendanceSessionComponent() {
                 <p className="font-medium">{session.section_group}</p>
               </div>
             )}
+            {session.week && (
+              <div>
+                <span className="text-muted-foreground">Week:</span>
+                <p className="font-medium">Week {session.week}</p>
+              </div>
+            )}
+            {session.section_num && (
+              <div>
+                <span className="text-muted-foreground">Section Number:</span>
+                <p className="font-medium">Section {session.section_num}</p>
+              </div>
+            )}
             <div>
               <span className="text-muted-foreground">Started:</span>
               <p className="font-medium">{formattedStartTime}</p>
@@ -266,13 +343,22 @@ export default function AttendanceSessionComponent() {
                 <p className="font-medium">{formattedEndTime}</p>
               </div>
             )}
-            {session.location_lat && session.location_lng && (
+            {session.auto_close_duration_minutes ? (
+              <div>
+                <span className="text-muted-foreground">Auto-close:</span>
+                <p className="font-medium">{session.auto_close_duration_minutes} min</p>
+              </div>
+            ) : null}
+            {hasLocationVerification && (
               <div>
                 <span className="text-muted-foreground flex items-center gap-1">
                   <MapPin className="h-3 w-3" />
                   Location:
                 </span>
                 <p className="font-medium">Within {session.max_distance_meters}m</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {session.location_lat?.toFixed(6)}, {session.location_lng?.toFixed(6)}
+                </p>
               </div>
             )}
           </div>
@@ -304,6 +390,11 @@ export default function AttendanceSessionComponent() {
               <p className="text-xs text-center text-muted-foreground">
                 Students scan this code to check in
               </p>
+              {autoCloseCountdown && (
+                <p className="text-xs text-center text-orange-600 font-semibold">
+                  {autoCloseCountdown}
+                </p>
+              )}
             </div>
           ) : (
             <div className="text-center py-8">
@@ -316,9 +407,9 @@ export default function AttendanceSessionComponent() {
 
       {/* Attendance Records */}
       <NeuCard className="p-6">
-        <h3 className="font-semibold mb-4">Attendance Records ({records.length})</h3>
+        <h3 className="font-semibold mb-4">Attendance Records ({recordCount})</h3>
 
-        {records.length === 0 ? (
+        {recordCount === 0 ? (
           <div className="text-center py-12">
             <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
             <p className="text-muted-foreground">No students have checked in yet</p>
@@ -336,28 +427,7 @@ export default function AttendanceSessionComponent() {
                 </tr>
               </thead>
               <tbody>
-                {records.map((record, index) => (
-                  <tr key={record.id} className="border-b hover:bg-muted/50">
-                    <td className="py-3 px-4">{index + 1}</td>
-                    <td className="py-3 px-4 font-medium">{record.student_name}</td>
-                    <td className="py-3 px-4 text-muted-foreground">
-                      {record.student_email || 'N/A'}
-                    </td>
-                    <td className="py-3 px-4 text-sm">
-                      {new Date(record.check_in_time).toLocaleTimeString()}
-                    </td>
-                    <td className="py-3 px-4">
-                      {record.location_lat && record.location_lng ? (
-                        <span className="flex items-center gap-1 text-green-600">
-                          <CheckCircle2 className="h-4 w-4" />
-                          Verified
-                        </span>
-                      ) : (
-                        <span className="text-muted-foreground text-sm">No location</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                {renderedRecords}
               </tbody>
             </table>
           </div>

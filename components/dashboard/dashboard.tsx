@@ -40,11 +40,13 @@ export default function DashboardPage() {
     if (user && profile?.role === 'teacher') {
       loadStats()
     }
-  }, [user, profile, exams])
+  }, [user, profile])
 
   const loadStats = async () => {
     try {
-      const res = await fetch(`/api/analytics/dashboard`)
+      const res = await fetch(`/api/analytics/dashboard`, {
+        next: { revalidate: 60 } // Cache for 60 seconds
+      })
       if (res.ok) {
         const data = await res.json()
         setStats({

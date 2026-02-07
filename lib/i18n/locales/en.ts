@@ -444,6 +444,7 @@ export const en = {
         "createAccountButton": "Create Account",
         "creatingAccount": "Creating Account...",
         "alreadyHaveAccount": "Already have an account?",
+        "signUpWithGoogle": "sign up with google",
         "joinExamAsGuest": "Join an exam as guest",
         "fullNameRequired": "Full name is required",
         "emailRequired": "Email is required",

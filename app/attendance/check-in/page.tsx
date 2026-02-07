@@ -1,11 +1,8 @@
 'use client'
+import { Suspense } from "react"
 
-import dynamic from 'next/dynamic'
-
-const CheckInForm = dynamic(() => import('@/components/attendance/check-in-form'), {
-  ssr: false
-})
-
+import CheckInForm from "@/components/attendance/check-in-form"
 export default function CheckInPage() {
-  return <CheckInForm />
+    return(<Suspense fallback={<div className="p-4 text-center">Loading...</div>}> 
+    <CheckInForm /></Suspense>)
 }

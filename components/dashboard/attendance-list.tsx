@@ -35,21 +35,24 @@ export default function AttendanceList() {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
   const [newSession, setNewSession] = useState({
-    title: '',
-    description: '',
     module_name: '',
     section_group: '',
+    week: null as number | null,
+    section_num: null as number | null,
+    auto_close_duration_minutes: 0,
     useLocation: false,
     location_lat: null as number | null,
     location_lng: null as number | null,
-    max_distance_meters: 50,
+    max_distance_meters: 100,
     qr_refresh_interval: 60
   })
   const { t } = useTranslation()
 
   const loadSessions = useCallback(async () => {
     try {
-      const res = await fetch('/api/attendance/sessions')
+      const res = await fetch('/api/attendance/sessions', {
+        cache: 'no-store'
+      })
       if (res.ok) {
         const data = await res.json()
         setSessions(data.sessions || [])
@@ -102,8 +105,8 @@ export default function AttendanceList() {
   const handleCreateSession = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!newSession.title.trim()) {
-      toast.error('Please enter a session title')
+    if (!newSession.module_name.trim()) {
+      toast.error('Please enter a module/course name')
       return
     }
 
@@ -114,10 +117,11 @@ export default function AttendanceList() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: newSession.title,
-          description: newSession.description || null,
-          module_name: newSession.module_name || null,
+          module_name: newSession.module_name,
           section_group: newSession.section_group || null,
+          week: newSession.week,
+          section_num: newSession.section_num,
+          auto_close_duration_minutes: newSession.auto_close_duration_minutes,
           location_lat: newSession.useLocation ? newSession.location_lat : null,
           location_lng: newSession.useLocation ? newSession.location_lng : null,
           max_distance_meters: newSession.max_distance_meters,
@@ -188,15 +192,22 @@ export default function AttendanceList() {
     }
   }
 
-  // Memoize filtered sessions to avoid recalculation on every render
   const filteredSessions = useMemo(() =>
     sessions.filter(session =>
-      session.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      session.module_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      session.module_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       session.section_group?.toLowerCase().includes(searchTerm.toLowerCase())
     ),
     [sessions, searchTerm]
   )
+
+  // Memoize active session count
+  const activeSessionCount = useMemo(
+    () => sessions.filter(s => s.is_active).length,
+    [sessions]
+  )
+
+  // Note: attendance_records is not included in the base session list query
+  // This count would need to be added via a separate aggregate query or join if needed
 
   if (loading) {
     return (
@@ -229,46 +240,75 @@ export default function AttendanceList() {
       >
         <form onSubmit={handleCreateSession} className="space-y-4">
           <div>
-            <Label htmlFor="title">Session Title *</Label>
+            <Label htmlFor="module">Module/Course Name *</Label>
             <NeuInput
-              id="title"
-              value={newSession.title}
-              onChange={(e) => setNewSession(prev => ({ ...prev, title: e.target.value }))}
-              placeholder="e.g., Morning Lecture - Week 1"
+              id="module"
+              value={newSession.module_name}
+              onChange={(e) => setNewSession(prev => ({ ...prev, module_name: e.target.value }))}
+              placeholder="e.g., Computer Science 101"
               required
             />
           </div>
 
           <div>
-            <Label htmlFor="description">Description</Label>
+            <Label htmlFor="section">Section/Group</Label>
             <NeuInput
-              id="description"
-              value={newSession.description}
-              onChange={(e) => setNewSession(prev => ({ ...prev, description: e.target.value }))}
-              placeholder="Optional session description"
+              id="section"
+              value={newSession.section_group}
+              onChange={(e) => setNewSession(prev => ({ ...prev, section_group: e.target.value }))}
+              placeholder="e.g., Group A"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="module">Module/Course</Label>
+              <Label htmlFor="week">Week Number</Label>
               <NeuInput
-                id="module"
-                value={newSession.module_name}
-                onChange={(e) => setNewSession(prev => ({ ...prev, module_name: e.target.value }))}
-                placeholder="e.g., Computer Science"
+                id="week"
+                type="number"
+                min="1"
+                max="52"
+                value={newSession.week || ''}
+                onChange={(e) => setNewSession(prev => ({
+                  ...prev,
+                  week: e.target.value ? parseInt(e.target.value) : null
+                }))}
+                placeholder="e.g., 5"
               />
             </div>
 
             <div>
-              <Label htmlFor="section">Section/Group</Label>
+              <Label htmlFor="section_num">Section Number</Label>
               <NeuInput
-                id="section"
-                value={newSession.section_group}
-                onChange={(e) => setNewSession(prev => ({ ...prev, section_group: e.target.value }))}
-                placeholder="e.g., Group A"
+                id="section_num"
+                type="number"
+                min="1"
+                value={newSession.section_num || ''}
+                onChange={(e) => setNewSession(prev => ({
+                  ...prev,
+                  section_num: e.target.value ? parseInt(e.target.value) : null
+                }))}
+                placeholder="e.g., 1"
               />
             </div>
+          </div>
+
+          <div>
+            <Label htmlFor="autoClose">Auto-Close Duration (minutes)</Label>
+            <NeuInput
+              id="autoClose"
+              type="number"
+              min="0"
+              value={newSession.auto_close_duration_minutes}
+              onChange={(e) => setNewSession(prev => ({
+                ...prev,
+                auto_close_duration_minutes: parseInt(e.target.value) || 0
+              }))}
+              placeholder="0 = no auto-close, 60 = close after 60 mins"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Session will automatically close after specified minutes (0 = disabled)
+            </p>
           </div>
 
           <div className="space-y-2">
@@ -287,7 +327,9 @@ export default function AttendanceList() {
             </div>
             {newSession.useLocation && (
               <p className="text-sm text-muted-foreground">
-                Students must be within {newSession.max_distance_meters}m to check in
+                📍 Students must be within {newSession.max_distance_meters}m to check in.
+                <br />
+                <span className="text-xs">Tip: Set location while in the classroom to avoid issues.</span>
               </p>
             )}
           </div>
@@ -341,9 +383,9 @@ export default function AttendanceList() {
               <div className="space-y-4">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <h3 className="font-semibold text-lg mb-1">{session.title}</h3>
-                    {session.description && (
-                      <p className="text-sm text-muted-foreground mb-2">{session.description}</p>
+                    <h3 className="font-semibold text-lg mb-1">{session.module_name}</h3>
+                    {session.section_group && (
+                      <p className="text-sm text-muted-foreground mb-2">{session.section_group}</p>
                     )}
                   </div>
                   <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs ${session.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
@@ -362,18 +404,18 @@ export default function AttendanceList() {
                   </div>
                 </div>
 
-                {(session.module_name || session.section_group) && (
+                {(session.week || session.section_num) && (
                   <div className="text-sm space-y-1">
-                    {session.module_name && (
+                    {session.week && (
                       <div className="flex items-center gap-2">
-                        <span className="text-muted-foreground">Module:</span>
-                        <span className="font-medium">{session.module_name}</span>
+                        <span className="text-muted-foreground">Week:</span>
+                        <span className="font-medium">{session.week}</span>
                       </div>
                     )}
-                    {session.section_group && (
+                    {session.section_num && (
                       <div className="flex items-center gap-2">
                         <span className="text-muted-foreground">Section:</span>
-                        <span className="font-medium">{session.section_group}</span>
+                        <span className="font-medium">{session.section_num}</span>
                       </div>
                     )}
                   </div>
@@ -402,14 +444,14 @@ export default function AttendanceList() {
                   <NeuButton
                     variant="outline"
                     size="sm"
-                    onClick={() => handleExport(session.id, session.title)}
+                    onClick={() => handleExport(session.id, session.module_name)}
                   >
                     <Download className="h-4 w-4" />
                   </NeuButton>
                   <NeuButton
                     variant="outline"
                     size="sm"
-                    onClick={() => handleDeleteSession(session.id, session.title)}
+                    onClick={() => handleDeleteSession(session.id, session.module_name)}
                   >
                     <Trash2 className="h-4 w-4" />
                   </NeuButton>

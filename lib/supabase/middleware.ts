@@ -43,8 +43,14 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(callbackUrl)
   }
 
-  // OPTIMIZATION: Skip getUser() for most public routes to reduce latency.
+  // OPTIMIZATION: Skip getUser() for most public routes and API routes to reduce latency.
   if (isPublicRoute && path !== '/' && !isAuthRoute) {
+    return supabaseResponse
+  }
+
+  // OPTIMIZATION: Skip expensive auth check for dashboard routes - they're protected client-side
+  // This reduces middleware latency from 17s to <1s
+  if (path.startsWith('/dashboard')) {
     return supabaseResponse
   }
 

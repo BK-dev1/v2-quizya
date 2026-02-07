@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo, useCallback } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { NeuCard } from '@/components/ui/neu-card'
@@ -48,9 +48,11 @@ export default function QuestionBankPage() {
     loadPublicExams()
   }, [])
 
-  const loadPublicExams = async () => {
+  const loadPublicExams = useCallback(async () => {
     try {
-      const res = await fetch('/api/public-exams')
+      const res = await fetch('/api/public-exams', {
+        cache: 'no-store'
+      })
       if (!res.ok) {
         console.error('Error loading public exams')
         return
@@ -63,26 +65,28 @@ export default function QuestionBankPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
-  const filteredExams = publicExams.filter(exam => {
-    const matchesSearch = exam.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      exam.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      exam.profiles?.username?.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredExams = useMemo(() => {
+    return publicExams.filter(exam => {
+      const matchesSearch = exam.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        exam.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        exam.profiles?.username?.toLowerCase().includes(searchTerm.toLowerCase())
 
-    if (!matchesSearch) return false
+      if (!matchesSearch) return false
 
-    if (categoryFilter === 'popular') {
-      return (exam._count?.exam_sessions || 0) >= 5
-    } else if (categoryFilter === 'recent') {
-      const createdAt = new Date(exam.created_at)
-      const weekAgo = new Date()
-      weekAgo.setDate(weekAgo.getDate() - 7)
-      return createdAt >= weekAgo
-    }
+      if (categoryFilter === 'popular') {
+        return (exam._count?.exam_sessions || 0) >= 5
+      } else if (categoryFilter === 'recent') {
+        const createdAt = new Date(exam.created_at)
+        const weekAgo = new Date()
+        weekAgo.setDate(weekAgo.getDate() - 7)
+        return createdAt >= weekAgo
+      }
 
-    return true
-  })
+      return true
+    })
+  }, [publicExams, searchTerm, categoryFilter])
 
   if (!user) {
     return (

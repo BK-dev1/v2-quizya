@@ -1,12 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import {
-  getAttendanceSession,
-  createAttendanceRecord,
-  checkDuplicateAttendance,
-  verifyAttendanceToken
-} from '@/lib/services/attendance-sessions'
+import { createServiceRoleClient } from '@/lib/supabase/server'
 import { verifyLocation } from '@/lib/utils/location'
+import { isValidEmail, sanitizeString, isValidStudentName } from '@/lib/utils/validation'
+import { hasSessionAutoClosed } from '@/lib/utils/session'
 
 // Rate limiting map (in-memory)
 // PRODUCTION NOTE: This in-memory storage will NOT work correctly in:
@@ -16,6 +12,32 @@ import { verifyLocation } from '@/lib/utils/location'
 const rateLimitMap = new Map<string, number[]>()
 const RATE_LIMIT_WINDOW = 60000 // 1 minute
 const MAX_REQUESTS = 5 // 5 requests per minute
+const CLEANUP_INTERVAL = 300000 // Clean up every 5 minutes
+
+// Periodic cleanup to prevent memory leaks
+let lastCleanup = Date.now()
+
+function cleanupRateLimitMap() {
+  const now = Date.now()
+
+  // Only cleanup if CLEANUP_INTERVAL has passed
+  if (now - lastCleanup < CLEANUP_INTERVAL) {
+    return
+  }
+
+  lastCleanup = now
+
+  // Remove expired entries
+  for (const [ip, timestamps] of rateLimitMap.entries()) {
+    const recentTimestamps = timestamps.filter(t => now - t < RATE_LIMIT_WINDOW)
+
+    if (recentTimestamps.length === 0) {
+      rateLimitMap.delete(ip)
+    } else {
+      rateLimitMap.set(ip, recentTimestamps)
+    }
+  }
+}
 
 function checkRateLimit(ip: string): boolean {
   const now = Date.now()
@@ -30,6 +52,9 @@ function checkRateLimit(ip: string): boolean {
 
   recentTimestamps.push(now)
   rateLimitMap.set(ip, recentTimestamps)
+
+  // Trigger periodic cleanup
+  cleanupRateLimitMap()
 
   return true
 }
@@ -79,24 +104,65 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verify token is valid (database check)
-    if (!(await verifyAttendanceToken(sessionId, token))) {
+    // Sanitize and validate student name
+    const sanitizedName = sanitizeString(studentName, 100)
+    if (!isValidStudentName(sanitizedName)) {
+      return NextResponse.json(
+        { error: 'Student name must be between 2 and 100 characters' },
+        { status: 400 }
+      )
+    }
+
+    // Validate email format if provided
+    const sanitizedEmail = studentEmail ? sanitizeString(studentEmail, 255) : null
+    if (sanitizedEmail && !isValidEmail(sanitizedEmail)) {
+      return NextResponse.json(
+        { error: 'Invalid email format' },
+        { status: 400 }
+      )
+    }
+
+    // Use service role client for all operations (students are not authenticated)
+    // This bypasses RLS which is safe here because:
+    // - Token is validated first (expires after 60s)
+    // - Rate limiting prevents abuse  
+    // - Only minimal data is read, and inserts are protected by DB constraints
+    const supabase = createServiceRoleClient()
+    const now = new Date().toISOString()
+
+    // Run token verification and session fetch in parallel
+    const [tokenResult, sessionResult] = await Promise.all([
+      supabase
+        .from('attendance_tokens' as any)
+        .select('id', { count: 'exact', head: true })
+        .eq('session_id', sessionId)
+        .eq('token', token)
+        .gt('expires_at', now)
+        .limit(1),
+      supabase
+        .from('attendance_sessions')
+        .select('id,is_active,location_lat,location_lng,max_distance_meters,started_at,auto_close_duration_minutes')
+        .eq('id', sessionId)
+        .single()
+    ])
+
+    if (tokenResult.error || (tokenResult.count || 0) === 0) {
+      console.error('Token validation failed:', tokenResult.error)
       return NextResponse.json(
         { error: 'Invalid or expired QR code. Please scan again.' },
         { status: 400 }
       )
     }
 
-    // Get session details
-    const supabase = await createClient()
-    const session = await getAttendanceSession(sessionId)
-
-    if (!session) {
+    if (sessionResult.error || !sessionResult.data) {
+      console.error('Session fetch failed:', sessionResult.error)
       return NextResponse.json(
         { error: 'Session not found' },
         { status: 404 }
       )
     }
+
+    const session = sessionResult.data
 
     if (!session.is_active) {
       return NextResponse.json(
@@ -105,35 +171,46 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check for duplicate attendance
-    const isDuplicate = await checkDuplicateAttendance(
-      sessionId,
-      studentName,
-      studentEmail
-    )
-
-    if (isDuplicate) {
+    // Check if session has auto-closed
+    if (hasSessionAutoClosed(session.started_at, session.auto_close_duration_minutes)) {
       return NextResponse.json(
-        { error: 'You have already checked in for this session' },
+        { error: 'This attendance session has ended' },
         { status: 400 }
       )
     }
 
-    // Verify location if provided
-    if (session.location_lat && session.location_lng && locationLat && locationLng) {
+    // Verify location only if teacher has set a location requirement
+    if (session.location_lat && session.location_lng) {
+      // Teacher requires location verification
+      if (!locationLat || !locationLng) {
+        return NextResponse.json(
+          { error: 'Location is required for this session. Please enable location services.' },
+          { status: 400 }
+        )
+      }
+
+      const maxDistance = session.max_distance_meters || 100
       const locationCheck = verifyLocation(
         session.location_lat,
         session.location_lng,
         locationLat,
         locationLng,
-        session.max_distance_meters
+        maxDistance
       )
 
       if (!locationCheck.isValid) {
+        console.log('Location verification failed:', {
+          distance: locationCheck.distance,
+          maxDistance,
+          teacherCoords: `${session.location_lat}, ${session.location_lng}`,
+          studentCoords: `${locationLat}, ${locationLng}`
+        })
+
         return NextResponse.json(
           {
             error: locationCheck.message || 'You are too far from the attendance location',
-            distance: locationCheck.distance
+            distance: locationCheck.distance,
+            maxDistance
           },
           { status: 400 }
         )
@@ -143,18 +220,28 @@ export async function POST(request: NextRequest) {
     // Get user agent
     const userAgent = request.headers.get('user-agent') || undefined
 
-    // Create attendance record
-    const record = await createAttendanceRecord({
-      session_id: sessionId,
-      student_name: studentName,
-      student_email: studentEmail,
-      location_lat: locationLat,
-      location_lng: locationLng,
-      ip_address: ip,
-      user_agent: userAgent
-    })
+    // Insert attendance record - UNIQUE constraint catches duplicates
+    const { error: insertError } = await supabase
+      .from('attendance_records')
+      .insert({
+        session_id: sessionId,
+        student_name: sanitizedName,
+        student_email: sanitizedEmail,
+        location_lat: locationLat || null,
+        location_lng: locationLng || null,
+        ip_address: ip,
+        user_agent: userAgent
+      })
 
-    if (!record) {
+    if (insertError) {
+      // Unique constraint violation = duplicate check-in
+      if (insertError.code === '23505') {
+        return NextResponse.json(
+          { error: 'You have already checked in for this session' },
+          { status: 400 }
+        )
+      }
+      console.error('Error creating attendance record:', insertError)
       return NextResponse.json(
         { error: 'Failed to record attendance' },
         { status: 500 }
@@ -163,8 +250,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Attendance recorded successfully',
-      record
+      message: 'Attendance recorded successfully'
     }, { status: 201 })
   } catch (error) {
     console.error('Error recording attendance:', error)

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { getAttendanceSessionWithRecords } from '@/lib/services/attendance-sessions'
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import {
   generateAttendanceExcel,
   generateAttendanceFilename,
@@ -14,6 +13,7 @@ export async function GET(
 ) {
   try {
     const supabase = await createClient()
+    const supabaseAdmin = createServiceRoleClient()
     const { id: sessionId } = await params
 
     // Get current user
@@ -26,10 +26,18 @@ export async function GET(
       )
     }
 
-    // Get session with records
-    const session = await getAttendanceSessionWithRecords(sessionId)
+    // Get session with records using service role client (faster)
+    const { data: session, error: sessionError } = await supabaseAdmin
+      .from('attendance_sessions')
+      .select(`
+        *,
+        attendance_records (*)
+      `)
+      .eq('id', sessionId)
+      .order('check_in_time', { foreignTable: 'attendance_records', ascending: false })
+      .single()
 
-    if (!session) {
+    if (sessionError || !session) {
       return NextResponse.json(
         { error: 'Session not found' },
         { status: 404 }

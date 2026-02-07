@@ -56,6 +56,46 @@ export async function getAttendanceSessionWithRecords(sessionId: string) {
   return data
 }
 
+export async function getAttendanceSessionWithRecordsSummary(sessionId: string) {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from('attendance_sessions')
+    .select(`
+      id,
+      title,
+      description,
+      module_name,
+      section_group,
+      started_at,
+      ended_at,
+      is_active,
+      qr_refresh_interval,
+      location_lat,
+      location_lng,
+      max_distance_meters,
+      teacher_id,
+      attendance_records (
+        id,
+        student_name,
+        student_email,
+        check_in_time,
+        location_lat,
+        location_lng
+      )
+    `)
+    .eq('id', sessionId)
+    .order('check_in_time', { foreignTable: 'attendance_records', ascending: false })
+    .single()
+
+  if (error) {
+    console.error('Error fetching attendance session summary:', error)
+    return null
+  }
+
+  return data
+}
+
 export async function getTeacherAttendanceSessions(teacherId: string): Promise<AttendanceSession[]> {
   const supabase = await createClient()
 
@@ -194,6 +234,51 @@ export async function storeAttendanceToken(
 
   if (error) {
     console.error('Error storing attendance token:', error)
+    return false
+  }
+
+  return true
+}
+
+export async function getValidTokenForSession(
+  sessionId: string,
+  minRemainingSeconds: number = 10
+): Promise<{ token: string; expiresAt: string } | null> {
+  const supabase = await createClient()
+
+  const minExpiryTime = new Date(Date.now() + minRemainingSeconds * 1000).toISOString()
+
+  const { data, error } = await (supabase.from('attendance_tokens' as any) as any)
+    .select('token, expires_at')
+    .eq('session_id', sessionId)
+    .gt('expires_at', minExpiryTime)
+    .order('expires_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (error) {
+    console.error('Error fetching valid token:', error)
+    return null
+  }
+
+  if (!data) return null
+
+  return {
+    token: data.token,
+    expiresAt: data.expires_at
+  }
+}
+
+export async function cleanupExpiredTokens(sessionId: string): Promise<boolean> {
+  const supabase = await createClient()
+
+  const { error } = await (supabase.from('attendance_tokens' as any) as any)
+    .delete()
+    .eq('session_id', sessionId)
+    .lt('expires_at', new Date().toISOString())
+
+  if (error) {
+    console.error('Error cleaning up expired tokens:', error)
     return false
   }
 

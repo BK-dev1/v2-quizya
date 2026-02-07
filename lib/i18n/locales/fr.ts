@@ -441,6 +441,7 @@ export const fr = {
         "createAccountButton": "Créer un Compte",
         "creatingAccount": "Création du compte...",
         "alreadyHaveAccount": "Vous avez déjà un compte ?",
+        "signUpWithGoogle": "Connectez avec Google",
         "joinExamAsGuest": "Rejoindre un examen en tant qu'invité",
         "fullNameRequired": "Le nom complet est requis",
         "emailRequired": "L'email est requis",
