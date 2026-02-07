@@ -26,7 +26,6 @@ export async function GET(
       )
     }
 
-    // Get session with records using service role client (faster)
     const { data: session, error: sessionError } = await supabaseAdmin
       .from('attendance_sessions')
       .select(`
@@ -54,15 +53,15 @@ export async function GET(
 
     // Generate Excel file
     const excelBuffer = await generateAttendanceExcel({
-      sessionTitle: session.title,
-      moduleName: session.module_name || undefined,
+      sessionTitle: session.module_name,
+      moduleName: session.module_name,
       sectionGroup: session.section_group || undefined,
       startedAt: session.started_at,
       endedAt: session.ended_at || undefined,
       records: session.attendance_records || []
     })
 
-    const filename = generateAttendanceFilename(session.title)
+    const filename = generateAttendanceFilename(session.module_name)
 
     return createExcelResponse(excelBuffer, filename)
   } catch (error) {

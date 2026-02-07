@@ -13,14 +13,12 @@ import {
   Plus,
   Search,
   QrCode,
-  Users,
   Clock,
   Loader2,
   Trash2,
   Download,
   MapPin,
-  CheckCircle2,
-  XCircle
+  BarChart3
 } from 'lucide-react'
 import { AttendanceSession } from '@/lib/types'
 import { toast } from 'sonner'
@@ -146,8 +144,8 @@ export default function AttendanceList() {
     }
   }
 
-  const handleDeleteSession = async (sessionId: string, title: string) => {
-    if (!confirm(`Are you sure you want to delete "${title}"?`)) {
+  const handleDeleteSession = async (sessionId: string, name: string) => {
+    if (!confirm(`Are you sure you want to delete "${name}"?`)) {
       return
     }
 
@@ -199,6 +197,19 @@ export default function AttendanceList() {
     ),
     [sessions, searchTerm]
   )
+
+  // Group sessions by module
+  const sessionsByModule = useMemo(() => {
+    const grouped = new Map<string, typeof sessions>()
+    filteredSessions.forEach(session => {
+      const moduleName = session.module_name
+      if (!grouped.has(moduleName)) {
+        grouped.set(moduleName, [])
+      }
+      grouped.get(moduleName)!.push(session)
+    })
+    return grouped
+  }, [filteredSessions])
 
   // Memoize active session count
   const activeSessionCount = useMemo(
@@ -368,96 +379,136 @@ export default function AttendanceList() {
         </div>
       </div>
 
-      {filteredSessions.length === 0 ? (
-        <NeuCard className="p-12 text-center">
-          <QrCode className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-2">No attendance sessions yet</h3>
-          <p className="text-muted-foreground mb-4">
-            Create your first attendance session to start tracking student attendance
+      {sessionsByModule.size === 0 ? (
+        <NeuCard className="p-16 text-center flex flex-col items-center justify-center border-dashed border-2">
+          <div className="bg-primary/5 p-6 rounded-full mb-6">
+            <QrCode className="h-12 w-12 text-primary/50" />
+          </div>
+          <h3 className="text-xl font-semibold mb-2">No attendance sessions yet</h3>
+          <p className="text-muted-foreground mb-8 max-w-sm">
+            Create your first attendance session to start tracking student attendance in real-time.
           </p>
+          <NeuButton onClick={() => setShowCreateModal(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Create First Session
+          </NeuButton>
         </NeuCard>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filteredSessions.map((session) => (
-            <NeuCard key={session.id} className="p-6">
-              <div className="space-y-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-lg mb-1">{session.module_name}</h3>
-                    {session.section_group && (
-                      <p className="text-sm text-muted-foreground mb-2">{session.section_group}</p>
-                    )}
-                  </div>
-                  <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs ${session.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
-                    }`}>
-                    {session.is_active ? (
-                      <>
-                        <CheckCircle2 className="h-3 w-3" />
-                        Active
-                      </>
-                    ) : (
-                      <>
-                        <XCircle className="h-3 w-3" />
-                        Ended
-                      </>
-                    )}
+        <div className="space-y-12">
+          {Array.from(sessionsByModule.entries()).map(([moduleName, moduleSessions]) => (
+            <div key={moduleName} className="space-y-6">
+              <div className="flex items-center justify-between border-b pb-4">
+                <div className="flex items-center gap-4">
+                  <div className="h-10 w-1 bg-primary rounded-full" />
+                  <div>
+                    <h2 className="text-2xl font-bold tracking-tight">{moduleName}</h2>
+                    <p className="text-sm text-muted-foreground">
+                      {moduleSessions.length} session{moduleSessions.length !== 1 ? 's' : ''}
+                    </p>
                   </div>
                 </div>
-
-                {(session.week || session.section_num) && (
-                  <div className="text-sm space-y-1">
-                    {session.week && (
-                      <div className="flex items-center gap-2">
-                        <span className="text-muted-foreground">Week:</span>
-                        <span className="font-medium">{session.week}</span>
-                      </div>
-                    )}
-                    {session.section_num && (
-                      <div className="flex items-center gap-2">
-                        <span className="text-muted-foreground">Section:</span>
-                        <span className="font-medium">{session.section_num}</span>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                  <div className="flex items-center gap-1">
-                    <Clock className="h-4 w-4" />
-                    {new Date(session.started_at).toLocaleDateString()}
-                  </div>
-                  {session.location_lat && session.location_lng && (
-                    <div className="flex items-center gap-1">
-                      <MapPin className="h-4 w-4" />
-                      Location
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex gap-2 pt-2">
-                  <Link href={`/dashboard/attendance/${session.id}`} className="flex-1">
-                    <NeuButton variant="outline" className="w-full cursor-pointer">
-                      <QrCode className="mr-2 h-4 w-4" />
-                      View QR
-                    </NeuButton>
-                  </Link>
-                  <NeuButton
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleExport(session.id, session.module_name)}
-                  >
-                    <Download className="h-4 w-4" />
+                <Link href={`/dashboard/attendance/modules/${encodeURIComponent(moduleName)}`}>
+                  <NeuButton variant="ghost" size="sm" className="hidden sm:flex text-muted-foreground hover:text-primary">
+                    <BarChart3 className="mr-2 h-4 w-4" />
+                    View Statistics
                   </NeuButton>
-                  <NeuButton
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDeleteSession(session.id, session.module_name)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </NeuButton>
-                </div>
+                </Link>
               </div>
-            </NeuCard>
+
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {moduleSessions.map((session) => (
+                  <NeuCard key={session.id} className="group relative overflow-hidden transition-all hover:shadow-lg hover:border-primary/20 flex flex-col h-full">
+                    {session.is_active && (
+                      <div className="absolute top-0 right-0 p-4">
+                        <span className="relative flex h-3 w-3">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="p-6 flex-1 space-y-4">
+                      <div className="space-y-1">
+                        <div className="flex justify-between items-start pr-6">
+                          <h3 className="font-semibold text-lg line-clamp-1" title={session.module_name}>
+                            {session.module_name}
+                          </h3>
+                        </div>
+                        {session.section_group ? (
+                          <p className="text-sm font-medium text-primary">{session.section_group}</p>
+                        ) : (
+                          <p className="text-sm text-muted-foreground">All Sections</p>
+                        )}
+                      </div>
+
+                      <div className="space-y-2 pt-2">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Clock className="h-4 w-4 shrink-0" />
+                          <span>{new Date(session.started_at).toLocaleDateString()}</span>
+                        </div>
+
+                        {(session.week || session.section_num) && (
+                          <div className="flex gap-3 text-xs font-medium text-muted-foreground">
+                            {session.week && (
+                              <span className="bg-muted/50 px-2 py-1 rounded">Week {session.week}</span>
+                            )}
+                            {session.section_num && (
+                              <span className="bg-muted/50 px-2 py-1 rounded">Sec {session.section_num}</span>
+                            )}
+                          </div>
+                        )}
+
+                        {session.location_lat && (
+                          <div className="flex items-center gap-2 text-sm text-green-600/80">
+                            <MapPin className="h-3 w-3 shrink-0" />
+                            <span className="text-xs">Location Verified</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="p-4 bg-muted/5 border-t flex items-center gap-2">
+                      <Link href={`/dashboard/attendance/${session.id}`} className="flex-1">
+                        <NeuButton
+                          variant={session.is_active ? 'primary' : 'outline'}
+                          className={`w-full justify-center ${session.is_active ? 'shadow-md' : 'bg-background'}`}
+                        >
+                          {session.is_active ? (
+                            <>
+                              <QrCode className="mr-2 h-4 w-4" />
+                              Monitor Live
+                            </>
+                          ) : (
+                            'View Report'
+                          )}
+                        </NeuButton>
+                      </Link>
+
+                      <div className="flex gap-1">
+                        <NeuButton
+                          variant="ghost"
+                          size="sm"
+                          className="h-9 w-9 p-0"
+                          onClick={() => handleExport(session.id, session.module_name)}
+                          title="Export CSV"
+                        >
+                          <Download className="h-4 w-4" />
+                        </NeuButton>
+                        <NeuButton
+                          variant="ghost"
+                          size="sm"
+                          className="h-9 w-9 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => handleDeleteSession(session.id, session.module_name)}
+                          title="Delete Session"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </NeuButton>
+                      </div>
+                    </div>
+                  </NeuCard>
+                ))}
+              </div>
+            </div>
           ))}
         </div>
       )}

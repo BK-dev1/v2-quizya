@@ -44,7 +44,8 @@ export async function updateSession(request: NextRequest) {
   }
 
   // OPTIMIZATION: Skip getUser() for most public routes and API routes to reduce latency.
-  if (isPublicRoute && path !== '/' && !isAuthRoute) {
+  // We handle teacher redirection (from /) on the client side now to improve TTFB
+  if (isPublicRoute && !isAuthRoute) {
     return supabaseResponse
   }
 

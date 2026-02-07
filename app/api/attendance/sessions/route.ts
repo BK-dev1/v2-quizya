@@ -74,8 +74,6 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
     const {
-      title,
-      description,
       module_name,
       section_group,
       location_lat,
@@ -87,20 +85,10 @@ export async function POST(request: NextRequest) {
       auto_close_duration_minutes
     } = body
 
-    // Validate required fields
-    if (!title) {
-      return NextResponse.json(
-        { error: 'Title is required' },
-        { status: 400 }
-      )
-    }
-
     // Create session
     const { data: session, error: insertError } = await supabaseAdmin
       .from('attendance_sessions')
       .insert({
-        title,
-        description,
         teacher_id: user.id,
         module_name,
         section_group,

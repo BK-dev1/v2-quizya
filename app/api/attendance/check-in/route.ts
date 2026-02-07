@@ -3,6 +3,7 @@ import { createServiceRoleClient } from '@/lib/supabase/server'
 import { verifyLocation } from '@/lib/utils/location'
 import { isValidEmail, sanitizeString, isValidStudentName } from '@/lib/utils/validation'
 import { hasSessionAutoClosed } from '@/lib/utils/session'
+import { verifySignedToken } from '@/lib/utils/qr-generator'
 
 // Rate limiting map (in-memory)
 // PRODUCTION NOTE: This in-memory storage will NOT work correctly in:
@@ -130,39 +131,43 @@ export async function POST(request: NextRequest) {
     const supabase = createServiceRoleClient()
     const now = new Date().toISOString()
 
-    // Run token verification and session fetch in parallel
-    const [tokenResult, sessionResult] = await Promise.all([
-      supabase
-        .from('attendance_tokens' as any)
-        .select('id', { count: 'exact', head: true })
-        .eq('session_id', sessionId)
-        .eq('token', token)
-        .gt('expires_at', now)
-        .limit(1),
-      supabase
-        .from('attendance_sessions')
-        .select('id,is_active,location_lat,location_lng,max_distance_meters,started_at,auto_close_duration_minutes')
-        .eq('id', sessionId)
-        .single()
-    ])
+    // Run operations sequentially to fail fast and debug performance
+    const t0 = Date.now()
 
-    if (tokenResult.error || (tokenResult.count || 0) === 0) {
-      console.error('Token validation failed:', tokenResult.error)
+    // 1. Validate Token (Stateless Check)
+    // Use service role key as secret (must match generation)
+    const secret = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'default-secret'
+    const isValidToken = verifySignedToken(token, sessionId, secret, 120000) // 2 minutes window
+
+    const t1 = Date.now()
+    console.log(`[CheckIn] Token verification (stateless) took ${t1 - t0}ms`)
+
+    if (!isValidToken) {
       return NextResponse.json(
         { error: 'Invalid or expired QR code. Please scan again.' },
         { status: 400 }
       )
     }
 
-    if (sessionResult.error || !sessionResult.data) {
-      console.error('Session fetch failed:', sessionResult.error)
+    // 2. Fetch Session Details
+    const { data: session, error: sessionError } = await supabase
+      .from('attendance_sessions')
+      .select('id,is_active,location_lat,location_lng,max_distance_meters,started_at,auto_close_duration_minutes')
+      .eq('id', sessionId)
+      .single()
+
+    const t2 = Date.now()
+    console.log(`[CheckIn] Session fetch took ${t2 - t1}ms`)
+
+
+
+    if (sessionError || !session) {
+      console.error('Session fetch failed:', sessionError)
       return NextResponse.json(
         { error: 'Session not found' },
         { status: 404 }
       )
     }
-
-    const session = sessionResult.data
 
     if (!session.is_active) {
       return NextResponse.json(

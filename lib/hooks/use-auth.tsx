@@ -8,6 +8,7 @@ interface User {
   id: string
   email: string
   user_metadata?: Record<string, any>
+  app_metadata?: Record<string, any>
 }
 
 interface AuthContextType {

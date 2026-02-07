@@ -63,8 +63,6 @@ export async function getAttendanceSessionWithRecordsSummary(sessionId: string) 
     .from('attendance_sessions')
     .select(`
       id,
-      title,
-      description,
       module_name,
       section_group,
       started_at,
