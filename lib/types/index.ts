@@ -17,6 +17,8 @@ export type Question = Tables<'questions'>
 export type ExamSession = Tables<'exam_sessions'>
 export type QuestionBank = Tables<'question_bank'>
 export type UserSettings = Tables<'user_settings'>
+export type AttendanceSession = Tables<'attendance_sessions'>
+export type AttendanceRecord = Tables<'attendance_records'>
 
 // Insert types
 export type ProfileInsert = TablesInsert<'profiles'>
@@ -25,6 +27,8 @@ export type QuestionInsert = TablesInsert<'questions'>
 export type ExamSessionInsert = TablesInsert<'exam_sessions'>
 export type QuestionBankInsert = TablesInsert<'question_bank'>
 export type UserSettingsInsert = TablesInsert<'user_settings'>
+export type AttendanceSessionInsert = TablesInsert<'attendance_sessions'>
+export type AttendanceRecordInsert = TablesInsert<'attendance_records'>
 
 // Update types
 export type ProfileUpdate = TablesUpdate<'profiles'>
@@ -33,6 +37,8 @@ export type QuestionUpdate = TablesUpdate<'questions'>
 export type ExamSessionUpdate = TablesUpdate<'exam_sessions'>
 export type QuestionBankUpdate = TablesUpdate<'question_bank'>
 export type UserSettingsUpdate = TablesUpdate<'user_settings'>
+export type AttendanceSessionUpdate = TablesUpdate<'attendance_sessions'>
+export type AttendanceRecordUpdate = TablesUpdate<'attendance_records'>
 
 // Custom types for frontend use
 export type ExamWithQuestions = Exam & {
@@ -72,4 +78,20 @@ export type ProctoringData = {
   infractions: ProctoringEvent[]
   fullscreen_exits?: number
   tab_switches?: number
+}
+
+// Attendance types
+export type AttendanceSessionWithRecords = AttendanceSession & {
+  records: AttendanceRecord[]
+  attendance_count?: number
+}
+
+export type AttendanceQRData = {
+  sessionId: string
+  token: string
+  expiresAt: number
+  teacherLocation?: {
+    lat: number
+    lng: number
+  }
 }
