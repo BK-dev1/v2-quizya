@@ -77,8 +77,8 @@ export default function JoinLiveQuizPage() {
           toast.success(t('successfullyJoined') || 'Successfully joined the quiz!')
         }
 
-        // Redirect to quiz taking page
-        router.push(`/live-quiz/${data.quiz.id}?participant=${data.participant.id}`)
+        // Redirect to quiz taking page - include session token in URL for reliable transfer
+        router.push(`/live-quiz/${data.quiz.id}?participant=${data.participant.id}&token=${data.session_token}`)
       } else {
         setError(data.error || t('failedToJoin') || 'Failed to join quiz')
       }

@@ -398,7 +398,9 @@ export default function NewLiveQuizPage() {
                             value={option.text}
                             onChange={(e) => updateOptionText(question.id, option.id, e.target.value)}
                             className={`flex-1 px-4 py-2 rounded-lg border text-sm ${
-                              isCorrect ? 'border-green-300 bg-green-50' : 'border-gray-200'
+                              isCorrect 
+                                ? 'border-green-300 bg-green-50 text-green-900 dark:bg-green-900/30 dark:text-green-100 dark:border-green-700' 
+                                : 'border-gray-200 dark:border-gray-700'
                             }`}
                           />
                           {question.options.length > 2 && (

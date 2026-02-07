@@ -58,7 +58,8 @@ export async function POST(request: NextRequest) {
         }, { status: 400 })
       }
 
-      // Generate a new session token (invalidates any previous session on other devices)
+      // Generate a new session token - this invalidates any previous session
+      // The old session will be kicked on its next poll attempt
       const newSessionToken = randomUUID()
 
       // Update last seen and session token, return existing participant

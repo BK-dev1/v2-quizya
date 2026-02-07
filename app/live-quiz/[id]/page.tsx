@@ -77,8 +77,28 @@ export default function LiveQuizTakePage() {
   const [sessionTokenLoaded, setSessionTokenLoaded] = React.useState(false)
   const [sessionInvalid, setSessionInvalid] = React.useState(false)
 
-  // Get session token from sessionStorage on mount
+  // Get session token from URL first (most reliable), then fallback to sessionStorage
   React.useEffect(() => {
+    // First check URL params (from redirect after join)
+    const tokenFromUrl = searchParams.get('token')
+    if (tokenFromUrl) {
+      setSessionToken(tokenFromUrl)
+      // Also update sessionStorage for consistency
+      try {
+        const stored = sessionStorage.getItem('liveQuizParticipant')
+        if (stored) {
+          const parsed = JSON.parse(stored)
+          parsed.sessionToken = tokenFromUrl
+          sessionStorage.setItem('liveQuizParticipant', JSON.stringify(parsed))
+        }
+      } catch (e) {
+        console.error('Error updating session token in storage:', e)
+      }
+      setSessionTokenLoaded(true)
+      return
+    }
+
+    // Fallback to sessionStorage
     try {
       const stored = sessionStorage.getItem('liveQuizParticipant')
       if (stored) {
@@ -92,7 +112,7 @@ export default function LiveQuizTakePage() {
     }
     // Mark as loaded regardless of whether we found a token
     setSessionTokenLoaded(true)
-  }, [quizId])
+  }, [quizId, searchParams])
   const [timeLeft, setTimeLeft] = React.useState<number | null>(null)
   const [hasSubmitted, setHasSubmitted] = React.useState(false)
   const lastQuestionIdRef = React.useRef<string | null>(null)

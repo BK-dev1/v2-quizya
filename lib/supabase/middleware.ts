@@ -30,6 +30,7 @@ export async function updateSession(request: NextRequest) {
     '/pricing', '/privacy', '/terms', '/blog', '/attendance'
   ].some(route => path === route || path.startsWith(`${route}/`))
 
+<<<<<<< HEAD
   const nextUrl = request.nextUrl
   const code = nextUrl.searchParams.get('code')
 
@@ -84,6 +85,28 @@ export async function updateSession(request: NextRequest) {
   if (!user && !isAuthRoute && !isPublicRoute) {
     const url = new URL('/auth/login', request.url)
     url.searchParams.set('next', path)
+=======
+  if (
+    !user &&
+    !request.nextUrl.pathname.startsWith('/auth') &&
+    !request.nextUrl.pathname.startsWith('/api') &&
+    !request.nextUrl.pathname.startsWith('/public-exams') &&
+    !request.nextUrl.pathname.startsWith('/join') &&
+    !request.nextUrl.pathname.startsWith('/join-quiz') &&
+    !request.nextUrl.pathname.startsWith('/live-quiz') &&
+    !request.nextUrl.pathname.startsWith('/about') &&
+    !request.nextUrl.pathname.startsWith('/pricing') &&
+    !request.nextUrl.pathname.startsWith('/privacy') &&
+    !request.nextUrl.pathname.startsWith('/terms') &&
+    !request.nextUrl.pathname.startsWith('/accessibility') &&
+    !request.nextUrl.pathname.startsWith('/blog') &&
+    !request.nextUrl.pathname.startsWith('/exam/take') &&
+    request.nextUrl.pathname !== '/'
+  ) {
+    // no user, potentially respond by redirecting the user to the login page
+    const url = request.nextUrl.clone()
+    url.pathname = '/auth/login'
+>>>>>>> 572bd56 (fix styling issue)
     return NextResponse.redirect(url)
   }
 
