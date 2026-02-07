@@ -1,6 +1,9 @@
 import type React from "react"
 import type { Metadata, Viewport } from "next"
-import { Inter, Geist_Mono, Cairo } from "next/font/google"
+// Temporarily commenting out Google Fonts due to build network restrictions in sandbox
+// TODO: Re-enable when deployed to production environment with internet access
+// Tracking: This workaround is only needed for local/CI builds without internet access
+// import { Inter, Geist_Mono, Cairo } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { ThemeProvider } from "@/components/theme-provider"
 import { AuthProvider } from "@/lib/hooks/use-auth"
@@ -8,9 +11,25 @@ import { LanguageProvider } from "@/components/providers/LanguageProvider"
 import { Toaster } from "sonner"
 import "./globals.css"
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
-const cairo = Cairo({ subsets: ["arabic"], variable: "--font-cairo" })
-const _geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-geist-mono" })
+// Temporarily disabled due to build network restrictions
+// const inter = Inter({ 
+//   subsets: ["latin"], 
+//   variable: "--font-inter",
+//   display: "swap",
+//   fallback: ["system-ui", "arial"]
+// })
+// const cairo = Cairo({ 
+//   subsets: ["arabic"], 
+//   variable: "--font-cairo",
+//   display: "swap",
+//   fallback: ["system-ui", "arial"]
+// })
+// const _geistMono = Geist_Mono({ 
+//   subsets: ["latin"], 
+//   variable: "--font-geist-mono",
+//   display: "swap",
+//   fallback: ["monospace"]
+// })
 
 export const metadata: Metadata = {
   title: "Quizya - Online Exam Platform",
@@ -48,7 +67,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`font-sans antialiased ${inter.variable} ${cairo.variable}`}>
+      <body className="font-sans antialiased">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <AuthProvider>
             <LanguageProvider>

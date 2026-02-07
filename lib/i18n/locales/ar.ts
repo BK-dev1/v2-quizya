@@ -50,7 +50,7 @@ export const ar = {
         "termsOfService": "شروط الخدمة",
         "accessibility": "إمكانية الوصول",
         "allRightsReserved": "جميع الحقوق محفوظة.",
-        
+
         // Pricing
         "free": "مجاني",
         "freeDesc": "مثالي للمعلمين الأفراد.",
@@ -420,6 +420,16 @@ export const ar = {
         "errorOccurred": "حدث خطأ أثناء تسجيل الدخول",
         "errorGoogleSignIn": "حدث خطأ أثناء تسجيل الدخول باستخدام Google",
         "googleOAuthNotConfigured": "تسجيل الدخول باستخدام Google غير مُهيأ. يرجى إعداد Google OAuth في لوحة تحكم Supabase.",
+        "resetPassword": "إعادة تعيين كلمة المرور",
+        "forgotPasswordTitle": "نسيت كلمة المرور",
+        "forgotPasswordDesc": "أدخل عنوان بريدك الإلكتروني وسنرسل لك رابطًا لإعادة تعيين كلمة المرور الخاصة بك.",
+        "sendResetLink": "إرسال رابط إعادة التعيين",
+        "sendingResetLink": "جاري الإرسال...",
+        "resetLinkSent": "تم إرسال رابط إعادة التعيين! يرجى التحقق من بريدك الإلكتروني.",
+        "newPassword": "كلمة المرور الجديدة",
+        "confirmNewPassword": "تأكيد كلمة المرور الجديدة",
+        "updatingPassword": "جاري التحديث...",
+        "passwordUpdated": "تم تحديث كلمة المرور بنجاح!",
 
         "createAccount": "إنشاء حساب",
         "joinQuizya": "انضم إلى Quizya لإنشاء وإدارة الاختبارات",

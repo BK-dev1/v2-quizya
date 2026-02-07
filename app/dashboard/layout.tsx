@@ -18,6 +18,7 @@ import {
   Bell,
   ChevronDown,
   Loader2,
+  ClipboardCheck,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -26,6 +27,7 @@ import { useTranslation } from "react-i18next"
 const navItems = [
   { href: "/dashboard", label: "dashboard", icon: LayoutDashboard },
   { href: "/dashboard/exams", label: "myExams", icon: FileEdit },
+  { href: "/dashboard/attendance", label: "attendance", icon: ClipboardCheck },
   { href: "/dashboard/question-bank", label: "questionBank", icon: Database },
   { href: "/dashboard/analytics", label: "analytics", icon: BarChart3 },
   { href: "/dashboard/settings", label: "settings", icon: Settings },
