@@ -210,6 +210,15 @@ export default function LiveQuizControlPage() {
           const currentQ = updatedQuiz.questions?.[updatedQuiz.current_question_index]
           if (currentQ) fetchQuestionStats(currentQ.id)
         }
+        
+        // Show success toast for results visibility changes
+        if (action === 'update_settings' && 'show_results_to_students' in additionalData) {
+          const visible = (additionalData as any).show_results_to_students
+          toast.success(visible ? 'Results published to students' : 'Results hidden from students')
+        }
+        if (action === 'show_final_results') {
+          toast.success('Results published to students')
+        }
       } else {
         const error = await response.json()
         toast.error(error.error || "Action failed")
@@ -253,7 +262,7 @@ export default function LiveQuizControlPage() {
     return `${mins}:${secs.toString().padStart(2, '0')}`
   }
 
-  if (loading) {
+  if (loading || !quiz) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin" />
@@ -261,10 +270,10 @@ export default function LiveQuizControlPage() {
     )
   }
 
-  if (!quiz) {
+  if (!quiz.status) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p className="text-muted-foreground">Quiz not found</p>
+        <p className="text-muted-foreground">Quiz data is loading...</p>
       </div>
     )
   }
@@ -336,9 +345,9 @@ export default function LiveQuizControlPage() {
                 quiz.status === 'showing_results' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
                 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
               }`}>
-                {quiz.status.toUpperCase()}
+                {(quiz.status || 'loading').toUpperCase()}
               </span>
-              {quiz.status !== 'waiting' && (
+              {quiz.status && quiz.status !== 'waiting' && (
                 <span className="text-sm text-muted-foreground">
                   Question {quiz.current_question_index + 1} of {questions.length}
                 </span>

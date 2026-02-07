@@ -1,16 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
 
 // Note: Live quiz tables are created by migration. Using 'as any' until types are regenerated.
 
 // GET: Get the current active question for students - OPTIMIZED for minimal queries
+// Uses admin client to bypass RLS and ensure ended quizzes are still accessible
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id: quizId } = await params
-    const supabase = await createClient()
+    // Use admin client to bypass RLS - ensures ended quizzes are still accessible
+    const supabase = createAdminClient()
     const serverTime = Date.now()
     const { searchParams } = new URL(request.url)
     const participantId = searchParams.get('participant_id')

@@ -94,6 +94,7 @@ export type AttendanceQRData = {
     lat: number
     lng: number
   }
+}
 // Live Quiz Types
 export type LiveQuizStatus = 'waiting' | 'active' | 'paused' | 'showing_results' | 'ended'
 export type QuestionState = 'hidden' | 'active' | 'closed' | 'showing_answer'

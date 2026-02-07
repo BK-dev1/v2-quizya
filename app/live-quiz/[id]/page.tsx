@@ -148,16 +148,35 @@ export default function LiveQuizTakePage() {
       }
 
       if (!response.ok) {
-        toast.error("Failed to load quiz")
-        router.push('/join-quiz')
+        // If we already have state and the quiz ended, don't show error - just keep showing ended screen
+        if (state?.quiz?.status === 'ended') {
+          // Quiz ended, no need to poll anymore - stop silently
+          return
+        }
+        // Only redirect if we've never loaded the quiz
+        if (!state) {
+          toast.error("Failed to load quiz")
+          router.push('/join-quiz')
+        }
         return
       }
 
       const data = await response.json()
       setState(data)
 
-      // If quiz ended with redirect flag, go home immediately
-      if (data.quiz.status === 'ended' && data.quiz.redirect_students_home) {
+      // If quiz ended, don't redirect immediately - let the ended UI show
+      // The ended UI has its own redirect logic based on user login status
+      if (data.quiz.status === 'ended') {
+        // Stop polling - we're done
+        if (pollRef.current) {
+          clearInterval(pollRef.current)
+          pollRef.current = null
+        }
+        return
+      }
+
+      // If quiz ended with redirect flag (teacher chose to send home without showing results), go home immediately
+      if (data.quiz.redirect_students_home) {
         toast.success(t('quizEnded') || 'Quiz ended!')
         router.push('/join-quiz')
         return
@@ -190,7 +209,7 @@ export default function LiveQuizTakePage() {
     } finally {
       setLoading(false)
     }
-  }, [quizId, participantId, router, state?.current_question?.id, sessionToken, sessionTokenLoaded, sessionInvalid, t])
+  }, [quizId, participantId, router, state?.current_question?.id, state?.quiz?.status, sessionToken, sessionTokenLoaded, sessionInvalid, t])
 
   // Adaptive polling based on quiz state
   React.useEffect(() => {
@@ -200,14 +219,10 @@ export default function LiveQuizTakePage() {
     const getPollingInterval = () => {
       if (!state) return 2000 // Initial load
       
-      // STOP polling if quiz ended and results are shown - no more updates needed
-      if (state.quiz.status === 'ended' && state.quiz.show_results_to_students) {
-        return 0 // No polling - final state reached
-      }
-      
-      // Quiz ended but waiting for results - poll slowly
+      // STOP polling completely if quiz ended - no more updates needed
+      // The ended UI has its own countdown and redirect logic
       if (state.quiz.status === 'ended') {
-        return 3000
+        return 0 // No polling - final state reached
       }
       
       // Check for state changes more frequently during active questions
@@ -234,7 +249,7 @@ export default function LiveQuizTakePage() {
     return () => {
       if (pollRef.current) clearInterval(pollRef.current)
     }
-  }, [fetchState, state?.quiz.status, state?.current_question?.state, state?.quiz.show_results_to_students, hasSubmitted])
+  }, [fetchState, state?.quiz.status, state?.current_question?.state, hasSubmitted])
 
   // Timer countdown
   React.useEffect(() => {
@@ -256,6 +271,37 @@ export default function LiveQuizTakePage() {
       if (timerRef.current) clearInterval(timerRef.current)
     }
   }, [state?.current_question?.id, state?.current_question?.state])
+
+  // Quiz ended: Redirect immediately
+  React.useEffect(() => {
+    if (state?.quiz?.status !== 'ended' || !state?.participant) return
+    
+    const isRegistered = !!state.participant.user_id
+    // Redirect immediately without showing any page
+    if (isRegistered) {
+      router.push('/dashboard')
+    } else {
+      router.push('/')
+    }
+  }, [state?.quiz?.status, state?.participant, router])
+
+  // Quiz ended: Store guest participant email for signup flow
+  React.useEffect(() => {
+    if (state?.quiz?.status !== 'ended' || !state?.participant) return
+    
+    const isRegistered = !!state.participant.user_id
+    if (!isRegistered) {
+      try {
+        sessionStorage.setItem('guestQuizEmail', JSON.stringify({
+          email: (state.participant as any).participant_email || '',
+          name: state.participant.participant_name,
+          quizTitle: state.quiz.title
+        }))
+      } catch (e) {
+        console.error('Error storing guest info:', e)
+      }
+    }
+  }, [state?.quiz?.status, state?.participant, state?.quiz?.title])
 
   // Toggle option selection
   const toggleOption = (optionId: string) => {
@@ -392,68 +438,11 @@ export default function LiveQuizTakePage() {
     )
   }
 
-  // Quiz ended - show score and auto-redirect
+  // Quiz ended - show loading while redirecting
   if (quiz.status === 'ended') {
-    // Auto-redirect after showing score
-    const isRegistered = !!participant.user_id
-    const [redirectCountdown, setRedirectCountdown] = React.useState(5)
-    
-    React.useEffect(() => {
-      const timer = setInterval(() => {
-        setRedirectCountdown(prev => {
-          if (prev <= 1) {
-            clearInterval(timer)
-            // Redirect based on registration status
-            if (isRegistered) {
-              router.push('/my-results')
-            } else {
-              router.push('/join-quiz')
-            }
-            return 0
-          }
-          return prev - 1
-        })
-      }, 1000)
-      return () => clearInterval(timer)
-    }, [isRegistered, router])
-    
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
-        <NeuCard className="max-w-md">
-          <NeuCardContent className="pt-8 pb-8 text-center">
-            <Trophy className="w-16 h-16 mx-auto mb-4 text-yellow-500" />
-            <h2 className="text-2xl font-bold mb-2">{t('quizEnded') || 'Quiz Ended!'}</h2>
-            
-            {/* Always show score immediately */}
-            <div className="space-y-4 mt-6">
-              <div className="bg-primary/10 rounded-lg p-6">
-                <p className="text-sm text-muted-foreground">{t('yourScore') || 'Your Score'}</p>
-                <p className="text-4xl font-bold text-primary">{participant.total_score}</p>
-                <p className="text-sm text-muted-foreground mt-2">
-                  {participant.total_correct} / {quiz.total_questions} {t('correct') || 'correct'}
-                </p>
-              </div>
-              
-              <p className="text-sm text-muted-foreground">
-                {isRegistered 
-                  ? (t('redirectingToResults') || 'Redirecting to your results...')
-                  : (t('redirectingToJoin') || 'Redirecting...')
-                } ({redirectCountdown}s)
-              </p>
-              
-              <NeuButton 
-                onClick={() => router.push(isRegistered ? '/my-results' : '/join-quiz')} 
-                variant="secondary" 
-                className="w-full"
-              >
-                {isRegistered 
-                  ? (t('viewAllResults') || 'View All Results')
-                  : (t('joinAnotherQuiz') || 'Join Another Quiz')
-                }
-              </NeuButton>
-            </div>
-          </NeuCardContent>
-        </NeuCard>
+        <Loader2 className="w-10 h-10 animate-spin text-primary" />
       </div>
     )
   }

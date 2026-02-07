@@ -54,7 +54,10 @@ export default function MyResultsPage() {
 
   const fetchResults = async () => {
     try {
-      const res = await fetch('/api/live-quiz/my-results')
+      // Add timestamp to bypass any caching
+      const res = await fetch(`/api/live-quiz/my-results?t=${Date.now()}`, {
+        cache: 'no-store'
+      })
       if (res.ok) {
         const data = await res.json()
         setResults(data)

@@ -31,6 +31,7 @@ export async function createClient() {
   )
 }
 
+<<<<<<< Updated upstream
 /**
  * Create a Supabase client with service role privileges (bypasses RLS)
  * WARNING: Only use this for server-side operations where you've validated the request
@@ -52,4 +53,18 @@ export function createServiceRoleClient() {
   }
 
   return serviceRoleClientCache
+=======
+// Admin client that bypasses RLS - use with caution
+export function createAdminClient() {
+  return createSupabaseClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    }
+  )
+>>>>>>> Stashed changes
 }

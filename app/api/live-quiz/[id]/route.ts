@@ -296,16 +296,18 @@ export async function PUT(
       }
 
       case 'end': {
-        // End the quiz completely and show results to students
+        // End the quiz completely
         // Recalculate all scores first
         await recalculateParticipantScores(supabase, id)
         
+        // End quiz but do NOT publish results automatically
+        // Teacher must explicitly click "Publish Results" to share scores with students
         await (supabase
           .from('live_quizzes' as any)
           .update({
             status: 'ended',
-            ended_at: new Date().toISOString(),
-            show_results_to_students: true
+            ended_at: new Date().toISOString()
+            // show_results_to_students remains false until teacher explicitly publishes
           })
           .eq('id', id) as any)
 
@@ -326,7 +328,9 @@ export async function PUT(
         // Show final results to students
         await (supabase
           .from('live_quizzes' as any)
-          .update({ show_results_to_students: true })
+          .update({ 
+            show_results_to_students: true
+          })
           .eq('id', id) as any)
 
         break
@@ -340,10 +344,15 @@ export async function PUT(
         }
         
         if (Object.keys(updates).length > 0) {
-          await (supabase
+          const { error: updateError } = await (supabase
             .from('live_quizzes' as any)
             .update(updates)
-            .eq('id', id) as any)
+            .eq('id', id)
+            .eq('created_by', user.id) as any)
+          
+          if (updateError) {
+            return NextResponse.json({ error: 'Failed to update settings' }, { status: 500 })
+          }
         }
 
         break

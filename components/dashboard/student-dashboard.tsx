@@ -11,7 +11,8 @@ import {
     Calendar,
     FileQuestion,
     Trophy,
-    ArrowRight
+    ArrowRight,
+    Zap
 } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
@@ -19,15 +20,34 @@ import { ExamSession } from '@/lib/types'
 import { DashboardSkeleton } from '@/components/dashboard/dashboard-skeleton'
 import { useTranslation } from 'react-i18next'
 
+interface LiveQuizResult {
+    id: string
+    participant_name: string
+    total_score: number
+    total_correct: number
+    joined_at: string
+    quiz: {
+        id: string
+        title: string
+        description?: string
+        status: string
+        ended_at?: string
+        show_results_to_students: boolean
+        total_questions: number
+    }
+}
+
 export default function StudentDashboard() {
     const { user, profile } = useAuth()
     const [sessions, setSessions] = useState<ExamSession[]>([])
+    const [liveQuizResults, setLiveQuizResults] = useState<LiveQuizResult[]>([])
     const [loading, setLoading] = useState(true)
     const { t } = useTranslation()
 
     useEffect(() => {
         if (user) {
             loadSessions()
+            loadLiveQuizResults()
         }
     }, [user])
 
@@ -45,6 +65,18 @@ export default function StudentDashboard() {
             toast.error(t('failedLoadAnalytics'))
         } finally {
             setLoading(false)
+        }
+    }
+
+    const loadLiveQuizResults = async () => {
+        try {
+            const res = await fetch('/api/live-quiz/my-results')
+            if (res.ok) {
+                const data = await res.json()
+                setLiveQuizResults(data)
+            }
+        } catch (error) {
+            console.error('Error loading live quiz results:', error)
         }
     }
 
@@ -196,6 +228,78 @@ export default function StudentDashboard() {
                         })}
                     </div>
                 )}
+
+                {/* Live Quiz Results Section */}
+                <div className="mt-8">
+                    <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-xl font-bold flex items-center gap-2">
+                            <Zap className="w-5 h-5 text-yellow-500" />
+                            {t('liveQuizResults') || 'Live Quiz Results'}
+                        </h2>
+                        {liveQuizResults.length > 0 && (
+                            <Link href="/my-results">
+                                <NeuButton variant="ghost" size="sm" className="gap-1">
+                                    {t('viewAll') || 'View All'} <ArrowRight className="w-4 h-4" />
+                                </NeuButton>
+                            </Link>
+                        )}
+                    </div>
+
+                    {liveQuizResults.length === 0 ? (
+                        <NeuCard className="p-8 text-center">
+                            <div className="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/30 rounded-full flex items-center justify-center mx-auto mb-3">
+                                <Zap className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
+                            </div>
+                            <h3 className="text-lg font-semibold mb-2">{t('noLiveQuizResults') || 'No live quiz results yet'}</h3>
+                            <p className="text-sm text-muted-foreground mb-4">
+                                {t('noLiveQuizResultsDesc') || 'Join a live quiz to see your results here'}
+                            </p>
+                            <Link href="/join-quiz">
+                                <NeuButton size="sm">{t('joinLiveQuiz') || 'Join Live Quiz'}</NeuButton>
+                            </Link>
+                        </NeuCard>
+                    ) : (
+                        <div className="grid gap-4">
+                            {liveQuizResults.slice(0, 3).map((result) => {
+                                const percentage = result.quiz.total_questions > 0
+                                    ? Math.round((result.total_correct / result.quiz.total_questions) * 100)
+                                    : 0
+                                
+                                return (
+                                    <NeuCard key={result.id} className="p-4 transition-all hover:shadow-lg">
+                                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                            <div className="flex-1">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <Zap className="w-4 h-4 text-yellow-500" />
+                                                    <h3 className="font-semibold">{result.quiz.title}</h3>
+                                                </div>
+                                                <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                                                    <span className="flex items-center gap-1">
+                                                        <Calendar className="w-3 h-3" />
+                                                        {new Date(result.joined_at).toLocaleDateString()}
+                                                    </span>
+                                                    <span className="flex items-center gap-1">
+                                                        <Trophy className="w-3 h-3" />
+                                                        {result.total_correct}/{result.quiz.total_questions} {t('correct') || 'correct'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-4">
+                                                <div className="text-center">
+                                                    <p className="text-2xl font-bold text-primary">{result.total_score}</p>
+                                                    <p className="text-xs text-muted-foreground">{t('points') || 'points'}</p>
+                                                </div>
+                                                <div className={`text-center px-3 py-1 rounded-full ${percentage >= 50 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
+                                                    <p className="text-lg font-bold">{percentage}%</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </NeuCard>
+                                )
+                            })}
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     )
