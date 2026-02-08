@@ -371,11 +371,9 @@ export type Database = {
       attendance_sessions: {
         Row: {
           id: string
-          title: string
-          description: string | null
-          teacher_id: string
-          module_name: string | null
+          module_name: string
           section_group: string | null
+          teacher_id: string
           location_lat: number | null
           location_lng: number | null
           max_distance_meters: number
@@ -383,16 +381,17 @@ export type Database = {
           is_active: boolean
           started_at: string
           ended_at: string | null
+          week: number | null
+          section_num: number | null
+          auto_close_duration_minutes: number | null
           created_at: string
           updated_at: string
         }
         Insert: {
           id?: string
-          title: string
-          description?: string | null
-          teacher_id: string
-          module_name?: string | null
+          module_name: string
           section_group?: string | null
+          teacher_id: string
           location_lat?: number | null
           location_lng?: number | null
           max_distance_meters?: number
@@ -400,16 +399,17 @@ export type Database = {
           is_active?: boolean
           started_at?: string
           ended_at?: string | null
+          week?: number | null
+          section_num?: number | null
+          auto_close_duration_minutes?: number | null
           created_at?: string
           updated_at?: string
         }
         Update: {
           id?: string
-          title?: string
-          description?: string | null
-          teacher_id?: string
-          module_name?: string | null
+          module_name?: string
           section_group?: string | null
+          teacher_id?: string
           location_lat?: number | null
           location_lng?: number | null
           max_distance_meters?: number
@@ -417,6 +417,9 @@ export type Database = {
           is_active?: boolean
           started_at?: string
           ended_at?: string | null
+          week?: number | null
+          section_num?: number | null
+          auto_close_duration_minutes?: number | null
           created_at?: string
           updated_at?: string
         }
@@ -470,6 +473,38 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "attendance_records_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "attendance_sessions"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      attendance_tokens: {
+        Row: {
+          id: string
+          session_id: string
+          token: string
+          expires_at: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          session_id: string
+          token: string
+          expires_at: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          session_id?: string
+          token?: string
+          expires_at?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_tokens_session_id_fkey"
             columns: ["session_id"]
             isOneToOne: false
             referencedRelation: "attendance_sessions"

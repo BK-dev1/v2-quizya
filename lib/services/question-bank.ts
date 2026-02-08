@@ -3,7 +3,7 @@ import { QuestionBank, QuestionBankInsert, QuestionBankUpdate } from '@/lib/type
 
 export async function createQuestionBankItem(question: QuestionBankInsert): Promise<QuestionBank | null> {
   const supabase = await createClient()
-  
+
   const { data, error } = await supabase
     .from('question_bank')
     .insert(question)
@@ -28,7 +28,7 @@ export async function getQuestionBankItems(
   }
 ): Promise<QuestionBank[]> {
   const supabase = await createClient()
-  
+
   let query = supabase
     .from('question_bank')
     .select('*')
@@ -61,11 +61,11 @@ export async function getQuestionBankItems(
 }
 
 export async function updateQuestionBankItem(
-  questionId: string, 
+  questionId: string,
   updates: QuestionBankUpdate
 ): Promise<QuestionBank | null> {
   const supabase = await createClient()
-  
+
   const { data, error } = await supabase
     .from('question_bank')
     .update(updates)
@@ -83,7 +83,7 @@ export async function updateQuestionBankItem(
 
 export async function deleteQuestionBankItem(questionId: string): Promise<boolean> {
   const supabase = await createClient()
-  
+
   const { error } = await supabase
     .from('question_bank')
     .delete()
@@ -99,7 +99,7 @@ export async function deleteQuestionBankItem(questionId: string): Promise<boolea
 
 export async function getQuestionBankSubjects(userId: string): Promise<string[]> {
   const supabase = await createClient()
-  
+
   const { data, error } = await supabase
     .from('question_bank')
     .select('subject')
@@ -117,7 +117,7 @@ export async function getQuestionBankSubjects(userId: string): Promise<string[]>
 
 export async function getQuestionBankTags(userId: string): Promise<string[]> {
   const supabase = await createClient()
-  
+
   const { data, error } = await supabase
     .from('question_bank')
     .select('tags')

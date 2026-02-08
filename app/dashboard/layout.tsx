@@ -256,15 +256,15 @@ export default function DashboardLayout({
       {/* Main Content */}
       <div className="lg:pl-64 rtl:lg:pr-64 rtl:lg:pl-0">
         {/* Desktop Header */}
-        <header className="hidden lg:flex items-center justify-between px-8 h-16 border-b border-border">
-          <div>{/* Breadcrumb or page title could go here */}</div>
+        {/* <header className="hidden lg:flex items-center justify-between px-8 h-16 border-b border-border">
+          <div></div>
           <div className="flex items-center gap-4">
             <button className="p-2 rounded-lg hover:bg-muted relative" aria-label="Notifications">
               <Bell className="w-5 h-5" />
               <span className="absolute top-1 right-1 w-2 h-2 bg-destructive rounded-full" />
             </button>
           </div>
-        </header>
+        </header> */}
 
         <main className="p-4 lg:p-8">{children}</main>
       </div>

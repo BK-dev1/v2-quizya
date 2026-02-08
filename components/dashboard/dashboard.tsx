@@ -15,13 +15,28 @@ import {
   Trash2,
   Globe,
   Lock,
-  Loader2
+  Loader2,
+  Zap,
+  Play
 } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import StudentDashboard from '@/components/dashboard/student-dashboard'
 import { DashboardSkeleton } from '@/components/dashboard/dashboard-skeleton'
 import { useTranslation } from 'react-i18next'
+
+interface LiveQuiz {
+  id: string
+  title: string
+  description?: string
+  status: string
+  quiz_code: string
+  questions: any[]
+  participants: any[]
+  created_at: string
+  ended_at?: string
+  show_results_to_students: boolean
+}
 
 export default function DashboardPage() {
   const { user, profile, loading: authLoading } = useAuth()
@@ -33,18 +48,42 @@ export default function DashboardPage() {
     totalSessions: 0,
     avgScore: 0
   })
+  const [liveQuizzes, setLiveQuizzes] = useState<LiveQuiz[]>([])
+  const [liveQuizzesLoading, setLiveQuizzesLoading] = useState(true)
   const [loadingStats, setLoadingStats] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
 
   useEffect(() => {
     if (user && profile?.role === 'teacher') {
       loadStats()
+      loadLiveQuizzes()
     }
-  }, [user, profile, exams])
+  }, [user, profile])
+
+  const loadLiveQuizzes = async () => {
+    try {
+      const res = await fetch('/api/live-quiz')
+      if (res.ok) {
+        const data = await res.json()
+        // Show ALL quizzes - sorted by status (active first, then ended)
+        const sortedQuizzes = data.sort((a: LiveQuiz, b: LiveQuiz) => {
+          const statusOrder: Record<string, number> = { active: 0, paused: 1, showing_results: 2, waiting: 3, ended: 4 }
+          return (statusOrder[a.status] || 5) - (statusOrder[b.status] || 5)
+        })
+        setLiveQuizzes(sortedQuizzes)
+      }
+    } catch (error) {
+      console.error('Error loading live quizzes:', error)
+    } finally {
+      setLiveQuizzesLoading(false)
+    }
+  }
 
   const loadStats = async () => {
     try {
-      const res = await fetch(`/api/analytics/dashboard`)
+      const res = await fetch(`/api/analytics/dashboard`, {
+        next: { revalidate: 60 } // Cache for 60 seconds
+      })
       if (res.ok) {
         const data = await res.json()
         setStats({
@@ -73,6 +112,26 @@ export default function DashboardPage() {
         toast.success(t('examDeleted') || 'Exam deleted successfully')
       } else {
         toast.error(t('deleteExamFailed') || 'Failed to delete exam')
+      }
+    }
+  }
+
+  const handleDeleteLiveQuiz = async (quizId: string, e: React.MouseEvent) => {
+    e.preventDefault() // Prevent Link navigation
+    e.stopPropagation()
+    
+    if (confirm(t('confirmDeleteQuiz') || 'Are you sure you want to delete this quiz? This will remove all participant data.')) {
+      try {
+        const res = await fetch(`/api/live-quiz/${quizId}`, { method: 'DELETE' })
+        if (res.ok) {
+          toast.success(t('quizDeleted') || 'Quiz deleted successfully')
+          setLiveQuizzes(prev => prev.filter(q => q.id !== quizId))
+        } else {
+          toast.error(t('deleteQuizFailed') || 'Failed to delete quiz')
+        }
+      } catch (error) {
+        console.error('Error deleting quiz:', error)
+        toast.error(t('deleteQuizFailed') || 'Failed to delete quiz')
       }
     }
   }
@@ -163,6 +222,89 @@ export default function DashboardPage() {
             </NeuCard>
           ))}
         </div>
+
+        {/* Live Quizzes Section */}
+        {(liveQuizzes.length > 0 || !liveQuizzesLoading) && (
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold flex items-center gap-2">
+                <Zap className="h-5 w-5 text-yellow-500" />
+                {t('liveQuizzes') || 'Live Quizzes'}
+              </h2>
+              <Link href="/dashboard/live-quiz/new">
+                <NeuButton size="sm">
+                  <Plus className="h-4 w-4 mr-2" />
+                  {t('createLiveQuiz') || 'Create Live Quiz'}
+                </NeuButton>
+              </Link>
+            </div>
+            
+            {liveQuizzesLoading ? (
+              <div className="flex gap-4">
+                {[1, 2].map((i) => (
+                  <NeuCard key={i} className="p-4 w-64 flex-shrink-0">
+                    <div className="h-4 w-2/3 bg-muted animate-pulse rounded mb-2" />
+                    <div className="h-3 w-1/2 bg-muted animate-pulse rounded" />
+                  </NeuCard>
+                ))}
+              </div>
+            ) : liveQuizzes.length === 0 ? (
+              <NeuCard className="p-6 text-center">
+                <Zap className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
+                <p className="text-sm text-muted-foreground">{t('noLiveQuizzes') || 'No live quizzes yet'}</p>
+              </NeuCard>
+            ) : (
+              <div className="flex gap-4 overflow-x-auto pb-2">
+                {liveQuizzes.map((quiz) => (
+                  <Link key={quiz.id} href={`/dashboard/live-quiz/${quiz.id}`}>
+                    <NeuCard className="p-4 min-w-[250px] hover:shadow-md transition-shadow cursor-pointer">
+                      <div className="flex items-start justify-between mb-2">
+                        <h3 className="font-medium truncate flex-1">{quiz.title}</h3>
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                            quiz.status === 'waiting' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                            quiz.status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                            quiz.status === 'paused' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' :
+                            quiz.status === 'ended' ? 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300' :
+                            'bg-blue-100 text-blue-800'
+                          }`}>
+                            {quiz.status}
+                          </span>
+                          <button
+                            onClick={(e) => handleDeleteLiveQuiz(quiz.id, e)}
+                            className="p-1 rounded-full hover:bg-red-100 dark:hover:bg-red-900 text-muted-foreground hover:text-red-600 transition-colors"
+                            title={t('deleteQuiz') || 'Delete quiz'}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                      <div className="text-sm text-muted-foreground flex items-center gap-3">
+                        <span className="font-mono">{quiz.quiz_code}</span>
+                        <span><Users className="h-3 w-3 inline mr-1" />{quiz.participants?.length || 0}</span>
+                      </div>
+                      {quiz.status === 'ended' && (
+                        <div className="mt-2 flex items-center gap-1 text-xs">
+                          {quiz.show_results_to_students ? (
+                            <span className="text-green-600">✓ {t('resultsPublished') || 'Results Published'}</span>
+                          ) : (
+                            <span className="text-muted-foreground">{t('resultsNotPublished') || 'Results Not Published'}</span>
+                          )}
+                        </div>
+                      )}
+                      <NeuButton size="sm" variant="ghost" className="mt-3 w-full text-sm">
+                        <Play className="h-3 w-3 mr-1" />
+                        {quiz.status === 'waiting' ? (t('continueSetup') || 'Continue') : 
+                         quiz.status === 'ended' ? (t('viewResults') || 'View Results') :
+                         (t('manage') || 'Manage')}
+                      </NeuButton>
+                    </NeuCard>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Actions */}
         <div className="flex items-center justify-between mb-6">

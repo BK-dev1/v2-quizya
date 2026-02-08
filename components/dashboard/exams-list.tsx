@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo, useCallback } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { useExams } from '@/lib/hooks/use-exams'
@@ -21,7 +21,8 @@ import {
   Clock,
   Loader2,
   MoreVertical,
-  FileQuestion
+  FileQuestion,
+  Zap
 } from 'lucide-react'
 import { Exam } from '@/lib/types'
 import { toast } from 'sonner'
@@ -36,13 +37,7 @@ export default function ExamsPage() {
   const [loadingStats, setLoadingStats] = useState(true)
   const { t } = useTranslation()
 
-  useEffect(() => {
-    if (user && exams.length > 0) {
-      loadExamStats()
-    }
-  }, [user, exams])
-
-  const loadExamStats = async () => {
+  const loadExamStats = useCallback(async () => {
     try {
       const stats: Record<string, { sessions: number; avgScore: number }> = {}
 
@@ -64,14 +59,20 @@ export default function ExamsPage() {
     } finally {
       setLoadingStats(false)
     }
-  }
+  }, [exams])
 
-  const handleCopyRoomCode = (roomCode: string) => {
+  useEffect(() => {
+    if (user && exams.length > 0) {
+      loadExamStats()
+    }
+  }, [user, exams, loadExamStats])
+
+  const handleCopyRoomCode = useCallback((roomCode: string) => {
     navigator.clipboard.writeText(roomCode)
     toast.success(t('roomCodeCopied'))
-  }
+  }, [t])
 
-  const handleDeleteExam = async (examId: string, title: string) => {
+  const handleDeleteExam = useCallback(async (examId: string, title: string) => {
     if (confirm(`${t('confirmDeleteExam')} "${title}"?`)) {
       const success = await deleteExam(examId)
       if (success) {
@@ -80,9 +81,9 @@ export default function ExamsPage() {
         toast.error(t('deleteExamFailed'))
       }
     }
-  }
+  }, [deleteExam, t])
 
-  const toggleExamStatus = async (exam: Exam) => {
+  const toggleExamStatus = useCallback(async (exam: Exam) => {
     try {
       const res = await fetch(`/api/exams/${exam.id}`, {
         method: 'PUT',
@@ -99,18 +100,20 @@ export default function ExamsPage() {
     } catch (error) {
       toast.error(t('updateStatusFailed'))
     }
-  }
+  }, [t])
 
-  const filteredExams = exams.filter(exam => {
-    const matchesSearch = exam.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      exam.description?.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredExams = useMemo(() => {
+    return exams.filter(exam => {
+      const matchesSearch = exam.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        exam.description?.toLowerCase().includes(searchTerm.toLowerCase())
 
-    const matchesFilter = filter === 'all' ||
-      (filter === 'active' && exam.is_active) ||
-      (filter === 'inactive' && !exam.is_active)
+      const matchesFilter = filter === 'all' ||
+        (filter === 'active' && exam.is_active) ||
+        (filter === 'inactive' && !exam.is_active)
 
-    return matchesSearch && matchesFilter
-  })
+      return matchesSearch && matchesFilter
+    })
+  }, [exams, searchTerm, filter])
 
   if (!user || profile?.role !== 'teacher') {
     return (
@@ -142,12 +145,20 @@ export default function ExamsPage() {
               <h1 className="text-3xl font-bold ">{t('yourExams')}</h1>
               <p className="">{t('manageExamsDescription')}</p>
             </div>
-            <Link href="/dashboard/exams/new">
-              <NeuButton>
-                <Plus className="h-4 w-4 mr-2" />
-                {t('createExam')}
-              </NeuButton>
-            </Link>
+            <div className="flex gap-2">
+              <Link href="/dashboard/live-quiz/new">
+                <NeuButton variant="secondary">
+                  <Zap className="h-4 w-4 mr-2" />
+                  {t('createLiveQuiz') || 'Live Quiz'}
+                </NeuButton>
+              </Link>
+              <Link href="/dashboard/exams/new">
+                <NeuButton>
+                  <Plus className="h-4 w-4 mr-2" />
+                  {t('createExam')}
+                </NeuButton>
+              </Link>
+            </div>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-4">
